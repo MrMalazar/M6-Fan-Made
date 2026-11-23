@@ -1,0 +1,20 @@
+{{!-- Danni subiti (9/9): quanti, e di che segno. Niente <form>: DialogV2 mette
+     il contenuto dentro il suo, e un form dentro un form sparisce. --}}
+<div class="m6-danni">
+    <p class="m6-arete-hint">{{localize "M6.Salute.DanniHint"}}</p>
+    <label class="m6-item-field m6-danni-amount">
+        <span class="m6-arete-row-label">{{localize "M6.Salute.DanniAmount"}}</span>
+        <input type="number" name="amount" min="1" max="30" step="1" value="1" autofocus>
+    </label>
+    <span class="m6-arete-row-label">{{localize "M6.Salute.DanniSign"}}</span>
+    {{!-- I quattro segni del tracciato: un clic sceglie, il campo nascosto lo porta al tiro. --}}
+    <input type="hidden" name="state" value="{{chosen}}">
+    <div class="m6-danni-grid" role="group" aria-label="{{localize 'M6.Salute.DanniSign'}}">
+        {{#each signs as |sign|}}
+            <button type="button" class="m6-danni-sign" data-role="danniSign" data-state="{{sign.state}}" aria-label="{{localize sign.label}}">
+                <i class="m6-salute-glyph" data-state="{{sign.state}}" aria-hidden="true"></i>
+                <span>{{localize sign.label}}</span>
+            </button>
+        {{/each}}
+    </div>
+</div>

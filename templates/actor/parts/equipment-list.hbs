@@ -1,0 +1,71 @@
+{{!-- L'inventario (21/9, dal mock docs/mock_tre_pagine_21-9.html): un occhiello
+     per tipo (Armatura, Armi, Equipaggiamento, coi nomi del sistema) con la
+     lente e il +; la riga dell'oggetto col simbolo che lo manda in chat, il
+     nome che apre la descrizione, gli usi, il d10 pieno se tira, le frecce
+     degli usi, la matita e il cestino; poi, in riga (Blue, 24/9 sera), i
+     dettagli senza aprire l'oggetto: per l'arma il danno base e il tipo, per
+     l'armatura il valore, per tutti la casella delle altre informazioni (nel
+     flag flags.m6.dettagli). Dal 25/9 (Blue): il libro dell'occhiello
+     apre l'archivio dell'Equipaggiamento (Armi, Protezioni, Oggetti in
+     linguette); sull'arma il tag Aggravato (la spunta sta nella modifica guidata); sull'armatura il tag
+     «mentale» e i tasti ▼ (il colpo assorbito toglie un punto) e ▲ (il punto
+     che torna, fino al pieno). Le azioni sono quelle del sistema wod5e
+     (5.3.x): da risincronizzare quando il sistema cambia questo blocco. --}}
+{{#each equipmentItems as |equipment key|}}
+    <span class="m6-riq-occhiello m6-occhiello-tasti">
+        <span>{{localize (concat 'M6.Comuni.Inventario.' key)}}</span>
+        <span class="m6-occhiello-tastini">
+            <a class="item-control m6-riga-tastino m6-archivio-open" data-action="archivioOpen" data-kind="equip-{{key}}" data-kinds="equip-weapon,equip-armor,equip-gear" title="{{localize 'M6.Archivi.OpenEquip'}}" aria-label="{{localize 'M6.Archivi.OpenEquip'}}"><i class="fa-solid fa-book-open" aria-hidden="true"></i></a>
+            <a class="item-control m6-riga-tastino search-data-item" data-action="searchItem" title="{{localize 'M6.Comuni.Search'}}" data-type="{{key}}"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></a>
+            <a class="item-control m6-riga-tastino item-create" data-action="createItem" title="{{localize 'M6.Comuni.Add'}}" data-type="{{key}}"><i class="fas fa-plus" aria-hidden="true"></i></a>
+        </span>
+    </span>
+    {{#each equipment as |item|}}
+        <div class="m6-riga m6-riga-apribile m6-riga-oggetto m6-riga-inventario tipo-{{key}}" data-drag="true" data-item-id="{{item.id}}" data-document-uuid="{{item.uuid}}" data-type="Item">
+            <div class="m6-riga-testa m6-oggetto-testa">
+                <a class="m6-lettera m6-lettera-oggetto clickable" data-action="itemChat" data-item-id="{{item._id}}" title="{{localize 'M6.Comuni.ItemsList.ShowToChat'}}"><i class="fa-solid {{#if (eq key "weapon")}}fa-khanda{{else if (eq key "armor")}}fa-shield-halved{{else}}fa-box-open{{/if}}" aria-hidden="true"></i></a>
+                <button type="button" class="m6-riga-nome m6-riga-nome-apri" data-action="rigaApri" title="{{localize 'M6.Tratti.Apri'}}" aria-expanded="false"><span>{{item.name}}</span>{{#if item.system.enrichedDescription}}<i class="fa-solid fa-chevron-down" aria-hidden="true"></i>{{/if}}</button>
+                {{#if item.system.uses.enabled}}
+                    <small class="m6-oggetto-tag">{{item.system.uses.current}} / {{item.system.uses.max}}</small>
+                {{/if}}
+                <div class="m6-riga-tastini">
+                    {{!-- Il d10 pieno: l'oggetto ha una riserva e si tira (non dalla scheda di gruppo). --}}
+                    {{#ifnoteq ../../baseActorType 'group'}}
+                        {{#if item.system.dicepool}}
+                            {{#if (isNotEmpty item.system.dicepool)}}
+                                <a class="item-image rollable-item m6-riga-tastino m6-tastino-pieno" data-action="rollItem" data-item-uuid="{{item.uuid}}" title="{{localize 'M6.Tratti.Tira'}}"><i class="fa-solid fa-dice-d10" aria-hidden="true"></i></a>
+                            {{/if}}
+                        {{/if}}
+                    {{/ifnoteq}}
+                    {{#if item.system.uses.enabled}}
+                        <a class="item-control m6-riga-tastino item-use" data-action="expendItemUse" data-item-id="{{item._id}}" title="{{localize 'M6.Comuni.ItemsList.ExpendUse'}}"><i class="fa-solid fa-angle-down" aria-hidden="true"></i></a>
+                        <a class="item-control m6-riga-tastino item-restore" data-action="restoreItemUses" data-item-id="{{item._id}}" title="{{localize 'M6.Comuni.ItemsList.ResetUses'}}"><i class="fa-solid fa-rotate-left" aria-hidden="true"></i></a>
+                    {{/if}}
+                    <a class="item-control item-edit m6-riga-tastino" data-action="itemEdit" data-item-id="{{item._id}}" title="{{localize 'M6.Comuni.Edit'}}"><i class="fas fa-edit" aria-hidden="true"></i></a>
+                    <a class="item-control item-delete m6-riga-tastino" data-action="itemDelete" data-item-id="{{item._id}}" title="{{localize 'M6.Comuni.Delete'}}"><i class="fas fa-trash" aria-hidden="true"></i></a>
+                </div>
+                {{#if (eq key "weapon")}}
+                    {{!-- Il danno base e il tipo dell'arma, i campi del sistema (weaponvalue, weaponType) scritti dalla riga. --}}
+                    <input type="number" class="m6-oggetto-numero" data-item-id="{{item._id}}" data-item-field="system.weaponvalue" value="{{item.system.weaponvalue}}" min="0" max="9" step="1" title="{{localize 'M6.Comuni.EquipmentList.WeaponValue'}}" aria-label="{{item.name}}: {{localize 'M6.Comuni.EquipmentList.WeaponValue'}}" {{#if @root.locked}}disabled{{/if}}>
+                    <select class="m6-oggetto-tipo" data-item-id="{{item._id}}" data-item-field="system.weaponType" title="{{localize 'M6.Comuni.EquipmentList.WeaponType'}}" aria-label="{{item.name}}: {{localize 'M6.Comuni.EquipmentList.WeaponType'}}" {{#if @root.locked}}disabled{{/if}}>
+                        <option value="melee" {{#if (eq item.system.weaponType "melee")}}selected{{/if}}>{{localize "M6.Comuni.EquipmentList.Melee"}}</option>
+                        <option value="ranged" {{#if (eq item.system.weaponType "ranged")}}selected{{/if}}>{{localize "M6.Comuni.EquipmentList.Ranged"}}</option>
+                        <option value="supernatural" {{#if (eq item.system.weaponType "supernatural")}}selected{{/if}}>{{localize "M6.Comuni.EquipmentList.Supernatural"}}</option>
+                    </select>
+                    {{!-- La spunta dell'Aggravato (25/9) non sta più nella riga (Blue, 27/9: «le caselle del danno
+                         aggravato non andrebbero lì»): si cambia nella modifica guidata dell'arma; qui solo il tag. --}}
+                    {{#if item.flags.[m6].aggravato}}<small class="m6-oggetto-tag" title="{{localize 'M6.Items.AggravatedHint'}}">{{localize "M6.Items.AggravatedShort"}}</small>{{/if}}
+                {{else if (eq key "armor")}}
+                    <input type="number" class="m6-oggetto-numero" data-item-id="{{item._id}}" data-item-field="system.armorvalue" value="{{item.system.armorvalue}}" min="0" max="7" step="1" title="{{localize 'M6.Comuni.EquipmentList.ArmorValue'}}" aria-label="{{item.name}}: {{localize 'M6.Comuni.EquipmentList.ArmorValue'}}" {{#if @root.locked}}disabled{{/if}}>
+                    {{#if (eq item.flags.[m6].armatura "mentale")}}<small class="m6-oggetto-tag">{{localize "M6.Items.ArmorKinds.mentale"}}</small>{{/if}}
+                    <button type="button" class="m6-riga-tastino m6-armatura-colpo" data-action="armaturaColpo" data-item-id="{{item._id}}" title="{{localize 'M6.Items.ArmorHit'}}" aria-label="{{item.name}}: {{localize 'M6.Items.ArmorHit'}}" {{#if @root.locked}}disabled{{/if}}><i class="fa-solid fa-angle-down" aria-hidden="true"></i></button>
+                    <button type="button" class="m6-riga-tastino m6-armatura-punto" data-action="armaturaPunto" data-item-id="{{item._id}}" title="{{localize 'M6.Items.ArmorBack'}}" aria-label="{{item.name}}: {{localize 'M6.Items.ArmorBack'}}" {{#if @root.locked}}disabled{{/if}}><i class="fa-solid fa-angle-up" aria-hidden="true"></i></button>
+                {{/if}}
+                <input type="text" class="m6-oggetto-dettagli" data-item-id="{{item._id}}" data-item-field="flags.m6.dettagli" value="{{item.flags.[m6].dettagli}}" placeholder="{{localize 'M6.Tratti.Dettagli.oggetto'}}" aria-label="{{item.name}}: {{localize 'M6.Tratti.DettagliLabel'}}" title="{{localize 'M6.Tratti.DettagliHint'}}" {{#if @root.locked}}disabled{{/if}}>
+            </div>
+            <div class="m6-riga-spiega m6-oggetto-spiega">
+                {{#if item.system.enrichedDescription}}{{{item.system.enrichedDescription}}}{{/if}}
+            </div>
+        </div>
+    {{/each}}
+{{/each}}

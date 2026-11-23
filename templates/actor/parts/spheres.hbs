@@ -1,0 +1,196 @@
+{{!-- La pagina Magick (Blue, 21/9/2026, dal mock docs/mock_pagina_magick_21-9.html):
+     a sinistra le nove Sfere in una lista sola (il segno dell'accesso apre o
+     chiude il Dominio; niente livelli dal 25/9 sera; la casetta di famiglia; il
+     conto dei poteri conosciuti, lo stesso numero della prima pagina) e sotto le Magick
+     in atto; a destra i poteri che il giocatore ha inserito, Sfera per Sfera,
+     in righe a colonne allineate (pallino, nome, tipo, Amalgama, costo), col
+     testo che si apre al clic sul nome e la tendina Aggiungi (dal catalogo,
+     o scritto a mano); in fondo, in una tendina, la tavola degli Ambiti. Le
+     Specialità delle Sfere e la colonna Influenza non esistono più. --}}
+<section class="tab {{tab.cssClass}} m6-spheres" data-tab="{{tab.id}}" data-group="{{tab.group}}">
+    <header class="m6-section-title">
+        {{#if creazioneReset}}{{> "systems/m6/templates/actor/parts/reset-tasto.hbs" resetsById.spheres}}{{/if}}
+        <span>{{localize "M6.Tabs.Magick"}}</span>
+    </header>
+
+    <div class="m6-spheres-content m6-magick-layout">
+        <div class="m6-magick-sinistra">
+            {{!-- Le Sfere: quelle conosciute in testa, con pallini, casetta e conto; le altre sotto, spente. --}}
+            <section class="m6-riq m6-riq-pagina m6-riq-sfere">
+                <header class="m6-riq-title">
+                    <span>{{localize "M6.Tabs.Spheres"}}</span>
+                    <small class="m6-riq-conto">{{localize "M6.Poteri.SfereConosciute" count=sfereConosciute.length}} · {{localize "M6.Poteri.InTutto" count=poteriTotale}}</small>
+                </header>
+                <div class="m6-riq-body">
+                    {{!-- Le Sfere come nella prima pagina (Blue, 25/9 sera): niente livelli da 1 a 5,
+                         «creano solo confusione». Il sigillo è il tasto che apre e chiude il Dominio (Blue:
+                         «bastasse sul simbolo sfera»), poi il conto dei poteri conosciuti, il nome, la casetta
+                         (di famiglia o esterna). --}}
+                    <div class="m6-sfere-lista">
+                        {{#each sfereConosciute as |sphere|}}
+                            <div class="m6-riga m6-riga-sfera-pagina{{#if sphere.family}} family{{/if}}">
+                                <button type="button" class="m6-sfera-accesso acceso" data-action="sphereSelectionChange" data-sphere="{{sphere.id}}" data-selected="true" title="{{localize 'M6.Poteri.DominioChiudi'}}" aria-pressed="true" {{#if ../locked}}disabled{{/if}}><img class="m6-riga-icona m6-sfera-sigillo" src="{{sphere.icon}}" alt=""></button>
+                                <b class="m6-sfera-conto{{#unless sphere.conto}} vuoto{{/unless}}" title="{{localize 'M6.Stat.PoteriConosciuti'}}">{{sphere.conto}}</b>
+                                <span class="m6-riga-nome m6-riga-nome-fermo"><span>{{localize sphere.label}}</span></span>
+                                <button type="button" class="m6-riga-tastino m6-sfera-casa{{#if sphere.family}} on{{/if}}" data-action="familySphereToggle" data-sphere="{{sphere.id}}" title="{{#if sphere.family}}{{localize 'M6.Poteri.Casa'}}{{else}}{{localize 'M6.Poteri.CasaOff'}}{{/if}}" aria-pressed="{{sphere.family}}" {{#if ../locked}}disabled{{/if}}><i class="fa-solid fa-house" aria-hidden="true"></i></button>
+                            </div>
+                        {{/each}}
+                    </div>
+                    {{#if sfereAltre.length}}
+                        <span class="m6-riq-occhiello">{{localize "M6.Poteri.AltreSfere"}}</span>
+                        <div class="m6-sfere-lista">
+                            {{#each sfereAltre as |sphere|}}
+                                <div class="m6-riga m6-riga-sfera-pagina spenta">
+                                    <button type="button" class="m6-sfera-accesso" data-action="sphereSelectionChange" data-sphere="{{sphere.id}}" data-selected="false" title="{{localize 'M6.Poteri.DominioApri'}}" aria-pressed="false" {{#if ../locked}}disabled{{/if}}><img class="m6-riga-icona m6-sfera-sigillo" src="{{sphere.icon}}" alt=""></button>
+                                    <span class="m6-riga-nome m6-riga-nome-fermo"><span>{{localize sphere.label}}</span></span>
+                                </div>
+                            {{/each}}
+                        </div>
+                    {{/if}}
+                </div>
+            </section>
+
+            {{!-- Le Magick in atto (6/9; rifatte il 25/9 sera, Blue: «deve segnare diversi elementi»):
+                 ogni riga è una carta. In testa On/Off, il nome, le pastiglie (Volgare, il lucchetto del
+                 Paradosso permanente che si accende e spegne, «dal tiro», la Durata), il cestino; poi chi
+                 l'ha lanciata e chi la mantiene; com'è composta (i sigilli delle Sfere e il testo); la
+                 soglia con gli Ambiti in parole; i bonus e i malus; l'effetto su più righe. Il lancio con
+                 una Durata scrive tutto da sé; a mano si compila quel che serve. --}}
+            <section class="m6-riq m6-riq-pagina m6-ongoing-magick">
+                <header class="m6-riq-title">
+                    <span>{{localize "M6.OngoingMagick.Label"}}</span>
+                    <button type="button" class="m6-riq-tasto-piccolo" data-action="ongoingMagickAdd" title="{{localize 'M6.OngoingMagick.Add'}}" aria-label="{{localize 'M6.OngoingMagick.Add'}}" {{#if locked}}disabled{{/if}}><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+                </header>
+                <div class="m6-riq-body">
+                    {{#each ongoingMagick as |row|}}
+                        <div class="m6-atto-riga{{#if row.active}} accesa{{/if}}">
+                            <div class="m6-atto-testa">
+                                <button type="button" class="m6-ongoing-toggle{{#if row.active}} lit{{/if}}" data-action="ongoingMagickToggle" data-row="{{row.id}}" title="{{#if row.active}}{{localize 'M6.OngoingMagick.On'}}{{else}}{{localize 'M6.OngoingMagick.Off'}}{{/if}}" aria-label="{{localize 'M6.OngoingMagick.Status'}}" {{#if ../locked}}disabled{{/if}}>
+                                    {{#if row.active}}{{localize "M6.OngoingMagick.On"}}{{else}}{{localize "M6.OngoingMagick.Off"}}{{/if}}
+                                </button>
+                                <input type="text" class="m6-atto-nome" name="flags.m6.ongoingMagick.{{row.id}}.nameSpheres" value="{{row.nameSpheres}}" placeholder="{{localize 'M6.OngoingMagick.Name'}}" aria-label="{{localize 'M6.OngoingMagick.Name'}}" {{#if ../locked}}disabled{{/if}}>
+                                <span class="m6-ongoing-marks">
+                                    {{#if row.vulgar}}<small class="m6-atto-pastiglia volgare" title="{{localize 'M6.OngoingMagick.VolgareHint'}}">{{localize "M6.OngoingMagick.Volgare"}}</small>{{/if}}
+                                    <button type="button" class="m6-atto-pastiglia m6-atto-lucchetto{{#if row.lock}} on{{/if}}" data-action="ongoingMagickLock" data-row="{{row.id}}" title="{{#if row.lock}}{{localize 'M6.OngoingMagick.LockHint'}}{{else}}{{localize 'M6.OngoingMagick.LockOffHint'}}{{/if}}" aria-pressed="{{#if row.lock}}true{{else}}false{{/if}}" {{#if ../locked}}disabled{{/if}}><i class="fa-solid {{#if row.lock}}fa-lock{{else}}fa-lock-open{{/if}}" aria-hidden="true"></i> {{localize "M6.OngoingMagick.Permanente"}}</button>
+                                    {{#if row.fromRoll}}<small class="m6-atto-pastiglia" title="{{localize 'M6.OngoingMagick.DalTiroHint'}}"><i class="fa-solid fa-dice" aria-hidden="true"></i> {{localize "M6.OngoingMagick.DalTiro"}}</small>{{/if}}
+                                    {{#if row.duration}}<small class="m6-atto-pastiglia" title="{{localize 'M6.Scopes.duration'}}"><i class="fa-solid fa-hourglass-half" aria-hidden="true"></i> {{row.duration}}</small>{{/if}}
+                                </span>
+                                <button type="button" class="m6-riq-tasto-piccolo m6-atto-cestino" data-action="ongoingMagickDelete" data-row="{{row.id}}" title="{{localize 'M6.OngoingMagick.Remove'}}" aria-label="{{localize 'M6.OngoingMagick.Remove'}}" {{#if ../locked}}disabled{{/if}}><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+                            </div>
+                            <div class="m6-atto-campi">
+                                <label class="m6-atto-campo"><span>{{localize "M6.OngoingMagick.Lanciata"}}</span><input type="text" name="flags.m6.ongoingMagick.{{row.id}}.caster" value="{{row.caster}}" placeholder="{{localize 'M6.OngoingMagick.Chi'}}" {{#if ../locked}}disabled{{/if}}></label>
+                                <label class="m6-atto-campo"><span>{{localize "M6.OngoingMagick.Mantenuta"}}</span><input type="text" name="flags.m6.ongoingMagick.{{row.id}}.maintainer" value="{{row.maintainer}}" placeholder="{{localize 'M6.OngoingMagick.Nessuno'}}" {{#if ../locked}}disabled{{/if}}></label>
+                                <label class="m6-atto-campo largo"><span>{{localize "M6.OngoingMagick.Composizione"}}</span>{{#if row.spheres.length}}<span class="m6-atto-sigilli">{{#each row.spheres as |s|}}<img src="{{s.icon}}" alt="{{s.label}}" title="{{s.label}}">{{/each}}</span>{{/if}}<input type="text" name="flags.m6.ongoingMagick.{{row.id}}.composition" value="{{row.composition}}" placeholder="{{localize 'M6.OngoingMagick.ComposizioneHint'}}" {{#if ../locked}}disabled{{/if}}></label>
+                                <label class="m6-atto-campo largo"><span>{{localize "M6.OngoingMagick.Soglia"}}</span><input type="number" class="m6-atto-numero" name="flags.m6.ongoingMagick.{{row.id}}.threshold" value="{{row.threshold}}" min="0" step="1" data-dtype="Number" {{#if ../locked}}disabled{{/if}}><input type="text" name="flags.m6.ongoingMagick.{{row.id}}.scopesText" value="{{row.scopesText}}" placeholder="{{localize 'M6.OngoingMagick.AmbitiHint'}}" {{#if ../locked}}disabled{{/if}}></label>
+                                <label class="m6-atto-campo largo"><span>{{localize "M6.OngoingMagick.BonusMalus"}}</span><input type="text" name="flags.m6.ongoingMagick.{{row.id}}.modifiers" value="{{row.modifiers}}" placeholder="{{localize 'M6.OngoingMagick.BonusMalusHint'}}" {{#if ../locked}}disabled{{/if}}></label>
+                            </div>
+                            {{!-- L'effetto su più righe (Blue, 25/9: il riquadro era troppo piccolo). --}}
+                            <textarea class="m6-atto-effetto" name="flags.m6.ongoingMagick.{{row.id}}.triggerEffect" rows="2" placeholder="{{localize 'M6.OngoingMagick.Effect'}}" aria-label="{{localize 'M6.OngoingMagick.Effect'}}" {{#if ../locked}}disabled{{/if}}>{{row.triggerEffect}}</textarea>
+                        </div>
+                    {{/each}}
+                </div>
+            </section>
+        </div>
+
+        {{!-- I poteri conosciuti (24/9 sera, Blue: «una semplice lista», senza la divisione
+             per Sfere): in testa il conto, Aggiungi (la finestra dei poteri che si possono
+             prendere adesso, con le pastiglie delle Sfere) e il Catalogo completo da leggere;
+             sotto, una riga per potere in ordine di nome, a colonne fisse (27/9: «perché si
+             allineino e ognuna abbia uno spazio equo»): il sigillo della Sfera, il grado, il
+             nome (il clic apre il testo, come la freccia in fondo), le pastiglie del tipo
+             (attivo, passivo, tutte e due), l'Amalgama, gli usi, il costo, Usa. Aperta, le
+             quattro parti: Grado, Prerequisiti, Effetto attivo, Effetto passivo. --}}
+        <section class="m6-riq m6-riq-pagina m6-riq-conosciuti">
+            <header class="m6-riq-title m6-riq-title-tasti">
+                <span>{{localize "M6.Stat.PoteriConosciuti"}}</span>
+                <small class="m6-riq-conto">{{localize "M6.Poteri.InTutto" count=poteriTotale}}</small>
+                <span class="m6-riq-tasti">
+                    <button type="button" class="m6-riq-tasto-piccolo m6-poteri-catalogo-completo" data-action="potereCatalogoCompleto" title="{{localize 'M6.Poteri.CatalogoCompletoHint'}}" aria-label="{{localize 'M6.Poteri.CatalogoCompleto'}}"><i class="fa-solid fa-book-open" aria-hidden="true"></i></button>
+                    <button type="button" class="m6-sfera-potere m6-poteri-aggiungi" data-action="potereCatalogo" title="{{localize 'M6.Poteri.AggiungiHint'}}" {{#if locked}}disabled{{/if}}><i class="fa-solid fa-plus" aria-hidden="true"></i><span>{{localize "M6.Poteri.Aggiungi"}}</span></button>
+                </span>
+            </header>
+            <div class="m6-riq-body m6-poteri-lista">
+                {{#each poteriLista as |p|}}
+                    {{!-- La riga del potere: colonne allineate (Blue, 21/9: il tipo «non attaccato al nome»). --}}
+                    <div class="m6-potere-riga{{#if p.editing}} aperta modifica{{/if}}" data-row="{{p.id}}">
+                        <div class="m6-potere-testa">
+                            <img class="m6-potere-sfera" src="{{p.sphereIcon}}" alt="{{p.sphereLabel}}" title="{{p.sphereLabel}}">
+                            <b class="m6-potere-pallino{{#unless p.dot}} vuoto{{/unless}}" title="{{localize 'M6.Poteri.Pallino'}}">{{#if p.dot}}{{p.dot}}{{else}}·{{/if}}</b>
+                            <button type="button" class="m6-potere-nome" data-action="potereApri" title="{{localize 'M6.Poteri.Apri'}}" aria-expanded="{{p.editing}}"><span>{{p.label}}</span>{{#if p.parti.modificato.scheda}}<i class="fa-solid fa-pen m6-potere-segno" title="{{localize 'M6.Poteri.ModificatoScheda'}}" aria-hidden="true"></i>{{else if p.parti.modificato.mondo}}<i class="fa-solid fa-globe m6-potere-segno" title="{{localize 'M6.Poteri.ModificatoMondo'}}" aria-hidden="true"></i>{{/if}}</button>
+                            <span class="m6-potere-tipi">{{#if p.tipi.attivo}}<small class="m6-potere-tipo attivo">{{localize "M6.Poteri.Tipo.attivo"}}</small>{{/if}}{{#if p.tipi.passivo}}<small class="m6-potere-tipo passivo">{{localize "M6.Poteri.Tipo.passivo"}}</small>{{/if}}{{#if p.universale}}<small class="m6-potere-tipo universale" title="{{localize 'M6.Poteri.UniversaleHint' sphere=p.sphereLabel}}">{{localize "M6.Poteri.Universale"}}</small>{{/if}}{{#if p.tolto}}<small class="m6-potere-tipo tolto" title="{{localize 'M6.Poteri.ToltoHint' data=p.tolto.data motivo=p.tolto.motivo}}">{{localize "M6.Poteri.Tolto"}}</small>{{/if}}</span>
+                            <span class="m6-potere-amalgama{{#if p.amalgam}}{{#unless p.amalgamOwned}} manca{{/unless}}{{else}} niente{{/if}}" title="{{#if p.amalgam}}{{localize 'M6.Poteri.Con' sphere=p.amalgamLabel}}{{/if}}">{{#if p.amalgam}}<img src="{{p.amalgamIcon}}" alt="{{p.amalgamLabel}}">{{/if}}</span>
+                            <small class="m6-potere-usi" title="{{#if p.usesLabel}}{{p.usesLabel}}{{/if}}">{{p.usiTesto}}</small>
+                            <small class="m6-potere-costo"{{#if p.costoTitolo}} title="{{p.costoTitolo}}"{{/if}}>{{p.costoTesto}}</small>
+                            {{!-- «Usa» nella testa della riga, senza aprire la tendina (Blue, 25/9): sui poteri con
+                                 una parte attiva paga, conta gli usi e manda la carta; sui soli passivi «Mostra», la carta e basta. --}}
+                            <button type="button" class="m6-potere-usa{{#unless p.usa.ok}} spento{{/unless}}{{#unless p.tipi.attivo}} mostra{{/unless}}" data-action="potereUsa" data-row="{{p.id}}" title="{{#if p.tipi.attivo}}{{p.usa.hint}}{{else}}{{localize 'M6.Poteri.MostraHint'}}{{/if}}"><i class="fa-solid {{#if p.tipi.attivo}}fa-hand-sparkles{{else}}fa-comment{{/if}}" aria-hidden="true"></i> {{#if p.tipi.attivo}}{{localize "M6.Poteri.Usa"}}{{else}}{{localize "M6.Poteri.Mostra"}}{{/if}}</button>
+                            {{!-- La freccia apre e chiude come il nome (Blue, 24/9 sera: «la freccetta non funziona»). --}}
+                            <button type="button" class="m6-potere-chevron" data-action="potereApri" title="{{localize 'M6.Poteri.Apri'}}" aria-label="{{localize 'M6.Poteri.Apri'}}"><i class="fa-solid fa-chevron-down" aria-hidden="true"></i></button>
+                        </div>
+                        <div class="m6-potere-spiega">
+                            {{#if p.editing}}
+                                {{!-- In modifica: i campi della bandiera, salvati dal foglio come le Magick in atto. --}}
+                                <div class="m6-potere-campi">
+                                    <label class="m6-potere-campo-largo"><span>{{localize "M6.Poteri.Nome"}}</span><input type="text" name="flags.m6.poteri.{{p.id}}.name" value="{{p.name}}"></label>
+                                    <label><span>{{localize "M6.Poteri.Pallino"}}</span><select name="flags.m6.poteri.{{p.id}}.dot" data-dtype="Number"><option value="0"{{#unless p.dot}} selected{{/unless}}>{{localize "M6.Poteri.PallinoNessuno"}}</option>{{#each p.options.pallini as |o|}}<option value="{{o.value}}"{{#if (eq o.value p.dot)}} selected{{/if}}>{{o.label}}</option>{{/each}}</select></label>
+                                    <label><span>{{localize "M6.Poteri.Tipo.Label"}}</span><select name="flags.m6.poteri.{{p.id}}.type"><option value=""{{#unless p.type}} selected{{/unless}}>{{localize "M6.Poteri.Tipo.Nessuno"}}</option>{{#each p.options.tipi as |o|}}<option value="{{o.value}}"{{#if (eq o.value p.type)}} selected{{/if}}>{{o.label}}</option>{{/each}}</select></label>
+                                    <label><span>{{localize "M6.Poteri.Costo"}}</span><input type="text" name="flags.m6.poteri.{{p.id}}.cost" value="{{p.cost}}"></label>
+                                    {{!-- Di qualsiasi Sfera (25/9 sera): il segno si sposta su un'altra Sfera aperta. --}}
+                                    {{#if p.universale}}<label><span>{{localize "M6.Poteri.SegnatoIn"}}</span><select name="flags.m6.poteri.{{p.id}}.sphere">{{#each p.sfereSegno as |o|}}<option value="{{o.value}}"{{#if o.selected}} selected{{/if}}>{{o.label}}</option>{{/each}}</select></label>{{/if}}
+                                    {{!-- Le quattro parti (27/9): vuote, vale il testo di base; il testo di base sta nel segnaposto. --}}
+                                    <label class="m6-potere-campo-largo"><span>{{localize "M6.Poteri.Prerequisiti"}}</span><textarea name="flags.m6.poteri.{{p.id}}.prerequisitiTesto" rows="2" placeholder="{{#if p.parti.prerequisiti.testo}}{{p.parti.prerequisiti.testo}}{{else}}{{localize 'M6.Poteri.PrerequisitiNessuno'}}{{/if}}">{{p.prerequisitiTesto}}</textarea></label>
+                                    <label class="m6-potere-campo-largo"><span>{{localize "M6.Poteri.EffettoAttivo"}}</span><textarea name="flags.m6.poteri.{{p.id}}.attivo" rows="3" placeholder="{{#if p.parti.attivo.testo}}{{p.parti.attivo.testo}}{{else}}{{localize 'M6.Poteri.EffettoNessuno'}}{{/if}}">{{p.attivo}}</textarea></label>
+                                    <label class="m6-potere-campo-largo"><span>{{localize "M6.Poteri.EffettoPassivo"}}</span><textarea name="flags.m6.poteri.{{p.id}}.passivo" rows="3" placeholder="{{#if p.parti.passivo.testo}}{{p.parti.passivo.testo}}{{else}}{{localize 'M6.Poteri.EffettoNessuno'}}{{/if}}">{{p.passivo}}</textarea></label>
+                                    <label><span>{{localize "M6.Poteri.Amalgama"}}</span><select name="flags.m6.poteri.{{p.id}}.amalgam"><option value=""{{#unless p.amalgam}} selected{{/unless}}>{{localize "M6.Poteri.AmalgamaNessuna"}}</option>{{#each p.options.sfere as |o|}}<option value="{{o.value}}"{{#if (eq o.value p.amalgam)}} selected{{/if}}>{{o.label}}</option>{{/each}}</select></label>
+                                    {{#unless p.catalogId}}<label class="m6-potere-campo-largo"><span>{{localize "M6.Poteri.ConAmalgama"}}</span><textarea name="flags.m6.poteri.{{p.id}}.amalgamText" rows="2">{{p.amalgamText}}</textarea></label>{{/unless}}
+                                    <label class="m6-potere-campo-largo"><span>{{localize "M6.Poteri.Flavor"}}</span><textarea name="flags.m6.poteri.{{p.id}}.flavor" rows="2">{{p.flavor}}</textarea></label>
+                                </div>
+                            {{else}}
+                                {{#if p.formulaName}}<p class="m6-potere-testo m6-potere-matrice"><span class="m6-potere-k">{{localize "M6.Poteri.Matrice"}}</span>{{p.formulaName}}{{#if p.usesLabel}} · {{p.usesLabel}}{{/if}}</p>{{/if}}
+                                {{!-- La scelta fatta all'acquisto (tappa 3): l'Ambito, l'Abilità o l'incantesimo che il potere chiede; la salva il foglio. --}}
+                                {{#if p.sceltaCampo}}
+                                    <label class="m6-potere-testo m6-potere-scelta{{#unless p.scelta}} manca{{/unless}}"><span class="m6-potere-k">{{p.sceltaCampo.label}}</span>
+                                        <select name="flags.m6.poteri.{{p.id}}.scelta" {{#if ../locked}}disabled{{/if}}>
+                                            <option value=""{{#unless p.scelta}} selected{{/unless}}>{{localize "M6.Poteri.SceltaNessuna"}}</option>
+                                            {{#each p.sceltaCampo.options as |o|}}<option value="{{o.value}}"{{#if o.selected}} selected{{/if}}>{{o.label}}</option>{{/each}}
+                                        </select>
+                                    </label>
+                                {{/if}}
+                                {{!-- Le quattro parti (Blue, 27/9): Grado, Prerequisiti, Effetto attivo, Effetto passivo, ognuna col suo
+                                     titolo; l'Amalgama sta nel blocco del suo tipo con «Con Sfera» in chiave; le righe «Accesso con X»
+                                     con la chiave in evidenza. Una parte vuota dice «nessuno». --}}
+                                <div class="m6-potere-parti">
+                                    <p class="m6-potere-testo m6-potere-parte-grado"><span class="m6-potere-k">{{localize "M6.Poteri.Grado"}}</span>{{p.gradoLabel}}</p>
+                                    <div class="m6-potere-blocco prerequisiti{{#if p.parti.prerequisiti.vuota}} vuoto{{/if}}">
+                                        <span class="m6-potere-blocco-titolo">{{localize "M6.Poteri.Prerequisiti"}}</span>
+                                        {{#each p.parti.prerequisiti.righe as |r|}}<p class="m6-potere-blocco-riga">{{r}}</p>{{else}}<p class="m6-potere-blocco-riga"><em>{{localize "M6.Poteri.PrerequisitiNessuno"}}</em></p>{{/each}}
+                                    </div>
+                                    <div class="m6-potere-blocco attivo{{#if p.parti.attivo.vuota}} vuoto{{/if}}">
+                                        <span class="m6-potere-blocco-titolo">{{localize "M6.Poteri.EffettoAttivo"}}{{#if p.parti.attivo.misura}} <small class="m6-potere-misura">{{p.parti.attivo.misura}}</small>{{/if}}</span>
+                                        {{#each p.parti.attivo.voci as |v|}}<p class="m6-potere-blocco-riga">{{#if v.accesso}}<b class="m6-accesso">{{#if v.con}}{{localize "M6.Poteri.ConSfera"}}{{else}}{{localize "M6.Grimorio.Access"}}{{/if}} {{#each v.sfere as |sfera|}}<img class="m6-sfera-inline" src="systems/m6/assets/icons/sheet/{{sfera}}.png" alt="{{localize (concat 'M6.Spheres.' sfera)}}" title="{{localize (concat 'M6.Spheres.' sfera)}}">{{/each}}:</b> {{else if v.chiave}}<b>{{v.chiave}}:</b> {{/if}}{{v.testo}}</p>{{else}}<p class="m6-potere-blocco-riga"><em>{{localize "M6.Poteri.EffettoNessuno"}}</em></p>{{/each}}
+                                    </div>
+                                    <div class="m6-potere-blocco passivo{{#if p.parti.passivo.vuota}} vuoto{{/if}}">
+                                        <span class="m6-potere-blocco-titolo">{{localize "M6.Poteri.EffettoPassivo"}}{{#if p.parti.passivo.misura}} <small class="m6-potere-misura">{{p.parti.passivo.misura}}</small>{{/if}}</span>
+                                        {{#each p.parti.passivo.voci as |v|}}<p class="m6-potere-blocco-riga">{{#if v.accesso}}<b class="m6-accesso">{{#if v.con}}{{localize "M6.Poteri.ConSfera"}}{{else}}{{localize "M6.Grimorio.Access"}}{{/if}} {{#each v.sfere as |sfera|}}<img class="m6-sfera-inline" src="systems/m6/assets/icons/sheet/{{sfera}}.png" alt="{{localize (concat 'M6.Spheres.' sfera)}}" title="{{localize (concat 'M6.Spheres.' sfera)}}">{{/each}}:</b> {{else if v.chiave}}<b>{{v.chiave}}:</b> {{/if}}{{v.testo}}</p>{{else}}<p class="m6-potere-blocco-riga"><em>{{localize "M6.Poteri.EffettoNessuno"}}</em></p>{{/each}}
+                                    </div>
+                                </div>
+                                {{#if p.flavor}}<p class="m6-potere-flavor"><em>{{p.flavor}}</em></p>{{/if}}
+                            {{/if}}
+                            <div class="m6-potere-fondo">
+                                <button type="button" data-action="potereModifica" data-row="{{p.id}}" {{#if ../locked}}disabled{{/if}}><i class="fa-solid {{#if p.editing}}fa-check{{else}}fa-pen{{/if}}" aria-hidden="true"></i> {{#if p.editing}}{{localize "M6.Poteri.Fatto"}}{{else}}{{localize "M6.Poteri.Modifica"}}{{/if}}</button>
+                                {{#if p.modificaBase}}<button type="button" class="m6-potere-base" data-action="potereModificaBase" data-row="{{p.id}}" title="{{localize 'M6.Poteri.ModificaBaseHint'}}"><i class="fa-solid fa-globe" aria-hidden="true"></i> {{localize "M6.Poteri.ModificaBase"}}</button>{{/if}}
+                                <button type="button" data-action="potereTogli" data-row="{{p.id}}" {{#if ../locked}}disabled{{/if}}><i class="fa-solid fa-trash" aria-hidden="true"></i> {{localize "M6.Poteri.Togli"}}</button>
+                            </div>
+                        </div>
+                    </div>
+                {{/each}}
+            </div>
+        </section>
+
+        {{!-- Gli Ambiti: la tavola dei sette livelli, in una tendina a tutta larghezza. --}}
+        <details class="m6-riq m6-riq-pagina m6-riq-ambiti-tavola">
+            <summary class="m6-riq-title"><span>{{localize "M6.Scopes.TableTitle"}}</span><small class="m6-riq-conto">{{localize "M6.Poteri.Tavola"}}</small><i class="fa-solid fa-chevron-down" aria-hidden="true"></i></summary>
+            {{> "systems/m6/templates/actor/parts/scope-table.hbs"}}
+        </details>
+    </div>
+</section>

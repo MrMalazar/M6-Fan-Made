@@ -1,0 +1,62 @@
+{{!-- Passo 3 · la Bussola: Ambizione, Desiderio, Convinzioni, con le proposte del Credo e i cataloghi. --}}
+<section class="m6-guidata-riq m6-guidata-cosa">
+    <header class="m6-guidata-riq-titolo"><span>{{localize "M6.Guidata.Cosa"}}</span><small>{{passo.sotto}}</small></header>
+    <h2 class="m6-guidata-domanda">{{passo.domanda}}</h2>
+    <div class="m6-guidata-campo">
+        <label class="m6-guidata-etichetta" for="m6-guidata-ambition"><i class="fa-solid fa-mountain-sun" aria-hidden="true"></i> {{localize "M6.Guidata.Bussola.Ambizione"}} <small>{{localize "M6.Guidata.Bussola.AmbizioneHint"}}</small></label>
+        <div class="m6-guidata-riga-campo">
+            <input type="text" id="m6-guidata-ambition" name="system.headers.ambition" value="{{corpo.ambition}}" {{#unless @root.canEdit}}disabled{{/unless}}>
+            <button type="button" class="m6-guidata-tastino" data-action="catalogoApri" data-kind="ambizione" title="{{localize 'M6.Guidata.Catalogo'}}" {{#unless @root.canEdit}}disabled{{/unless}}><i class="fa-solid fa-book-open" aria-hidden="true"></i></button>
+        </div>
+        {{#if corpo.proposte.ambizione.length}}
+            <div class="m6-guidata-proposte"><small>{{#if corpo.credo}}{{localize "M6.Guidata.Proposte"}}{{else}}{{localize "M6.Guidata.ProposteComuni"}}{{/if}}</small>
+                {{#each corpo.proposte.ambizione as |p|}}<button type="button" class="m6-guidata-chip" data-action="propostaMetti" data-kind="ambizione" data-uuid="{{p.uuid}}" title="{{localize 'M6.Guidata.Aggiungi'}}" {{#unless @root.canEdit}}disabled{{/unless}}><b>{{p.name}}</b> {{p.text}}</button>{{/each}}
+            </div>
+        {{/if}}
+    </div>
+    <div class="m6-guidata-campo">
+        <label class="m6-guidata-etichetta" for="m6-guidata-desire"><i class="fa-solid fa-fire" aria-hidden="true"></i> {{localize "M6.Guidata.Bussola.Desiderio"}} <small>{{localize "M6.Guidata.Bussola.DesiderioHint"}}</small></label>
+        <div class="m6-guidata-riga-campo">
+            <input type="text" id="m6-guidata-desire" name="system.headers.desire" value="{{corpo.desire}}" {{#unless @root.canEdit}}disabled{{/unless}}>
+            <button type="button" class="m6-guidata-tastino" data-action="catalogoApri" data-kind="desiderio" title="{{localize 'M6.Guidata.Catalogo'}}" {{#unless @root.canEdit}}disabled{{/unless}}><i class="fa-solid fa-book-open" aria-hidden="true"></i></button>
+        </div>
+        {{#if corpo.proposte.desiderio.length}}
+            <div class="m6-guidata-proposte"><small>{{#if corpo.credo}}{{localize "M6.Guidata.Proposte"}}{{else}}{{localize "M6.Guidata.ProposteComuni"}}{{/if}}</small>
+                {{#each corpo.proposte.desiderio as |p|}}<button type="button" class="m6-guidata-chip" data-action="propostaMetti" data-kind="desiderio" data-uuid="{{p.uuid}}" title="{{localize 'M6.Guidata.Aggiungi'}}" {{#unless @root.canEdit}}disabled{{/unless}}><b>{{p.name}}</b> {{p.text}}</button>{{/each}}
+            </div>
+        {{/if}}
+    </div>
+    <div class="m6-guidata-campo">
+        <div class="m6-guidata-etichetta"><i class="fa-solid fa-scale-balanced" aria-hidden="true"></i> {{localize "M6.Guidata.Bussola.Convinzioni"}} <small>{{localize "M6.Guidata.Bussola.ConvinzioniHint"}}</small>
+            <button type="button" class="m6-guidata-tastino" data-action="catalogoApri" data-kind="convinzione" title="{{localize 'M6.Guidata.Catalogo'}}" {{#unless @root.canEdit}}disabled{{/unless}}><i class="fa-solid fa-book-open" aria-hidden="true"></i></button>
+        </div>
+        {{#each corpo.convinzioni as |row|}}
+            <div class="m6-guidata-riga-lista">
+                <div class="m6-guidata-riga-testo"><b>{{#if row.text}}{{row.text}}{{else}}<em class="m6-guidata-vuoto">{{localize "M6.Guidata.Bussola.ConvinzioneSenzaTesto"}}</em>{{/if}}</b>{{#if row.groupLabel}} <small class="m6-guidata-tag">{{row.groupLabel}}</small>{{/if}}
+                    {{#if row.serve}}<small class="m6-guidata-sotto"><i class="fa-solid fa-plus" aria-hidden="true"></i> {{row.serve}}</small>{{/if}}
+                    {{#if row.cross}}<small class="m6-guidata-sotto"><i class="fa-solid fa-minus" aria-hidden="true"></i> {{row.cross}}</small>{{/if}}
+                </div>
+                <button type="button" class="m6-guidata-tastino" data-action="rigaTogli" data-table="convinzioni" data-row="{{row.id}}" title="{{localize 'M6.Guidata.Togli'}}" {{#unless @root.canEdit}}disabled{{/unless}}><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+            </div>
+        {{else}}
+            <p class="m6-guidata-nota-passo">{{localize "M6.Guidata.Bussola.ConvinzioneVuota"}}</p>
+        {{/each}}
+        {{#if corpo.proposte.convinzione.length}}
+            <div class="m6-guidata-proposte"><small>{{#if corpo.credo}}{{localize "M6.Guidata.Proposte"}}{{else}}{{localize "M6.Guidata.ProposteComuni"}}{{/if}}</small>
+                {{#each corpo.proposte.convinzione as |p|}}<button type="button" class="m6-guidata-chip" data-action="propostaMetti" data-kind="convinzione" data-uuid="{{p.uuid}}" title="{{#if p.gloss}}+ {{p.gloss}}{{/if}}{{#if p.cross}} · − {{p.cross}}{{/if}}" {{#unless @root.canEdit}}disabled{{/unless}}>{{p.text}}</button>{{/each}}
+            </div>
+        {{/if}}
+    </div>
+</section>
+<aside class="m6-guidata-spiega">
+    {{> "systems/m6/templates/guidata/perche.hbs"}}
+    <section class="m6-guidata-riq m6-guidata-guadagni">
+        <header class="m6-guidata-riq-titolo"><span>{{localize "M6.Guidata.Guadagni"}}</span></header>
+        <div class="m6-guidata-voci">
+            <div class="m6-guidata-voce"><i class="fa-solid fa-mountain-sun" aria-hidden="true"></i> {{localize "M6.Guidata.Bussola.GuadagniAmbizione"}}</div>
+            <div class="m6-guidata-voce"><i class="fa-solid fa-fire" aria-hidden="true"></i> {{localize "M6.Guidata.Bussola.GuadagniDesiderio"}}</div>
+            <div class="m6-guidata-voce"><i class="fa-solid fa-scale-balanced" aria-hidden="true"></i> {{localize "M6.Guidata.Bussola.GuadagniConvinzioni"}} <b>{{corpo.convinzioni.length}}/3</b></div>
+            <div class="m6-guidata-voce"><i class="fa-solid fa-anchor" aria-hidden="true"></i> {{localize "M6.Guidata.Bussola.GuadagniAncore"}} <b>{{localize "M6.Guidata.Credo.NelPasso" n=13}}</b></div>
+        </div>
+    </section>
+</aside>

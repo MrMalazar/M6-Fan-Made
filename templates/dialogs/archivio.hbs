@@ -1,0 +1,64 @@
+{{!-- L'archivio: cerca, i gruppi a tendina (9/9), le linguette dei livelli
+     per Pregi e Difetti, apri la voce col clic sul nome, «+» per metterla sulla scheda. --}}
+<div class="m6-archivio" data-kind="{{kind}}">
+    {{#if kinds.length}}
+        {{!-- Gli Elementi (10/9): Background, Pregi e Difetti in una finestra, una linguetta per archivio. --}}
+        <div class="m6-archivio-kinds" role="tablist" aria-label="{{localize 'M6.Archivi.KindTabs'}}">
+            {{#each kinds as |tab|}}
+                <button type="button" role="tab" class="{{#if tab.active}}active{{/if}}" data-role="archivioKind" data-kind="{{tab.id}}" aria-selected="{{#if tab.active}}true{{else}}false{{/if}}">{{tab.label}}</button>
+            {{/each}}
+        </div>
+    {{/if}}
+    <div class="m6-archivio-head">
+        <input type="search" data-role="archivioSearch" placeholder="{{localize 'M6.Archivi.Search'}}" aria-label="{{localize 'M6.Archivi.Search'}}">
+        <button type="button" class="m6-archivio-fold" data-role="archivioFold" title="{{localize 'M6.Archivi.FoldHint'}}"><i class="fa-solid fa-compress" aria-hidden="true"></i> <span>{{localize "M6.Archivi.FoldAll"}}</span></button>
+        <small>{{localize "M6.Archivi.Count" count=count}}</small>
+    </div>
+    {{#if levels.length}}
+        {{!-- Il livello (9/9): «a 3» mostra le voci che valgono 3, o che arrivano a 3. --}}
+        <div class="m6-archivio-levels" role="group" aria-label="{{localize 'M6.Archivi.Level'}}">
+            <span>{{localize "M6.Archivi.Level"}}</span>
+            <button type="button" class="active" data-role="archivioLevel" data-level="0">{{localize "M6.Archivi.LevelAll"}}</button>
+            {{#each levels as |level|}}
+                <button type="button" data-role="archivioLevel" data-level="{{level}}">{{level}}</button>
+            {{/each}}
+        </div>
+    {{/if}}
+    <p class="m6-archivio-hint">{{localize "M6.Archivi.Hint"}}</p>
+    <div class="m6-archivio-list">
+        {{#each groups as |group|}}
+            {{#if group.name}}
+            <details class="m6-archivio-group" data-role="archivioGroup" open>
+                <summary>
+                    <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+                    <h3>{{group.name}}</h3>
+                    <small>{{group.count}}</small>
+                </summary>
+            {{else}}
+            <section class="m6-archivio-group" data-role="archivioGroup">
+            {{/if}}
+                {{#each group.entries as |entry|}}
+                    <article class="m6-archivio-entry" data-role="archivioEntry" data-uuid="{{entry.uuid}}">
+                        <div class="m6-archivio-row">
+                            <button type="button" class="m6-archivio-name" data-role="archivioToggle">
+                                <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+                                <span>{{entry.name}}</span>
+                                {{#if entry.cost}}<small>{{entry.cost}}</small>{{/if}}
+                            </button>
+                            {{#if ../../canAdd}}
+                                <button type="button" class="m6-archivio-add" data-role="archivioAdd" title="{{localize 'M6.Archivi.Add'}}" aria-label="{{localize 'M6.Archivi.Add'}}"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+                            {{/if}}
+                        </div>
+                        <div class="m6-archivio-content">{{{entry.content}}}</div>
+                    </article>
+                {{/each}}
+            {{#if group.name}}
+            </details>
+            {{else}}
+            </section>
+            {{/if}}
+        {{else}}
+            <p class="m6-archivio-hint">{{localize "M6.Archivi.Empty"}}</p>
+        {{/each}}
+    </div>
+</div>

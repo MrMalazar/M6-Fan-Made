@@ -1,0 +1,9 @@
+{{!-- «Dai a un PG»: si sceglie un personaggio dei giocatori; l'oggetto si crea su di lui e si toglie dal nemico. --}}
+<form class="dialog-contents m6-item-form m6-nemico-form">
+    <div class="form-group">
+        <label>{{localize "M6.Nemico.DaiChi"}}</label>
+        <select name="pg" autofocus>
+            {{#each personaggi as |pg|}}<option value="{{pg.id}}">{{pg.name}}</option>{{/each}}
+        </select>
+    </div>
+</form>

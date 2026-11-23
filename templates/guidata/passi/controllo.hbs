@@ -1,0 +1,30 @@
+{{!-- Passo 13 · il controllo finale: i passi e i conti, tutto verde quando la scheda è pronta. --}}
+<section class="m6-guidata-riq m6-guidata-cosa">
+    <header class="m6-guidata-riq-titolo"><span>{{localize "M6.Guidata.Cosa"}}</span><small>{{passo.sotto}}</small></header>
+    <h2 class="m6-guidata-domanda">{{passo.domanda}}</h2>
+    <p class="m6-guidata-nota-passo {{#if corpo.pronto}}exact{{else}}under{{/if}}">{{#if corpo.pronto}}{{localize "M6.Guidata.Controllo.Pronto"}}{{else}}{{localize "M6.Guidata.Controllo.Mancano" n=corpo.mancano}}{{/if}}</p>
+    <div class="m6-guidata-due-colonne">
+        <div>
+            <div class="m6-guidata-etichetta">{{localize "M6.Guidata.Controllo.Passi"}}</div>
+            {{#each corpo.voci as |voce|}}
+                <button type="button" class="m6-guidata-riga-lista controllo {{#if voce.ok}}exact{{else}}under{{/if}}" data-action="passoVai" data-passo="{{voce.n}}"><i class="fa-solid {{#if voce.ok}}fa-circle-check{{else}}fa-circle-xmark{{/if}}" aria-hidden="true"></i> <span>{{voce.n}} · {{voce.label}}</span></button>
+            {{/each}}
+        </div>
+        <div>
+            <div class="m6-guidata-etichetta">{{localize "M6.Guidata.Controllo.Conti"}}</div>
+            {{#each corpo.conti as |conto|}}
+                <div class="m6-guidata-riga-lista controllo {{conto.state}}"><i class="fa-solid {{#if (eq conto.state "exact")}}fa-circle-check{{else}}fa-circle-xmark{{/if}}" aria-hidden="true"></i> <span>{{conto.label}}</span> <b>{{conto.text}}</b></div>
+            {{/each}}
+        </div>
+    </div>
+</section>
+<aside class="m6-guidata-spiega">
+    {{> "systems/m6/templates/guidata/perche.hbs"}}
+    <section class="m6-guidata-riq m6-guidata-guadagni">
+        <header class="m6-guidata-riq-titolo"><span>{{localize "M6.Guidata.Guadagni"}}</span></header>
+        <div class="m6-guidata-voci">
+            <div class="m6-guidata-voce {{#if corpo.pronto}}exact{{else}}under{{/if}}"><i class="fa-solid fa-wand-sparkles" aria-hidden="true"></i> {{#if corpo.pronto}}{{localize "M6.Guidata.Pronto"}}{{else}}{{localize "M6.Guidata.Controllo.Mancano" n=corpo.mancano}}{{/if}}</div>
+            <button type="button" class="m6-guidata-tasto" data-action="schedaApri"><i class="fa-solid fa-address-card" aria-hidden="true"></i> {{localize "M6.Guidata.ApriScheda"}}</button>
+        </div>
+    </section>
+</aside>

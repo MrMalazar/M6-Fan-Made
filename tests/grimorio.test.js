@@ -1,0 +1,267 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { EFFETTI, FORMULE } from "../scripts/data/effetti.js";
+import { FORMULE_M6 } from "../scripts/data/formule.js";
+import { effectAvailable, effectEpic, effectSphereLevels, findEffetto, findFormula, formulaPick, formuleLabels, prepareGrimorio, prepareGrimorioFormule, prepareGrimorioSpheres, splitScopes } from "../scripts/grimorio.js";
+import { ustioneSplit, normalizeEffectKind } from "../scripts/paradox-burst.js";
+import { paintSalute } from "../scripts/salute.js";
+import { renderRollCard } from "../scripts/roll-card.js";
+
+// Il Grimorio: le nove Sfere del manuale, livelli da 1 a 5, id unici.
+assert.ok(EFFETTI.length > 200);
+assert.equal(new Set(EFFETTI.map((e) => e.id)).size, EFFETTI.length);
+assert.deepEqual([...new Set(EFFETTI.map((e) => e.sphere))].sort(), ["correspondence", "entropy", "forces", "life", "matter", "mind", "prime", "spirit", "time"]);
+assert.ok(EFFETTI.every((e) => e.level >= 1 && e.level <= 5 && e.name && e.text));
+const proiettare = findEffetto("forces-2-proiettare-luce-e-suono");
+// Nei blocchi (6/9) «(diretta)» segna la compagna che fa il lavoro diretto, senza livello.
+assert.deepEqual(proiettare.extras, [{ sphere: "prime", level: 1, required: true }]);
+assert.equal(proiettare.pairings.find((pairing) => pairing.sphere === "prime").required, true);
+const curvare = findEffetto("forces-2-curvare-la-luce-o-il-suono");
+assert.equal(curvare.extras.length, 0);
+
+// Si apre con la Sfera che lo porta: la compagna diretta non chiude la porta (regola del ponte).
+assert.equal(effectAvailable(proiettare, { forces: 2 }), true);
+assert.equal(effectAvailable(proiettare, { forces: 2, prime: 1 }), true);
+assert.equal(effectAvailable(curvare, { forces: 2 }), true);
+assert.equal(effectAvailable(curvare, { forces: 1 }), false);
+assert.deepEqual(effectSphereLevels(proiettare), { forces: 2, prime: 1 });
+assert.deepEqual(effectSphereLevels(curvare), { forces: 2 });
+// L'Epicità di un effetto parte dal suo livello (Blue, 2/10); una scritta a parte vince; mai sotto 1 né sopra 7.
+assert.equal(effectEpic(curvare), 2);
+// Le imprese impossibili che il libro scrive (2/10): Viaggiare nel tempo 7, Rianimare un morto recente 6.
+assert.deepEqual([findEffetto("time-5-viaggiare-nel-tempo")?.epic, effectEpic(findEffetto("time-5-viaggiare-nel-tempo"))], [7, 7]);
+assert.deepEqual([findEffetto("spirit-4-rianimare-un-morto-recente")?.epic, effectEpic(findEffetto("spirit-4-rianimare-un-morto-recente"))], [6, 6]);
+assert.equal(EFFETTI.filter((entry) => entry.epic).length, 2, "solo le due scritte nel libro; gli altri partono dal loro livello");
+assert.ok(EFFETTI.every((entry) => !/\(beneficio\)|\(malus \d/.test(entry.scopes)), "Malus e bonus (2/10): il Beneficio è il bonus, i livelli del malus li dà la colonna");
+assert.deepEqual([effectEpic({ level: 5, epic: 7 }), effectEpic({}), effectEpic({ level: 9 })], [7, 1, 7]);
+
+const grimorio = prepareGrimorio({ forces: 2, mind: 1 });
+assert.deepEqual(grimorio.map((g) => g.sphere), ["forces", "mind"]);
+assert.deepEqual(grimorio[0].levels.map((l) => l.level), [1, 2]);
+assert.ok(grimorio[0].levels[1].entries.some((e) => e.id === curvare.id));
+assert.ok(grimorio[0].levels[1].entries.some((e) => e.id === proiettare.id));
+// Il Primordio senza Primordio (7/9): niente «di lato», si paga in Quintessenza.
+assert.deepEqual(grimorio[0].levels[1].entries.find((e) => e.id === proiettare.id).missing, []);
+assert.equal(grimorio[0].levels[1].entries.find((e) => e.id === proiettare.id).missingPrime, true);
+assert.equal(prepareGrimorio({ forces: 2, prime: 1 })[0].levels[1].entries.find((e) => e.id === proiettare.id).missingPrime, false);
+assert.equal(prepareGrimorio({}).length, 0);
+
+// L'Ustione va dove dice l'Effetto: fisico, mentale, metà e metà per difetto.
+assert.equal(normalizeEffectKind("boh"), "");
+assert.deepEqual(ustioneSplit({ threshold: 5, tens: 2, kind: "physical" }), { total: 5, applied: 5, pa: 1, ps: 4, ma: 0, ms: 0, kind: "physical" });
+assert.deepEqual(ustioneSplit({ threshold: 5, tens: 0, kind: "" }), { total: 5, applied: 5, pa: 0, ps: 5, ma: 0, ms: 0, kind: "" });
+assert.deepEqual(ustioneSplit({ threshold: 4, tens: 3, kind: "mental" }), { total: 4, applied: 4, pa: 0, ps: 0, ma: 1, ms: 3, kind: "mental" });
+// Variabile (6/9): il punto dispari cade a caso, sul fisico o sul mentale.
+assert.deepEqual(ustioneSplit({ threshold: 5, tens: 4, kind: "variable", random: () => 0.1 }), { total: 5, applied: 5, pa: 2, ps: 1, ma: 0, ms: 2, kind: "variable" });
+assert.deepEqual(ustioneSplit({ threshold: 5, tens: 4, kind: "variable", random: () => 0.9 }), { total: 5, applied: 5, pa: 2, ps: 0, ma: 0, ms: 3, kind: "variable" });
+assert.deepEqual(ustioneSplit({ threshold: 4, tens: 0, kind: "variable", random: () => 0.9 }), { total: 4, applied: 4, pa: 0, ps: 2, ma: 0, ms: 2, kind: "variable" });
+
+// La Salute: fisici da sinistra, mentali da destra.
+assert.deepEqual(paintSalute({ pa: 1, ps: 1, ma: 1, ms: 2 }, 7), ["pa", "ps", "", "", "ms", "ms", "ma"]);
+assert.deepEqual(paintSalute({ pa: 0, ps: 3, ma: 0, ms: 3 }, 5), ["ps", "ps", "ps", "ms", "ms"]);
+
+// La carta porta Obiettivo ed Effetto; il dialogo li chiede sopra le Sfere, con la Quintessenza sotto l'Armonia.
+const card = renderRollCard({ goal: "Invisibilità", effectKind: "M6.Arete.EffectKinds.physical", threshold: 2 }, (k) => k);
+assert.match(card, /M6\.RollCard\.Goal<\/b><span class="m6-roll-value">Invisibilità<\/span>[\s\S]*M6\.RollCard\.Effect<\/b><span class="m6-roll-value">M6\.Arete\.EffectKinds\.physical<\/span>/);
+const dialog = readFileSync(new URL("../templates/dialogs/arete-roll.hbs", import.meta.url), "utf8");
+// L'Obiettivo sta in cima, con l'Effetto sotto, poi Sfere Effetto e Ambiti (10/9 notte).
+assert.match(dialog, /name="goal"[\s\S]*data-role="grimorioOpen"[\s\S]*name="effectKind"[\s\S]*Arete\.Spheres[\s\S]*Scopes\.Label/);
+const grimorioTemplate = readFileSync(new URL("../templates/dialogs/grimorio.hbs", import.meta.url), "utf8");
+assert.match(grimorioTemplate, /data-role="grimorioSearch"[\s\S]*data-effetto="\{\{entry\.id\}\}"/);
+const arete = readFileSync(new URL("../scripts/arete.js", import.meta.url), "utf8");
+// Col Sistema la finestra del Grimorio scrive e basta: il lancio, la Quintessenza e il Paradosso stanno nel riquadro del Tiro.
+assert.doesNotMatch(arete, /ramoCPool|balanceBefore|costo\.quintessenza/);
+// L'Ustione non si segna più da sola: la scelta sta nei tasti sotto la carta (ustione.js).
+const ustione = readFileSync(new URL("../scripts/ustione.js", import.meta.url), "utf8");
+assert.match(ustione, /applyUstione\(actor, \{ threshold: state\.threshold, tens: card\.ustione\.tens, kind: card\.ustione\.kind, lock: true \}\)/);
+
+console.log("Grimorio, Ustione e Salute: test passati.");
+
+// Il formato nuovo (6/9): Corrispondenza a blocchi, con le Sfere compagne e
+// gli Ambiti consigliati; «Mappare la zona» ha assorbito «Cercare nell'area».
+const corr = EFFETTI.filter((entry) => entry.sphere === "correspondence");
+assert.equal(corr.length, 26);
+assert.deepEqual(prepareGrimorio({ correspondence: 4, mind: 2, life: 1 }, (k) => k)[0].levels[3].entries.find((entry) => entry.id === "correspondence-4-ubiquita").pairings.map((pairing) => pairing.dots), ["●●", "●●●"]);
+const mappare = corr.find((entry) => entry.id === "correspondence-1-mappare-la-zona");
+assert.equal(mappare.pairings.length, 8);
+assert.equal(mappare.pairings[0].sphere, "entropy");
+assert.match(mappare.scopes, /^Area per le dimensioni/);
+assert.doesNotMatch(mappare.text, /Tutto questo, dal primo giorno/);
+assert.equal(corr.find((entry) => entry.id === "correspondence-1-sapere-dove-sei").pairings[0].sphere, "entropy");
+assert.equal(corr.some((entry) => entry.id === "correspondence-1-cercare-nell-area"), false);
+// Entropia nel formato nuovo (6/9): ventiquattro blocchi, Pesare le probabilità
+// assorbe Fiutare il pericolo, Sigillare un Giuramento chiude con gli Ambiti.
+const entro = EFFETTI.filter((entry) => entry.sphere === "entropy");
+assert.equal(entro.length, 31);
+assert.equal(entro.some((entry) => entry.id === "entropy-1-fiutare-il-pericolo"), false);
+assert.equal(entro.find((entry) => entry.id === "entropy-1-pesare-le-probabilita").pairings.length, 6);
+assert.match(entro.find((entry) => entry.id === "entropy-5-sigillare-un-giuramento").scopes, /^Condizioni 1 per ogni clausola/);
+assert.equal(entro.every((entry) => entry.pairings.length > 0 && entry.scopes), true);
+// Forze nel formato nuovo (6/9): ventotto blocchi, tutti con compagne e Ambiti.
+const forze = EFFETTI.filter((entry) => entry.sphere === "forces");
+assert.equal(forze.length, 35);
+assert.equal(forze.every((entry) => entry.pairings.length > 0 && entry.scopes), true);
+assert.equal(forze.find((entry) => entry.id === "forces-3-telecinesi").pairings.length, 5);
+// Materia nel formato nuovo (6/9): ventiquattro blocchi; «(obbligata)» nel nome segna la compagna necessaria.
+const materia = EFFETTI.filter((entry) => entry.sphere === "matter");
+assert.equal(materia.length, 29);
+assert.equal(materia.every((entry) => entry.pairings.length > 0 && entry.scopes), true);
+// Innestare al terzo pallino con la Vita ●●● diretta (7/9): il livello della compagna si scrive nel nome.
+assert.deepEqual(materia.find((entry) => entry.id === "matter-3-innestare-la-macchina-nella-carne").extras, [{ sphere: "life", level: 3, required: true }, { sphere: "prime", level: 1, required: true }]);
+assert.deepEqual(prepareGrimorio({ matter: 3, life: 1 }, (k) => k).find((group) => group.sphere === "matter").levels[2].entries.find((entry) => entry.id === "matter-3-innestare-la-macchina-nella-carne").missing, ["M6.Spheres.life ●●●"]);
+assert.equal(materia.some((entry) => entry.id === "matter-2-invecchiare-un-oggetto"), false);
+assert.equal(materia.some((entry) => entry.id === "matter-3-rimodellare"), true);
+assert.equal(materia.some((entry) => entry.name === "Rendere permanente il mutamento"), false);
+assert.equal(materia.find((entry) => entry.id === "matter-4-disgregare").formule[0], "annientare");
+// Mente nel formato nuovo (6/9): venticinque blocchi.
+const mente = EFFETTI.filter((entry) => entry.sphere === "mind");
+assert.equal(mente.length, 36);
+assert.equal(mente.every((entry) => entry.pairings.length > 0 && entry.scopes), true);
+assert.deepEqual(mente.find((entry) => entry.id === "mind-4-mostrarti-in-corpo-di-luce").extras.map((extra) => extra.sphere), ["spirit", "prime"]);
+// Primordio nel formato nuovo (6/9): ventisei blocchi.
+const primordio = EFFETTI.filter((entry) => entry.sphere === "prime");
+assert.equal(primordio.length, 27);
+assert.equal(primordio.every((entry) => entry.pairings.length > 0 && entry.scopes), true);
+assert.equal(primordio.some((entry) => entry.id === "prime-3-rianimare-un-morto-recente"), false);
+// Spirito nel formato nuovo (6/9): ventinove blocchi.
+const spirito = EFFETTI.filter((entry) => entry.sphere === "spirit");
+assert.equal(spirito.length, 33);
+assert.equal(spirito.every((entry) => entry.pairings.length > 0 && entry.scopes), true);
+assert.deepEqual(spirito.find((entry) => entry.id === "spirit-1-riconoscere-il-sovrannaturale").extras.map((extra) => extra.sphere), ["life"]);
+assert.ok(spirito.some((entry) => entry.id === "spirit-4-abitare-un-corpo"));
+assert.equal(spirito.some((entry) => entry.name === "Creare un Feticcio"), false);
+// Tempo nel formato nuovo (6/9): ventuno blocchi.
+const tempo = EFFETTI.filter((entry) => entry.sphere === "time");
+assert.equal(tempo.length, 22);
+assert.equal(tempo.every((entry) => entry.pairings.length > 0 && entry.scopes), true);
+assert.deepEqual(tempo.find((entry) => entry.id === "time-4-avvertire-il-te-di-ieri").extras.map((extra) => extra.sphere), ["mind"]);
+// Vita nel formato nuovo (6/9): ventiquattro blocchi. Tutte le nove Sfere sono a blocchi:
+// ogni effetto ha gli Ambiti consigliati, e solo due di Corrispondenza stanno senza compagne.
+const vita = EFFETTI.filter((entry) => entry.sphere === "life");
+assert.equal(vita.length, 30);
+assert.equal(vita.every((entry) => entry.pairings.length > 0 && entry.scopes), true);
+assert.deepEqual(vita.find((entry) => entry.id === "life-3-animare-un-cadavere").extras.map((extra) => extra.sphere), ["prime"]);
+assert.ok(vita.some((entry) => entry.id === "life-3-pilotare-un-corpo"));
+assert.ok(vita.some((entry) => entry.id === "life-5-immunita-fisica"));
+assert.equal(vita.some((entry) => entry.name === "Rendere permanente il mutamento"), false);
+assert.equal(EFFETTI.every((entry) => entry.scopes), true);
+assert.equal(EFFETTI.filter((entry) => entry.pairings.length === 0).length, 2);
+// Una copia sola per effetto (verdetto di Blue, 6/9), tranne le vie volute: Addormentare (Mente, Vita), Rendere permanente il mutamento (Materia, Vita), Riconoscere il sovrannaturale (Mente, Spirito).
+const perNome = new Map();
+for (const entry of EFFETTI) perNome.set(entry.name, (perNome.get(entry.name) ?? 0) + 1);
+// Dal 7/9: Contrastare Magick porta lo stesso nome in tutte e nove le Sfere; Rendere permanente resta solo in Vita, Riconoscere il sovrannaturale solo in Spirito (in Mente sta dentro Lettura dell'aura).
+// E Ferire creatura (7/9, verdetto di Blue: «una sola spell», colorata per Sfera) in otto Sfere: tutte tranne il Tempo.
+assert.deepEqual([...perNome].filter(([, n]) => n > 1).map(([name]) => name).sort(), ["Accelerare e rallentare", "Addormentare", "Contrastare Magick", "Ferire creatura"]);
+assert.equal(perNome.get("Contrastare Magick"), 9);
+assert.equal(perNome.get("Ferire creatura"), 8);
+assert.equal(EFFETTI.filter((entry) => entry.name === "Ferire creatura").every((entry) => entry.formule.includes("danneggiare")), true);
+// Il giocatore vede solo le compagne che ha (verdetto di Blue, 6/9), e gli
+// Ambiti consigliati una riga per Ambito.
+const grimorioIt = prepareGrimorio({ correspondence: 2, life: 1, matter: 1 }, (k) => k);
+const shown = grimorioIt[0].levels[1].entries.find((entry) => entry.name === "Marchiare un bersaglio");
+assert.deepEqual(shown.pairings.map((pairing) => pairing.label), ["M6.Spheres.life", "M6.Spheres.matter"]);
+assert.match(shown.pairings[0].icon, /life\.png$/);
+assert.equal(Array.isArray(shown.scopes), true);
+assert.equal(shown.scopes.length, 3);
+// Le quattro compagne generali (Corrispondenza, Spirito, Tempo, Entropia) sono regole nel LIBRO: nelle tavole restano solo quando dicono di più.
+assert.equal(EFFETTI.filter((entry) => entry.pairings.some((pairing) => pairing.sphere === "correspondence" && /non vedi\.$/.test(pairing.text))).length, 0);
+assert.match(shown.scopes[0], /^Durata per quanto canta il marchio/);
+assert.deepEqual(splitScopes("Area per un campo, un giardino, un raccolto. Durata per quanto dura. Potenza (danni) se la malattia ferisce. Condizioni (malus 2, ostacolare) per quanto pesa."), ["Area per un campo, un giardino, un raccolto.", "Durata per quanto dura.", "Potenza (danni) se la malattia ferisce.", "Condizioni (malus 2, ostacolare) per quanto pesa."]);
+assert.deepEqual(prepareGrimorio({ correspondence: 2 }, (k) => k)[0].levels[1].entries.find((entry) => entry.name === "Marchiare un bersaglio").pairings, []);
+assert.match(readFileSync(new URL("../templates/dialogs/grimorio.hbs", import.meta.url), "utf8"), /m6-grimorio-pairings[\s\S]*pairing\.icon[\s\S]*m6-grimorio-scopes[\s\S]*Grimorio\.Scopes/);
+
+// Le Formule di ieri (ramo B, 52 su cinque gradi) restano nei dati degli
+// effetti: ogni effetto ne porta almeno una. Dal 24/9 il Grimorio mostra
+// «per Formula» le 48 matrici del formato di Blue (formule.js): le etichette
+// sugli effetti sono i nomi di oggi, senza grado, con le coppie fuse.
+assert.equal(FORMULE.length, 52);
+assert.equal(EFFETTI.length, 269);
+assert.equal(EFFETTI.every((entry) => entry.formule.length > 0 && entry.formule.every((id) => FORMULE.some((formula) => formula.id === id))), true);
+assert.deepEqual(formuleLabels(findEffetto("forces-3-onda-d-urto")), ["Danneggiare"]);
+assert.deepEqual(formuleLabels(findEffetto("life-3-curare-malattie")), ["Guarire", "Riparare"]);
+assert.equal(findFormula("accelerare").id, "accelerare-e-rallentare");
+assert.equal(findFormula("rallentare").id, "accelerare-e-rallentare");
+assert.equal(findFormula("guarire").name, "Guarire");
+assert.equal(findFormula("boh"), null);
+assert.ok(EFFETTI.some((entry) => entry.sphere === "correspondence" && entry.formule.includes("danneggiare")));
+// Ogni Formula di ieri trova una matrice di oggi.
+assert.ok(FORMULE.every((formula) => findFormula(formula.id)));
+const perFormula = prepareGrimorioFormule({ forces: 3, mind: 2, life: 1 }, (k) => k);
+assert.equal(perFormula.length, 48);
+assert.deepEqual(perFormula.map((formula) => formula.name), [...perFormula.map((formula) => formula.name)].sort((a, b) => a.localeCompare(b, "it")));
+const danneggiare = perFormula.find((formula) => formula.id === "danneggiare");
+assert.equal(danneggiare.open, true);
+assert.deepEqual(danneggiare.accessOwned.map((sphere) => sphere.id), ["forces", "mind", "life"]);
+// Dal 29/9 l'Impatto è fuori dalle soglie: Danneggiare resta con la Potenza.
+assert.equal(danneggiare.thresholds[0].base, 3);
+assert.deepEqual(danneggiare.thresholds[0].scopes.map((scope) => [scope.id, scope.level]), [["potency", 3]]);
+assert.equal(danneggiare.thresholds[0].text, "3 (M6.Scopes.potency 3)");
+// La soglia è il conto del Sistema con l'Areté (la pagina «Prima e dopo del tiro»): Costruire, Potenza 2 e
+// Durata 3, fa 4 con Areté 1 e 3 con Areté 2; con l'Epicità 1 di ogni lancio, una Formula senza Ambiti fa 1.
+const costruire = perFormula.find((formula) => formula.id === "costruire");
+assert.equal(costruire.thresholds[0].base, 4);
+assert.equal(prepareGrimorioFormule({ matter: 1 }, (k) => k, { arete: 2 }).find((formula) => formula.id === "costruire").thresholds[0].base, 3);
+assert.equal(perFormula.find((formula) => formula.id === "barriera").thresholds[0].base, 2, "Durata 2 fa da base; Bersagli 1 non aggiunge niente");
+assert.equal(perFormula.find((formula) => formula.id === "contrastare").thresholds[0].text, "1");
+// L'Informazione di Rivelare sta nella Precisione.
+assert.deepEqual(perFormula.find((formula) => formula.id === "rivelare").thresholds[0].scopes.map((scope) => [scope.id, scope.level]), [["precision", 4]]);
+assert.equal(perFormula.every((formula) => formula.thresholds.every((threshold) => threshold.scopes.every((scope) => scope.id !== "impact"))), true);
+assert.equal(danneggiare.rows.find((row) => row.key === "forces").owned, true);
+assert.equal(danneggiare.rows.find((row) => row.key === "spirit").owned, false);
+assert.ok(danneggiare.powers.some((power) => power.name === "Onda d'urto"));
+assert.ok(danneggiare.powers.some((power) => power.name === "Sferzata" && power.proposal));
+// Le Amalgame scritte si scelgono fra quelle possedute; se non ce ne sono scritte, fra le Sfere fuori dall'Accesso.
+const guarire = perFormula.find((formula) => formula.id === "guarire");
+assert.deepEqual(guarire.amalgams.map((sphere) => sphere.id), ["matter", "spirit"]);
+assert.deepEqual(guarire.amalgamChoices, []);
+const percepire = perFormula.find((formula) => formula.id === "percepire");
+assert.equal(percepire.amalgamsFree, true);
+assert.deepEqual(percepire.amalgamChoices, []);
+const riavvolgere = perFormula.find((formula) => formula.id === "riavvolgere");
+assert.equal(riavvolgere.open, false);
+assert.deepEqual(riavvolgere.amalgamChoices.map((sphere) => sphere.id), ["mind", "life"]);
+// Annientare ha due soglie: 4 o 7 (senza l'Impatto, dal 29/9).
+assert.deepEqual(perFormula.find((formula) => formula.id === "annientare").thresholds.map((threshold) => threshold.base), [4, 7]);
+// Senza Sfere le matrici si leggono, ma nessuna si apre.
+assert.equal(prepareGrimorioFormule({}).length, 48);
+assert.equal(prepareGrimorioFormule({}).every((formula) => !formula.open), true);
+// La scelta: Sfera d'Accesso posseduta, Amalgame possedute, gli Ambiti della soglia base.
+const pick = formulaPick(FORMULE_M6.find((formula) => formula.id === "guarire"), { access: "life", amalgams: ["matter", "forces", "life"], sphereLevels: { life: 2, matter: 1, forces: 3 } });
+assert.deepEqual(pick.spheres, { life: 2, matter: 1 });
+assert.deepEqual(pick.amalgams, ["matter"]);
+assert.deepEqual(pick.scopes, { potency: 3 });
+assert.equal(pick.threshold, 3);
+assert.equal(formulaPick(FORMULE_M6.find((formula) => formula.id === "guarire"), { access: "forces", sphereLevels: { forces: 3 } }), null);
+assert.equal(formulaPick(FORMULE_M6.find((formula) => formula.id === "guarire"), { access: "life", sphereLevels: { forces: 3 } }), null);
+// L'accesso al Dominio (25/9): la Sfera fra le proprie apre la matrice anche a livello 0; il livello è un promemoria.
+const aZero = prepareGrimorioFormule({ life: 0 }, (k) => k).find((formula) => formula.id === "guarire");
+assert.deepEqual([aZero.open, aZero.accessOwned.map((sphere) => [sphere.id, sphere.level])], [true, [["life", 0]]]);
+assert.deepEqual(formulaPick(FORMULE_M6.find((formula) => formula.id === "guarire"), { access: "life", amalgams: ["matter"], sphereLevels: { life: 0, matter: 0 } }).spheres, { life: 1, matter: 1 }, "senza livello la Sfera vale 1 nel lancio");
+assert.equal(formulaPick(FORMULE_M6.find((formula) => formula.id === "annientare"), { access: "matter", threshold: 1, sphereLevels: { matter: 1 } }).threshold, 7);
+assert.deepEqual(prepareGrimorio({ forces: 3 }, (k) => k)[0].levels[2].entries.find((entry) => entry.id === "forces-3-onda-d-urto").formule, ["Danneggiare"]);
+assert.match(grimorioTemplate, /data-view-panel="sphere"[\s\S]*m6-grimorio-formula[\s\S]*data-view-panel="formula"[\s\S]*data-formula="\{\{formula\.id\}\}"[\s\S]*data-role="formulaAccess"[\s\S]*data-role="formulaAmalgam"[\s\S]*data-role="formulaSave"[\s\S]*data-role="formulaRoll"[\s\S]*data-role="formulaPick"/);
+console.log("Formule: test passati.");
+
+// I simboli delle Sfere in cima, le schede dei gradi, la riga aperta in evidenza (7/9).
+assert.deepEqual(prepareGrimorioSpheres({ forces: 3, life: 1 }, (k) => k, new Set(["life"])).map((s) => [s.sphere, s.lit, s.dots]), [["forces", true, "●●●"], ["life", false, "●"]]);
+assert.match(grimorioTemplate, /data-role="grimorioSphere" data-sphere="\{\{s\.sphere\}\}"[\s\S]*data-sphere-group="\{\{group\.sphere\}\}"/);
+const css = readFileSync(new URL("../styles/m6.css", import.meta.url), "utf8");
+assert.match(css, /\.m6-grimorio-row\[open\] \{/);
+assert.match(css, /\.m6-roll-symbol-sphere > img \{\r?\n  filter: brightness\(0\)/);
+console.log("Grimorio, simboli e schede: test passati.");
+
+// Il testo della Formula per le Sfere scelte (Blue, 27/9): la riga della Sfera
+// d'Accesso, la riga della coppia con l'Amalgama se c'è, e «In genere» solo senza Sfere.
+{
+  const { testoDellaFormula } = await import("../scripts/grimorio.js");
+  const { FORMULE_M6 } = await import("../scripts/data/formule.js");
+  const f = (id) => FORMULE_M6.find((formula) => formula.id === id);
+  assert.equal(testoDellaFormula(f("danneggiare"), { access: "forces" }), f("danneggiare").bySphere.forces.trim());
+  assert.equal(testoDellaFormula(f("danneggiare"), {}), f("danneggiare").use, "senza Sfere resta la glossa");
+  const coppia = testoDellaFormula(f("aprire-e-bloccare"), { access: "mind", amalgams: ["life"] });
+  assert.equal(coppia, f("aprire-e-bloccare").bySphere["mind+life"].trim(), "la coppia scritta nella matrice");
+  const conAmalgama = testoDellaFormula(f("danneggiare"), { access: "forces", amalgams: ["life"] });
+  assert.ok(conAmalgama.startsWith(f("danneggiare").bySphere.forces.trim()) && conAmalgama.includes(f("danneggiare").bySphere.life.trim()), "l'Amalgama porta la sua riga");
+  assert.equal(testoDellaFormula(null, { access: "forces" }), "");
+}
+console.log("testo della Formula per Sfera: ok");

@@ -1,0 +1,268 @@
+/**
+ * Le carte in chat del nemico (Blue, 25/9, dal mock): il tiro di un'azione o
+ * di una riserva (ritratto e nome, «Spara · su Guendalina», il conto, i dadi
+ * del modulo, l'esito, e il tasto che applica il danno o la Condizione al
+ * bersaglio) e il lancio di Magick (la soglia in grande con gli Ambiti, cosa
+ * fa, i danni, «Resiste con …», il tasto Resisti che apre il Tiro del PG con
+ * la soglia già dentro). Il bersaglio è il token preso di mira dal Narratore.
+ *
+ * Il tiro passa da rollRamoCDirect (paradox-dice.js), come i tiri di Abilità
+ * del mago: la carta è quella del modulo, i dadi hanno le sue facce, e i
+ * tasti del mago (Volontà, Indulgere, Prezzo, Ustione) non compaiono perché
+ * l'attore non è un Mago. Quello che serve al tasto «Applica» sta nella
+ * bandiera della carta, sotto `nemico`.
+ */
+import { applicaCondizione, findCondizioneByName } from "./condizioni.js";
+import { tiraDanni } from "./danni.js";
+import { MODULE_ID } from "./constants.js";
+import { isMageActor } from "./mage-dice.js";
+import { armaturaDi, contoDelTiro, pesiCondizioni, valoreVoce } from "./nemico.js";
+import { renderRollCard, ROLL_CARD_FLAG, rollActionsBox } from "./roll-card.js";
+import { addSaluteDamage } from "./salute.js";
+import { dannoDelColpo, esito as esitoDelTiro } from "./sistema.js";
+
+export const NEMICO_MAGICK_FLAG = "nemicoMagick";
+
+/** Il bersaglio: il primo token preso di mira da chi tira (il Narratore), se ha un attore. */
+export function bersaglioPreso(user = globalThis.game?.user) {
+  const token = [...(user?.targets ?? [])][0];
+  const actor = token?.actor;
+  if (!actor) return null;
+  return { uuid: String(actor.uuid ?? ""), name: String(token.name ?? actor.name ?? ""), actor };
+}
+
+/**
+ * Il tiro del nemico (il Sistema, 14/11): tutta la riserva, già scalata dalle
+ * Condizioni (−2 al grado 1, la metà al grado 2), contro la soglia del
+ * bersaglio, cioè i successi che gli servono; un tiro senza soglia scritta ne
+ * chiede uno, e conta i successi per il confronto. A zero dadi non si tira, e
+ * nemmeno con una Condizione che fa fallire (29/9: il Narratore la toglie, se
+ * non c'entra). Torna il messaggio.
+ */
+export async function tiraNemico(actor, { nome = "", riserva, soglia = 0, danno = 0, aggravato = false, condizione = "" } = {}) {
+  const localize = game.i18n.localize.bind(game.i18n);
+  const format = game.i18n.format.bind(game.i18n);
+  const bersaglio = bersaglioPreso();
+  const pesi = pesiCondizioni(actor.items?.contents ?? [...(actor.items ?? [])])[riserva?.campo] ?? { meta: [], fallisce: [] };
+  if (pesi.fallisce.length) {
+    ui.notifications.warn(format("M6.Nemico.Fallisce", { names: pesi.fallisce.join(", ") }));
+    return null;
+  }
+  const conto = contoDelTiro({ nome, riserva, soglia, bersaglio, danno, aggravato, condizione, localize, format });
+  if (conto.dadi <= 0) {
+    ui.notifications.warn(localize("M6.Nemico.ZeroDadi"));
+    return null;
+  }
+  const armatura = bersaglio?.actor ? armaturaDi(bersaglio.actor.items?.contents ?? [...(bersaglio.actor.items ?? [])]) : null;
+  const notes = armatura?.totale ? [format("M6.Nemico.ArmaturaBersaglio", { bersaglio: bersaglio.name, punti: armatura.totale })] : [];
+  const flavor = renderRollCard({
+    traits: [{ label: riserva.label ?? "", value: riserva.base }],
+    bonusParts: (riserva.voci ?? []).map((voce) => `${valoreVoce(voce)} ${voce.nome}`),
+    threshold: conto.soglia
+  }, localize);
+  const { rollRamoCDirect } = await import("./paradox-dice.js");
+  return rollRamoCDirect({
+    actor,
+    data: actor.system,
+    pool: conto.dadi,
+    threshold: conto.soglia,
+    paradoxRating: 0,
+    skill: true,
+    title: conto.titolo,
+    flavor,
+    card: {
+      symbols: [],
+      traits: [{ id: String(riserva.id ?? ""), type: "nemico", label: riserva.label ?? "", value: riserva.totale }],
+      nemico: { ...conto, bersaglio: conto.bersaglio, armatura: armatura?.totale ?? 0, applicato: false }
+    },
+    activeModifiers: (riserva.voci ?? []).map((voce) => ({ label: voce.nome, value: valoreVoce(voce) })),
+    notes
+  });
+}
+
+/** Il lancio di Magick del nemico: la carta con la soglia, cosa fa, i danni e il tiro di resistenza. */
+export async function lanciaNemico(actor, effetto) {
+  const localize = game.i18n.localize.bind(game.i18n);
+  const format = game.i18n.format.bind(game.i18n);
+  const bersaglio = bersaglioPreso();
+  const titolo = bersaglio ? format("M6.Nemico.LanciaSu", { effetto: effetto.nome, bersaglio: bersaglio.name }) : format("M6.Nemico.LanciaSolo", { effetto: effetto.nome });
+  const content = await foundry.applications.handlebars.renderTemplate(`systems/${MODULE_ID}/templates/chat/nemico-magick.hbs`, {
+    nemico: { name: actor.name, img: actor.img },
+    effetto,
+    titolo,
+    sogliaTesto: format("M6.Nemico.SogliaCarta", { ambiti: effetto.ambitiTesto || localize("M6.Nemico.TuttiZero") }),
+    danniTesto: effetto.danni ? format("M6.Nemico.DadiDanniCarta", { dadi: effetto.danni }) : "",
+    resisteLabel: effetto.resisteTesto ? format("M6.Nemico.ResistiCon", { tiro: effetto.resisteTesto }) : localize("M6.Nemico.ResistenzaDaScrivere")
+  });
+  return ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    content,
+    flags: { [MODULE_ID]: { [NEMICO_MAGICK_FLAG]: { nome: effetto.nome, soglia: effetto.soglia, resiste: { ...(effetto.resiste ?? {}) }, resisteTesto: effetto.resisteTesto ?? "", danni: Math.max(Math.trunc(Number(effetto.danni) || 0), 0), bersaglio: bersaglio ? { uuid: bersaglio.uuid, name: bersaglio.name } : null } } }
+  });
+}
+
+/** Chi può premere un tasto sul bersaglio: il Narratore, o chi possiede l'attore. */
+function puoToccare(actor) {
+  return Boolean(game.user?.isGM || actor?.isOwner);
+}
+
+/** La carta del tiro: il conto e l'esito in chiaro, e il tasto «Applica a <bersaglio>» se riesce. */
+async function decoraCartaTiro(message, html) {
+  const card = message?.getFlag?.(MODULE_ID, ROLL_CARD_FLAG);
+  const nemico = card?.nemico;
+  if (!nemico || !html?.querySelector) return false;
+  const result = html.querySelector(".dice-result");
+  if (!result || result.querySelector(".m6-nemico-conto")) return false;
+  const localize = game.i18n.localize.bind(game.i18n);
+  const format = game.i18n.format.bind(game.i18n);
+  const riga = document.createElement("div");
+  riga.className = "m6-nemico-conto";
+  riga.textContent = nemico.conto ?? "";
+  const icons = result.querySelector(".dice-icons");
+  if (icons) icons.before(riga); else result.prepend(riga);
+  // Riesce coi successi pari alla soglia; il danno di un colpo è quello dell'arma più il margine.
+  const fatto = esitoDelTiro({ successi: card.total, soglia: card.difficulty });
+  const riuscito = fatto.riuscito;
+  const colpo = dannoDelNemico(nemico, fatto.margine);
+  if (riuscito && nemico.esito) {
+    const esito = document.createElement("div");
+    esito.className = "m6-nemico-esito";
+    esito.textContent = `${localize("M6.Nemico.Riesce")} · ${testoEsito(nemico, fatto.margine, { localize, format })}`;
+    result.querySelector(".m6-roll-actions")?.before(esito) ?? result.append(esito);
+  }
+  const bersaglio = nemico.bersaglio;
+  if (!riuscito || !bersaglio?.uuid || (!nemico.danno && !nemico.condizione) || nemico.applicato) return true;
+  const target = await fromUuid(bersaglio.uuid).catch(() => null);
+  if (!target || !puoToccare(target)) return true;
+  const box = rollActionsBox(result);
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "m6-nemico-applica";
+  button.dataset.nemicoApplica = "1";
+  button.textContent = nemico.danno
+    ? format("M6.Nemico.Applica", { bersaglio: bersaglio.name })
+    : format("M6.Nemico.ApplicaCondizione", { condizione: nemico.condizione, bersaglio: bersaglio.name });
+  button.addEventListener("click", async (event) => {
+    event.preventDefault();
+    button.disabled = true;
+    await applicaAlBersaglio(target, { ...nemico, danno: colpo }, { localize, format });
+    if (message.isOwner || game.user.isGM) await message.update({ [`flags.${MODULE_ID}.${ROLL_CARD_FLAG}.nemico.applicato`]: true }).catch(() => null);
+    button.remove();
+  });
+  box.append(button);
+  return true;
+}
+
+/** Il danno di un colpo riuscito: quello dell'arma più il margine (il Sistema); senza danno scritto, niente. */
+export function dannoDelNemico(nemico = {}, margine = 0) {
+  const arma = Math.max(Math.trunc(Number(nemico?.danno) || 0), 0);
+  return arma > 0 ? dannoDelColpo(arma, margine) : 0;
+}
+
+/** L'esito in parole: «6 danni superficiali (4 più 2 di margine) · Atterrato». */
+export function testoEsito(nemico = {}, margine = 0, { localize = (k) => k, format = (k, d) => `${k} ${JSON.stringify(d)}` } = {}) {
+  const parti = [];
+  const arma = Math.max(Math.trunc(Number(nemico?.danno) || 0), 0);
+  const colpo = dannoDelNemico(nemico, margine);
+  const tipo = localize(nemico?.aggravato ? "M6.Nemico.Aggravati" : "M6.Nemico.Superficiali");
+  if (colpo > arma) parti.push(format("M6.Nemico.DannoMargine", { danno: colpo, tipo, arma, margine: colpo - arma }));
+  else if (colpo) parti.push(format("M6.Nemico.DannoEsito", { danno: colpo, tipo }));
+  const condizione = String(nemico?.condizione ?? "").trim();
+  if (condizione) parti.push(condizione);
+  return parti.join(" · ");
+}
+
+/**
+ * Il danno sulla Salute del bersaglio coi conti di salute.js, o la
+ * Condizione: fuori dalle scale si accende se manca; su una scala sale di
+ * un gradino se il bersaglio ce l'ha già (29/9: «un altro colpo dello stesso
+ * tipo fa salire la Condizione di un gradino»), e l'avviso dice dove arriva.
+ */
+export async function applicaAlBersaglio(target, nemico, { localize = (k) => k, format = (k, d) => `${k} ${JSON.stringify(d)}` } = {}) {
+  const danno = Math.max(Math.trunc(Number(nemico?.danno) || 0), 0);
+  if (danno) {
+    await addSaluteDamage(target, nemico.aggravato ? { pa: danno } : { ps: danno });
+    ui.notifications.info(format("M6.Nemico.Applicato", { bersaglio: target.name, danno, tipo: localize(nemico.aggravato ? "M6.Nemico.Aggravati" : "M6.Nemico.Superficiali") }));
+  }
+  const nome = String(nemico?.condizione ?? "").trim();
+  if (nome) {
+    const entry = findCondizioneByName(nome);
+    const dopo = entry ? await applicaCondizione(target, entry) : null;
+    ui.notifications.info(format("M6.Nemico.CondizioneMessa", { bersaglio: target.name, condizione: dopo?.name ?? nome }));
+  }
+}
+
+/**
+ * La carta del lancio: il tasto «Resisti · <bersaglio>» per chi possiede il
+ * bersaglio, e per il Narratore «Tira i danni» quando l'effetto ne porta
+ * (un dado dei danni per livello di Potenza).
+ */
+async function decoraCartaMagick(message, html) {
+  const dati = message?.getFlag?.(MODULE_ID, NEMICO_MAGICK_FLAG);
+  if (!dati || !html?.querySelector) return false;
+  const carta = html.querySelector(".m6-nemico-carta");
+  if (!carta || carta.querySelector("[data-nemico-resisti], [data-nemico-danni]")) return false;
+  const bersaglio = dati.bersaglio;
+  const dadi = Math.max(Math.trunc(Number(dati.danni) || 0), 0);
+  if (dadi && game.user?.isGM) {
+    const tira = document.createElement("button");
+    tira.type = "button";
+    tira.className = "m6-nemico-applica";
+    tira.dataset.nemicoDanni = "1";
+    tira.textContent = game.i18n.format("M6.Nemico.TiraDanni", { dadi });
+    tira.addEventListener("click", async (event) => {
+      event.preventDefault();
+      await tiraDanni({ dadi, actor: ChatMessage.getSpeakerActor?.(message.speaker) ?? null, titolo: String(dati.nome ?? ""), bersaglio });
+    });
+    carta.append(tira);
+  }
+  if (!bersaglio?.uuid) return true;
+  const target = await fromUuid(bersaglio.uuid).catch(() => null);
+  if (!target || !puoToccare(target)) return true;
+  const format = game.i18n.format.bind(game.i18n);
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "m6-nemico-resisti";
+  button.dataset.nemicoResisti = "1";
+  button.innerHTML = `<i class="fa-solid fa-shield-halved" aria-hidden="true"></i> ${format("M6.Nemico.ResistiSu", { bersaglio: bersaglio.name })}`;
+  button.addEventListener("click", async (event) => {
+    event.preventDefault();
+    await apriResistenza(target, dati);
+  });
+  carta.append(button);
+  return true;
+}
+
+/** Il Tiro del PG con la soglia già scritta e, se c'è, Attributo + Abilità già messi. */
+export async function apriResistenza(target, dati) {
+  const localize = game.i18n.localize.bind(game.i18n);
+  const format = game.i18n.format.bind(game.i18n);
+  if (!isMageActor(target)) {
+    ui.notifications.warn(format("M6.Nemico.ResistiSenzaScheda", { bersaglio: target.name }));
+    return false;
+  }
+  const sheet = target.sheet;
+  await sheet.render(true);
+  const { caricaResistenza } = await import("./tiro-scheda.js");
+  await caricaResistenza(sheet, { soglia: dati.soglia, attribute: dati.resiste?.attribute ?? "", skill: dati.resiste?.skill ?? "" });
+  ui.notifications.info(format("M6.Nemico.ResistiAperto", { bersaglio: target.name, soglia: dati.soglia }));
+  return true;
+}
+
+/**
+ * Le azioni senza tiro accese si spengono al turno dopo del nemico, se c'è un
+ * combattimento aperto: lo scrive il Narratore attivo, una volta sola.
+ */
+function spegniAttiveAlTurno(combat, change) {
+  if (!("turn" in (change ?? {})) && !("round" in (change ?? {}))) return;
+  if (game.users?.activeGM && game.users.activeGM !== game.user) return;
+  const actor = combat?.combatant?.actor;
+  const attive = actor?.getFlag?.(MODULE_ID, "nemico")?.attive;
+  if (!attive || !Object.keys(attive).length) return;
+  actor.update({ [`flags.${MODULE_ID}.nemico.-=attive`]: null }).catch(() => null);
+}
+
+export function registraNemicoChat() {
+  Hooks.on("renderChatMessageHTML", (message, html) => { decoraCartaTiro(message, html); decoraCartaMagick(message, html); });
+  Hooks.on("updateCombat", spegniAttiveAlTurno);
+}

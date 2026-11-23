@@ -2,10 +2,10 @@
   "id": "m6",
   "title": "Maghi 6ª Edizione - Fan Made",
   "description": "Il sistema di gioco di Maghi 6ª Edizione per Foundry VTT. Fatto da fan, non ufficiale.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "url": "https://github.com/MrMalazar/M6-Fan-Made",
   "manifest": "https://github.com/MrMalazar/M6-Fan-Made/releases/latest/download/system.json",
-  "download": "https://github.com/MrMalazar/M6-Fan-Made/releases/download/0.1.0/m6.zip",
+  "download": "https://github.com/MrMalazar/M6-Fan-Made/releases/download/0.2.0/m6.zip",
   "authors": [
     {
       "name": "MrMalazar"
@@ -19,7 +19,9 @@
     "scripts/main.js"
   ],
   "styles": [
+    "styles/base.css",
     "styles/m6.css",
+    "styles/vathra.css",
     "styles/telefono.css"
   ],
   "languages": [
@@ -31,18 +33,251 @@
     {
       "lang": "en",
       "name": "English",
-      "path": "lang/it.json"
+      "path": "lang/en.json"
+    },
+    {
+      "lang": "it",
+      "name": "Italiano",
+      "path": "lang/it-vathra.json"
+    },
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en-vathra.json"
     }
   ],
   "documentTypes": {
     "Actor": {
       "mago": {},
-      "png": {}
+      "png": {
+        "htmlFields": [
+          "biography"
+        ]
+      }
+    },
+    "Item": {
+      "feature": {
+        "htmlFields": [
+          "description"
+        ]
+      },
+      "condition": {
+        "htmlFields": [
+          "description"
+        ]
+      },
+      "weapon": {
+        "htmlFields": [
+          "description"
+        ]
+      },
+      "armor": {
+        "htmlFields": [
+          "description"
+        ]
+      },
+      "gear": {
+        "htmlFields": [
+          "description"
+        ]
+      }
     },
     "ChatMessage": {
       "tiro": {}
     }
   },
+  "packs": [
+    {
+      "name": "mage-spheres",
+      "label": "Sfere d'Affinità (Italiano)",
+      "type": "Item",
+      "path": "packs/mage-spheres",
+      "system": "m6",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "mage-spheres-en",
+      "label": "Affinity Spheres (English)",
+      "type": "Item",
+      "path": "packs/mage-spheres-en",
+      "system": "m6",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "mage-pregi",
+      "label": "Pregi (M6)",
+      "type": "Item",
+      "path": "packs/mage-pregi",
+      "system": "m6",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "mage-difetti",
+      "label": "Difetti (M6)",
+      "type": "Item",
+      "path": "packs/mage-difetti",
+      "system": "m6",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "mage-background",
+      "label": "Background (M6)",
+      "type": "Item",
+      "path": "packs/mage-background",
+      "system": "m6",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "mage-credi",
+      "label": "Credi (M6)",
+      "type": "JournalEntry",
+      "path": "packs/mage-credi",
+      "system": "m6",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "mage-concetti",
+      "label": "Concetti (M6)",
+      "type": "JournalEntry",
+      "path": "packs/mage-concetti",
+      "system": "m6",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "mage-ambizioni",
+      "label": "Ambizioni (M6)",
+      "type": "JournalEntry",
+      "path": "packs/mage-ambizioni",
+      "system": "m6",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "mage-desideri",
+      "label": "Desideri (M6)",
+      "type": "JournalEntry",
+      "path": "packs/mage-desideri",
+      "system": "m6",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "mage-ancore",
+      "label": "Ancore (M6)",
+      "type": "JournalEntry",
+      "path": "packs/mage-ancore",
+      "system": "m6",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "mage-convinzioni",
+      "label": "Convinzioni (M6)",
+      "type": "JournalEntry",
+      "path": "packs/mage-convinzioni",
+      "system": "m6",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "mage-condizioni",
+      "label": "Condizioni (M6)",
+      "type": "Item",
+      "path": "packs/mage-condizioni",
+      "system": "m6",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "mage-strumenti",
+      "label": "Strumenti per la Magick (M6)",
+      "type": "Item",
+      "path": "packs/mage-strumenti",
+      "system": "m6",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "mage-equipaggiamento",
+      "label": "Equipaggiamento (M6)",
+      "type": "Item",
+      "path": "packs/mage-equipaggiamento",
+      "system": "m6",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    },
+    {
+      "name": "mage-macros",
+      "label": "Macro del Master (M6)",
+      "type": "Macro",
+      "path": "packs/mage-macros",
+      "system": "m6",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "ASSISTANT": "OWNER"
+      }
+    }
+  ],
+  "packFolders": [
+    {
+      "name": "Maghi 6ª Edizione",
+      "sorting": "m",
+      "packs": [
+        "mage-spheres",
+        "mage-spheres-en",
+        "mage-pregi",
+        "mage-difetti",
+        "mage-background",
+        "mage-credi",
+        "mage-concetti",
+        "mage-ambizioni",
+        "mage-desideri",
+        "mage-ancore",
+        "mage-convinzioni",
+        "mage-condizioni",
+        "mage-strumenti",
+        "mage-equipaggiamento",
+        "mage-macros"
+      ],
+      "color": "#98772b"
+    }
+  ],
+  "socket": true,
   "grid": {
     "distance": 1,
     "units": "m"
@@ -54,6 +289,7 @@
         "css",
         "hbs",
         "json",
+        "png",
         "svg"
       ],
       "paths": [

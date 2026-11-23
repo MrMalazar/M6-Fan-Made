@@ -1,0 +1,51 @@
+{{!-- Passo 11 · le quattordici Abilità a pallini, col tetto della creazione; sotto
+     ogni Abilità le sue Specializzazioni (26/9): le pastiglie con la × e, finché c'è
+     posto, la casella che ne scrive una (a mano o dai suggerimenti, a Invio). --}}
+<section class="m6-guidata-riq m6-guidata-cosa">
+    <header class="m6-guidata-riq-titolo"><span>{{localize "M6.Guidata.Cosa"}}</span><small>{{passo.sotto}}</small></header>
+    <h2 class="m6-guidata-domanda">{{passo.domanda}}</h2>
+    <div class="m6-guidata-conto-riga">
+        <span class="m6-guidata-conto {{corpo.conto.state}}">{{localize "M6.Guidata.Abilita.Pallini"}} <b>{{corpo.conto.text}}</b>{{#if corpo.conto.sfida}} <small>+{{corpo.conto.sfida}} {{localize "M6.Guidata.Abilita.Sfida"}}</small>{{/if}}</span>
+        <span class="m6-guidata-conto {{#if corpo.tettoOk}}exact{{else}}under{{/if}}" title="{{localize 'M6.Guidata.Abilita.TettoHint' cap=corpo.cap}}">{{localize "M6.Guidata.Abilita.Tetto"}} <b>{{corpo.cap}}</b></span>
+    </div>
+    <div class="m6-guidata-righe due-colonne">
+        {{#each corpo.gruppi as |gruppo|}}
+            <h3 class="m6-guidata-occhiello">{{gruppo.label}}</h3>
+            {{#each gruppo.abilita as |skill|}}
+                <div class="m6-guidata-riga{{#if skill.oltre}} oltre{{/if}}{{#if skill.spec.slots}} con-specializzazioni{{/if}}">
+                    {{#if skill.icon}}<img class="m6-guidata-riga-icona" src="{{skill.icon}}" alt="">{{/if}}
+                    <span class="m6-guidata-riga-nome">{{skill.label}}</span>
+                    <span class="m6-guidata-pallini" role="group" aria-label="{{skill.label}}">
+                        <button type="button" class="m6-guidata-pallino zero" data-action="abilitaPallino" data-skill="{{skill.id}}" data-value="0" title="0" {{#unless @root.canEdit}}disabled{{/unless}}></button>
+                        {{#each skill.steps as |step|}}
+                            <button type="button" class="m6-guidata-pallino{{#if step.lit}} lit{{/if}}{{#if step.oltre}} oltre{{/if}}" data-action="abilitaPallino" data-skill="{{skill.id}}" data-value="{{step.value}}" title="{{step.value}}{{#if step.oltre}} · {{localize 'M6.Guidata.Abilita.TettoHint' cap=../../corpo.cap}}{{/if}}" {{#unless @root.canEdit}}disabled{{/unless}}></button>
+                        {{/each}}
+                    </span>
+                    {{#if skill.spec.slots}}
+                        <div class="m6-guidata-specializzazioni" role="group" aria-label="{{skill.label}}: {{localize 'M6.Guidata.Abilita.Specializzazioni'}}">
+                            {{#each skill.spec.scritte as |s|}}
+                                <span class="m6-guidata-pastiglia"><span>{{s.name}}</span><button type="button" class="m6-guidata-pastiglia-via" data-action="specialtyTogli" data-skill="{{skill.id}}" data-index="{{s.index}}" title="{{localize 'M6.Specialties.Remove'}}" aria-label="{{localize 'M6.Specialties.Remove'}}: {{s.name}}" {{#unless @root.canEdit}}disabled{{/unless}}>×</button></span>
+                            {{/each}}
+                            {{#if skill.spec.free}}
+                                <input type="text" class="m6-guidata-pastiglia-scrivi" list="m6-spec-guidata-{{skill.id}}" data-specialty-add="{{skill.id}}" data-skill-label="{{skill.label}}" placeholder="{{localize 'M6.Specialties.Scrivi'}}" title="{{localize 'M6.Specialties.ScriviHint' free=skill.spec.free slots=skill.spec.slots}}" aria-label="{{skill.label}}: {{localize 'M6.Specialties.Scrivi'}}" autocomplete="off" maxlength="30" {{#unless @root.canEdit}}disabled{{/unless}}>
+                                {{#if skill.spec.suggestions.length}}<datalist id="m6-spec-guidata-{{skill.id}}">{{#each skill.spec.suggestions as |nome|}}<option value="{{nome}}"></option>{{/each}}</datalist>{{/if}}
+                            {{/if}}
+                        </div>
+                    {{/if}}
+                </div>
+            {{/each}}
+        {{/each}}
+    </div>
+</section>
+<aside class="m6-guidata-spiega">
+    {{> "systems/m6/templates/guidata/perche.hbs"}}
+    <section class="m6-guidata-riq m6-guidata-guadagni">
+        <header class="m6-guidata-riq-titolo"><span>{{localize "M6.Guidata.Guadagni"}}</span></header>
+        <div class="m6-guidata-voci">
+            <div class="m6-guidata-voce {{corpo.conto.state}}"><i class="fa-solid fa-graduation-cap" aria-hidden="true"></i> {{localize "M6.Guidata.Abilita.Pallini"}} <b>{{corpo.conto.text}}</b></div>
+            <div class="m6-guidata-voce {{#if corpo.tettoOk}}exact{{else}}under{{/if}}"><i class="fa-solid fa-arrow-up-short-wide" aria-hidden="true"></i> {{localize "M6.Guidata.Abilita.Tetto"}} <b>{{corpo.cap}}</b></div>
+            <div class="m6-guidata-voce" title="{{localize 'M6.Guidata.Abilita.SpecializzazioniHint'}}"><i class="fa-solid fa-star" aria-hidden="true"></i> {{localize "M6.Guidata.Abilita.Specializzazioni"}} <b>{{corpo.specializzazioni.scritte}}/{{corpo.specializzazioni.posti}}</b></div>
+            <div class="m6-guidata-voce"><i class="fa-solid fa-dice-d10" aria-hidden="true"></i> {{localize "M6.Guidata.Attributi.Tiro"}} <b>{{localize "M6.Guidata.Attributi.TiroPiu"}}</b></div>
+        </div>
+    </section>
+</aside>

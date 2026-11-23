@@ -1,0 +1,24 @@
+{{!-- Salda il debito del Sacrificio (Blue, 29/9): si ripaga la stessa Quintessenza
+     che il danno ha dato (1 a superficiale, 3 ad aggravato), e quelle caselle
+     tornano curabili. Solo i segni in debito; il massimo di ognuno dice anche
+     quanta Quintessenza c'è sulla Ruota. --}}
+<div class="m6-danni m6-sacrificio">
+    <p class="m6-arete-hint">{{localize "M6.Debito.Intro"}}</p>
+    <p class="m6-sacrificio-limiti">{{localize "M6.Debito.Disponibile" points=quintessence owed=owed}}</p>
+    <span class="m6-arete-row-label">{{localize "M6.Debito.Sign"}}</span>
+    <input type="hidden" name="state" value="{{chosen}}">
+    <div class="m6-danni-grid" role="group" aria-label="{{localize 'M6.Debito.Sign'}}">
+        {{#each signs as |sign|}}
+            <button type="button" class="m6-danni-sign{{#unless sign.max}} vuoto{{/unless}}" data-role="danniSign" data-state="{{sign.state}}" data-max="{{sign.max}}" aria-label="{{localize sign.label}}">
+                <i class="m6-salute-glyph" data-state="{{sign.state}}" aria-hidden="true"></i>
+                <span>{{localize sign.label}}</span>
+                <b class="m6-sacrificio-resa">{{sign.resa}}</b>
+            </button>
+        {{/each}}
+    </div>
+    <label class="m6-item-field m6-danni-amount">
+        <span class="m6-arete-row-label">{{localize "M6.Debito.Amount"}}</span>
+        <input type="number" name="amount" min="1" max="9" step="1" value="1">
+    </label>
+    <p class="m6-sacrificio-out" data-role="saldaCosto" aria-live="polite"></p>
+</div>

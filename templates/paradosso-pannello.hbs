@@ -1,0 +1,54 @@
+{{!-- Il pannello dei punti Paradosso del Narratore (ramo C, 11/9): la presa
+     in alto per trascinarlo, il numero grande che sale a vista, i comandi
+     del Narratore, la lobby e la Scheda del Paradosso, il registro. I
+     giocatori, se il Narratore lo permette, vedono solo il numero. --}}
+<div class="m6-paradosso-presa">
+    <i class="fa-solid fa-eye" aria-hidden="true"></i>
+    <span class="m6-paradosso-titolo">{{localize "M6.Paradosso.Title"}}</span>
+    {{#if gm}}
+        <button type="button" data-azione="visibile" title="{{#if visible}}{{localize 'M6.Paradosso.HideHint'}}{{else}}{{localize 'M6.Paradosso.ShowHint'}}{{/if}}" aria-label="{{localize 'M6.Paradosso.Visible'}}">
+            <i class="fa-solid {{#if visible}}fa-eye{{else}}fa-eye-slash{{/if}}" aria-hidden="true"></i>
+        </button>
+    {{/if}}
+    <button type="button" data-azione="chiudi" title="{{localize 'M6.Comuni.Close'}}" aria-label="{{localize 'M6.Comuni.Close'}}"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+</div>
+<div class="m6-paradosso-corpo">
+    <div class="m6-paradosso-numero-riga">
+        {{#if gm}}<button type="button" data-azione="meno" title="{{localize 'M6.Paradosso.Minus'}}" aria-label="{{localize 'M6.Paradosso.Minus'}}"><i class="fa-solid fa-minus" aria-hidden="true"></i></button>{{/if}}
+        <span class="m6-paradosso-numero" data-role="points">{{points}}</span>
+        {{#if gm}}<button type="button" data-azione="piu" title="{{localize 'M6.Paradosso.Plus'}}" aria-label="{{localize 'M6.Paradosso.Plus'}}"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>{{/if}}
+    </div>
+    <p class="m6-paradosso-sotto">{{localize "M6.Paradosso.Points"}}</p>
+    {{#if gm}}
+        <div class="m6-paradosso-comandi">
+            <button type="button" data-azione="spendi" title="{{localize 'M6.Paradosso.SpendHint'}}"><i class="fa-solid fa-wand-sparkles" aria-hidden="true"></i> {{localize "M6.Paradosso.Spend"}}</button>
+            <button type="button" data-azione="nuovaSessione" title="{{localize 'M6.Paradosso.NewSessionHint'}}"><i class="fa-solid fa-sun" aria-hidden="true"></i> {{localize "M6.Paradosso.NewSession"}}</button>
+            <button type="button" data-azione="azzera" title="{{localize 'M6.Paradosso.ResetHint'}}"><i class="fa-solid fa-eraser" aria-hidden="true"></i> {{localize "M6.Paradosso.Reset"}}</button>
+            <button type="button" data-azione="scheda" title="{{localize 'M6.Paradosso.SchedaHint'}}"><i class="fa-solid {{#if showScheda}}fa-chevron-up{{else}}fa-chevron-down{{/if}}" aria-hidden="true"></i> {{localize "M6.Paradosso.Scheda"}}</button>
+        </div>
+        {{#if showScheda}}
+        <div class="m6-paradosso-scheda">
+            <p class="m6-paradosso-lobby">
+                <b>{{localize "M6.Paradosso.Lobby"}}</b>
+                {{#if lobby.length}}{{#each lobby as |name|}}<span>{{name}}</span>{{/each}}{{else}}<em>{{localize "M6.Paradosso.LobbyEmpty"}}</em>{{/if}}
+            </p>
+            {{#if scheda.length}}
+            <div class="m6-paradosso-sfere">
+                {{#each scheda as |row|}}
+                    <span class="m6-roll-symbol m6-roll-symbol-sphere" title="{{row.label}} {{row.level}} ({{row.from}})"><img src="{{row.icon}}" alt="{{row.label}}"><b>{{row.level}}</b></span>
+                {{/each}}
+            </div>
+            {{else}}
+                <p class="m6-paradosso-vuoto"><em>{{localize "M6.Paradosso.SchedaEmpty"}}</em></p>
+            {{/if}}
+        </div>
+        {{/if}}
+        {{#if log.length}}
+        <ul class="m6-paradosso-registro">
+            {{#each log as |entry|}}
+                <li><b class="{{#if (gt entry.amount 0)}}su{{else}}giu{{/if}}">{{entry.sign}}</b> <span>{{entry.text}}</span></li>
+            {{/each}}
+        </ul>
+        {{/if}}
+    {{/if}}
+</div>

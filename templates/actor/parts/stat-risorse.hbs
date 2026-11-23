@@ -1,0 +1,102 @@
+{{!-- Risorse (Blue, 20/9): un riquadro solo, a righe come le altre colonne.
+     In quest'ordine: la Salute (col suo tastino che apre la ruota dei sei
+     comandi) e la Saggezza (la bilancia, dal 3/10, con la ruota a quattro), la Quintessenza e il
+     Paradosso col meno e il più ai lati del numero, la Ruota da sola, e in
+     fondo le Condizioni, ognuna apribile col clic sul nome. --}}
+<section class="m6-riq m6-riq-risorse">
+    <header class="m6-riq-title"><span>{{localize "M6.Stat.Risorse"}}</span></header>
+    <div class="m6-riq-body">
+        <div class="m6-risorse-righe">
+            {{> "systems/m6/templates/actor/parts/salute.hbs"}}
+
+            {{!-- La Saggezza come bilancia (Blue, 3/10): nove caselle, Caduto a sinistra e
+                 Folle a destra, e due segni indipendenti che partono dal centro, uno per
+                 l'Hubris e uno per il Silenzio; al quarto passo il personaggio è finito. In
+                 testa la bilancia, il nome, la riserva del tiro (Fermezza + Autocontrollo) e
+                 il tastino che apre la ruota dei quattro comandi: Atto (gradino, lato,
+                 Convinzione), Risplende, Ancora, Reset. Il clic su una casella porta lì il
+                 segno di quel lato, il clic destro lo riporta al centro; sotto la fila, lo
+                 stato dei due segni in parole. --}}
+            <div class="m6-riga m6-riga-risorsa m6-riga-saggezza con-ventaglio{{#if wisdom.fine}} finita{{/if}}">
+                <div class="m6-riga-testa">
+                    <i class="fa-solid fa-scale-balanced m6-riga-icona" aria-hidden="true"></i>
+                    <span class="m6-riga-nome m6-riga-nome-fermo" title="{{localize 'M6.Wisdom.Hint'}}"><span>{{localize "M6.Wisdom.Label"}}</span></span>
+                    {{#if wisdom.fine}}
+                        <output class="m6-saggezza-fine lato-{{wisdom.fine}}" title="{{localize (concat 'M6.Wisdom.Fine.' wisdom.fine)}}">{{wisdom.fineLabel}}</output>
+                    {{/if}}
+                    {{!-- La riserva del tiro: Fermezza + Autocontrollo, letta dagli Attributi. --}}
+                    <b class="m6-riga-valore" title="{{localize 'M6.Wisdom.RiservaHint' resolve=wisdom.resolve composure=wisdom.composure}}">{{wisdom.riserva}}</b>
+                    <div class="m6-riga-tastini">
+                        <button type="button" class="m6-riga-tastino m6-ventaglio-tasto" data-action="ventaglioToggle" title="{{localize 'M6.Wisdom.VentaglioHint'}}" aria-label="{{localize 'M6.Wisdom.VentaglioHint'}}"><i class="fa-solid fa-dice-d10" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+                <div class="m6-saggezza-track m6-bilancia" role="group" aria-label="{{localize 'M6.Wisdom.Label'}}" title="{{localize 'M6.Wisdom.ClickHint'}}">
+                    {{#each wisdom.cells as |cell|}}
+                        <button type="button" class="m6-bilancia-cella lato-{{cell.lato}}{{#if cell.fine}} fine{{/if}}{{#if cell.hubris}} segno-hubris{{/if}}{{#if cell.silenzio}} segno-silenzio{{/if}}" data-action="wisdomCellChange" data-index="{{cell.index}}" data-lato="{{cell.lato}}" data-passo="{{cell.passo}}" title="{{cell.title}}" aria-label="{{cell.title}}">
+                            {{#if cell.fine}}<i class="fa-solid {{#if (eq cell.lato 'hubris')}}fa-skull{{else}}fa-hurricane{{/if}}" aria-hidden="true"></i>{{/if}}
+                            <span class="m6-bilancia-segno hubris" aria-hidden="true"></span>
+                            <span class="m6-bilancia-segno silenzio" aria-hidden="true"></span>
+                        </button>
+                    {{/each}}
+                </div>
+                <small class="m6-bilancia-stato">
+                    <span class="lato-hubris{{#if wisdom.stato.hubris.passo}} fuori{{/if}}">{{wisdom.stato.hubris.riga}}</span>
+                    <span class="lato-silenzio{{#if wisdom.stato.silenzio.passo}} fuori{{/if}}">{{wisdom.stato.silenzio.riga}}</span>
+                </small>
+                {{!-- La sorgente della ruota: quattro comandi (--voce): 0 sinistra l'Ancora,
+                     1 sotto il Reset, 2 destra Risplende, 3 sopra l'Atto. --}}
+                <div class="m6-ventaglio m6-ventaglio-quattro" role="group" aria-label="{{localize 'M6.Wisdom.VentaglioHint'}}">
+                    <button type="button" class="m6-ventaglio-voce" style="--voce: 3" data-action="wisdomAtto" title="{{localize 'M6.Wisdom.Roll'}}" aria-label="{{localize 'M6.Wisdom.Roll'}}">
+                        <i class="fa-solid fa-dice-d10" aria-hidden="true"></i><span>{{localize "M6.Wisdom.Tira"}}</span>
+                    </button>
+                    <button type="button" class="m6-ventaglio-voce" style="--voce: 2" data-action="wisdomRisplende" title="{{localize 'M6.Wisdom.RisplendeHint'}}" aria-label="{{localize 'M6.Wisdom.Risplende'}}">
+                        <i class="fa-solid fa-sun" aria-hidden="true"></i><span>{{localize "M6.Wisdom.Risplende"}}</span>
+                    </button>
+                    <button type="button" class="m6-ventaglio-voce" style="--voce: 0" data-action="wisdomAncora" title="{{localize 'M6.Wisdom.AncoraHint'}}" aria-label="{{localize 'M6.Wisdom.Ancora'}}">
+                        <i class="fa-solid fa-anchor" aria-hidden="true"></i><span>{{localize "M6.Wisdom.Ancora"}}</span>
+                    </button>
+                    <button type="button" class="m6-ventaglio-voce" style="--voce: 1" data-action="wisdomReset" title="{{localize 'M6.Wisdom.ResetHint'}}" aria-label="{{localize 'M6.Wisdom.Reset'}}">
+                        <i class="fa-solid fa-eraser" aria-hidden="true"></i><span>{{localize "M6.Wisdom.Reset"}}</span>
+                    </button>
+                </div>
+            </div>
+
+            {{!-- I due conti della Ruota, ognuno sulla sua riga col meno e il più
+                 ai lati del numero (Blue, 20/9); la Ruota sotto non porta più
+                 tasti. Il nome PARADOSSO resta il tasto dello Scoppio. --}}
+            {{!-- Il Sacrificio (Blue, 29/9): il tastino accanto al nome apre la finestra dei danni
+                 in cambio di Quintessenza; col debito aperto compare il lucchetto col conto da
+                 ripagare, e un clic lo salda. --}}
+            <div class="m6-riga m6-riga-risorsa m6-riga-conto quintessence">
+                <div class="m6-riga-testa">
+                    <i class="fa-solid fa-circle-dot m6-riga-icona" aria-hidden="true"></i>
+                    <span class="m6-riga-nome m6-riga-nome-fermo"><span>{{localize "M6.MagickBalance.Quintessence"}}</span></span>
+                    <button type="button" class="m6-riga-tastino m6-sacrificio-tasto" data-action="saluteSacrificio" title="{{localize 'M6.Sacrificio.Hint'}}" aria-label="{{localize 'M6.Sacrificio.Label'}}"><i class="fa-solid fa-hand-holding-droplet" aria-hidden="true"></i></button>
+                    {{#if salute.debitoQuintessenza}}
+                        <button type="button" class="m6-debito-tasto" data-action="saluteSalda" title="{{localize 'M6.Debito.Hint' points=salute.debitoQuintessenza}}" aria-label="{{localize 'M6.Debito.Title'}}"><i class="fa-solid fa-lock" aria-hidden="true"></i> {{salute.debitoQuintessenza}}</button>
+                    {{/if}}
+                    <div class="m6-riga-conto-tasti">
+                        <button type="button" class="m6-ruota-tasto quintessence meno" data-action="magickBalanceChange" data-resource="quintessence" data-delta="-1" aria-label="{{localize 'M6.MagickBalance.RemoveQuintessence'}}" title="{{localize 'M6.MagickBalance.RemoveQuintessence'}}"><i class="fa-solid fa-minus" aria-hidden="true"></i></button>
+                        <b class="m6-riga-valore">{{magickTrack.quintessence}}</b>
+                        <button type="button" class="m6-ruota-tasto quintessence piu" data-action="magickBalanceChange" data-resource="quintessence" data-delta="1" aria-label="{{localize 'M6.MagickBalance.AddQuintessence'}}" title="{{localize 'M6.MagickBalance.AddQuintessence'}}"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+            </div>
+            <div class="m6-riga m6-riga-risorsa m6-riga-conto paradox">
+                <div class="m6-riga-testa">
+                    <i class="fa-solid fa-eye m6-riga-icona" aria-hidden="true"></i>
+                    <button type="button" class="m6-riga-nome m6-paradox-burst" data-action="paradoxBurst" title="{{localize 'M6.Burst.Hint'}}"><span>{{localize "M6.MagickBalance.Paradox"}}</span></button>
+                    <div class="m6-riga-conto-tasti">
+                        <button type="button" class="m6-ruota-tasto paradox meno" data-action="magickBalanceChange" data-resource="paradox" data-delta="-1" aria-label="{{localize 'M6.MagickBalance.RemoveParadox'}}" title="{{localize 'M6.MagickBalance.RemoveParadox'}}"><i class="fa-solid fa-minus" aria-hidden="true"></i></button>
+                        <b class="m6-riga-valore">{{magickTrack.paradox}}</b>
+                        <button type="button" class="m6-ruota-tasto paradox piu" data-action="magickBalanceChange" data-resource="paradox" data-delta="1" aria-label="{{localize 'M6.MagickBalance.AddParadox'}}" title="{{localize 'M6.MagickBalance.AddParadox'}}"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{> "systems/m6/templates/actor/parts/stat-ruota.hbs"}}
+
+        {{> "systems/m6/templates/actor/parts/stat-condizioni.hbs"}}
+    </div>
+</section>

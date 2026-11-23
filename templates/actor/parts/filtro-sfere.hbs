@@ -1,0 +1,11 @@
+{{!-- Il filtro per Sfera in testa a una lista (Blue, 26/9 sera: «un filtro di
+     ricerca per sfere»): «Tutte» e un sigillo per ogni Sfera che compare nelle
+     righe; filtra sul posto, senza render, come la cerca (wireStatFilters:
+     `data-filters` col nome della lista, `data-kind` sul tasto, `data-kinds`
+     sulle righe). --}}
+{{#if sfere.length}}
+<div class="m6-filtri-sfere" data-filters="{{nome}}" role="group" aria-label="{{localize 'M6.Formule.FiltroSfere'}}">
+    <button type="button" class="m6-filtro active" data-kind="" title="{{localize 'M6.Formule.SfereTutte'}}">{{localize "M6.Formule.SfereTutteBreve"}}</button>
+    {{#each sfere as |s|}}<button type="button" class="m6-filtro m6-filtro-sfera" data-kind="{{s.id}}" title="{{localize 'M6.Formule.SferaFiltro' sphere=s.label}}" aria-label="{{localize 'M6.Formule.SferaFiltro' sphere=s.label}}"><img class="m6-sfera-inline" src="{{s.icon}}" alt=""></button>{{/each}}
+</div>
+{{/if}}

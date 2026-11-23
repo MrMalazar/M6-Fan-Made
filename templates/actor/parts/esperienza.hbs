@@ -1,0 +1,101 @@
+{{!-- L'Esperienza (21/9, dal mock docs/mock_tre_pagine_21-9.html): il conto in
+     tre numeri, le Prese e le Spese affiancate con righe uguali (i punti in
+     oro, il testo su carta, il cestino), le spese proposte dalle altre pagine
+     (Segna scrive la riga, Ignora la mette da parte: niente si scala da solo),
+     e il listino di Blue del 21/9 a righe col calcolatore in testa. --}}
+<section class="tab {{tab.cssClass}} m6-esperienza" data-tab="{{tab.id}}" data-group="{{tab.group}}">
+    <header class="m6-section-title">
+        <span>{{localize "M6.Tabs.Esperienza"}}</span>
+    </header>
+
+    <div class="m6-exp m6-esperienza-layout">
+        {{!-- Il conto: Presa, Spesa, Rimane. --}}
+        <section class="m6-riq m6-riq-pagina m6-riq-exp-conto">
+            <header class="m6-riq-title"><span>{{localize "M6.Experience.Conto"}}</span></header>
+            <div class="m6-exp-totali">
+                <div><small>{{localize "M6.Experience.Taken"}}</small><strong>{{experience.total}}</strong></div>
+                <div class="spesa"><small>{{localize "M6.Experience.Spent"}}</small><strong class="m6-exp-mut">{{experience.spent}}</strong></div>
+                <div><small>{{localize "M6.Experience.Remains"}}</small><strong>{{experience.remaining}}</strong></div>
+            </div>
+        </section>
+
+        {{!-- Le prese: quanta esperienza è arrivata, sessione per sessione. La somma fa la Presa. --}}
+        <section class="m6-riq m6-riq-pagina m6-exp-log m6-riq-exp-prese">
+            <header class="m6-riq-title">
+                <span>{{localize "M6.Experience.GainsLabel"}}</span>
+                <small class="m6-riq-conto">{{localize "M6.Experience.InTutto" count=experience.total}}</small>
+                <button type="button" class="m6-riq-tasto-piccolo" data-action="experienceLogAdd" data-table="experienceGains" title="{{localize 'M6.Experience.GainsAdd'}}" aria-label="{{localize 'M6.Experience.GainsAdd'}}" {{#if locked}}disabled{{/if}}><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+            </header>
+            <div class="m6-riq-body">
+                {{#each experience.gains as |row|}}
+                    <div class="m6-riga m6-riga-exp">
+                        <input type="number" class="m6-exp-punti" min="0" step="1" name="flags.m6.experienceGains.{{row.id}}.cost" value="{{row.cost}}" aria-label="{{localize 'M6.Experience.Points'}}" {{#if ../locked}}disabled{{/if}}>
+                        <input type="text" class="m6-exp-testo" name="flags.m6.experienceGains.{{row.id}}.when" value="{{row.when}}" placeholder="{{localize 'M6.Experience.GainsWhenHint'}}" aria-label="{{localize 'M6.Experience.GainsWhen'}}" {{#if ../locked}}disabled{{/if}}>
+                        <button type="button" class="m6-riq-tasto-piccolo m6-exp-cestino" data-action="experienceLogDelete" data-table="experienceGains" data-row="{{row.id}}" title="{{localize 'M6.Experience.LogRemove'}}" aria-label="{{localize 'M6.Experience.LogRemove'}}" {{#if ../locked}}disabled{{/if}}><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+                    </div>
+                {{/each}}
+            </div>
+        </section>
+
+        {{!-- Il registro: cosa hai comprato, e quanto è costato; sotto, le spese proposte. --}}
+        <section class="m6-riq m6-riq-pagina m6-exp-log m6-riq-exp-spese">
+            <header class="m6-riq-title">
+                <span>{{localize "M6.Experience.LogLabel"}}</span>
+                <small class="m6-riq-conto">{{localize "M6.Experience.InTutto" count=experience.spent}}</small>
+                <button type="button" class="m6-riq-tasto-piccolo" data-action="experienceLogAdd" data-table="experienceLog" title="{{localize 'M6.Experience.LogAdd'}}" aria-label="{{localize 'M6.Experience.LogAdd'}}" {{#if locked}}disabled{{/if}}><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+            </header>
+            <div class="m6-riq-body">
+                {{#each experience.log as |row|}}
+                    <div class="m6-riga m6-riga-exp">
+                        <input type="number" class="m6-exp-punti" min="0" step="1" name="flags.m6.experienceLog.{{row.id}}.cost" value="{{row.cost}}" aria-label="{{localize 'M6.Experience.Points'}}" {{#if ../locked}}disabled{{/if}}>
+                        <input type="text" class="m6-exp-testo" name="flags.m6.experienceLog.{{row.id}}.what" value="{{row.what}}" placeholder="{{localize 'M6.Experience.LogWhatHint'}}" aria-label="{{localize 'M6.Experience.LogWhat'}}" {{#if ../locked}}disabled{{/if}}>
+                        <button type="button" class="m6-riq-tasto-piccolo m6-exp-cestino" data-action="experienceLogDelete" data-table="experienceLog" data-row="{{row.id}}" title="{{localize 'M6.Experience.LogRemove'}}" aria-label="{{localize 'M6.Experience.LogRemove'}}" {{#if ../locked}}disabled{{/if}}><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+                    </div>
+                {{/each}}
+                {{#if experience.proposals.length}}
+                    <span class="m6-riq-occhiello" title="{{localize 'M6.Experience.ProposteHint'}}">{{localize "M6.Experience.Proposte"}}</span>
+                    {{#each experience.proposals as |row|}}
+                        <div class="m6-riga m6-riga-exp m6-riga-proposta" title="{{localize 'M6.Experience.ProposteHint'}}">
+                            <b class="m6-exp-prezzo{{#unless row.cost}} vuoto{{/unless}}">{{#if row.cost}}{{row.cost}}{{else}}?{{/if}}</b>
+                            <img class="m6-riga-icona m6-sfera-sigillo" src="{{row.icon}}" alt="">
+                            <span class="m6-exp-cosa">{{row.what}}{{#if row.hint}} <em>{{row.hint}}</em>{{/if}}</span>
+                            <button type="button" class="m6-sfera-potere m6-exp-segna" data-action="experienceProposalMark" data-what="{{row.what}}" data-cost="{{row.cost}}" title="{{localize 'M6.Experience.MarkHint'}}" {{#unless row.cost}}disabled{{/unless}} {{#if ../locked}}disabled{{/if}}><span>{{localize "M6.Experience.Mark"}}</span></button>
+                            <button type="button" class="m6-riq-tasto-piccolo" data-action="experienceProposalIgnore" data-proposal="{{row.id}}" title="{{localize 'M6.Experience.IgnoreHint'}}" aria-label="{{localize 'M6.Experience.Ignore'}}" {{#if ../locked}}disabled{{/if}}><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+                        </div>
+                    {{/each}}
+                {{/if}}
+            </div>
+        </section>
+
+        {{!-- Il listino (Blue, 21/9; 23/9): il calcolatore in testa, poi le voci a righe, in una colonna sola, ognuna col suo simbolo. --}}
+        <section class="m6-riq m6-riq-pagina m6-riq-exp-listino">
+            <header class="m6-riq-title">
+                <span>{{localize "M6.Experience.Listino"}}</span>
+                <small class="m6-riq-conto">{{localize "M6.Experience.ListinoHint"}}</small>
+            </header>
+            <div class="m6-riq-body">
+                <div class="m6-riga m6-exp-calc" title="{{localize 'M6.Experience.CalcHint'}}">
+                    <i class="fa-solid fa-calculator m6-riga-icona" aria-hidden="true"></i>
+                    <select name="kind" class="m6-exp-tratto" aria-label="{{localize 'M6.Experience.Trait'}}">
+                        {{#each experience.rows as |row|}}
+                            <option value="{{row.kind}}">{{row.label}}</option>
+                        {{/each}}
+                    </select>
+                    <label class="m6-exp-da"><span>{{localize "M6.Experience.From"}}</span><input type="number" name="from" value="0" min="0" max="19" step="1"></label>
+                    <label class="m6-exp-da"><span>{{localize "M6.Experience.To"}}</span><input type="number" name="to" value="1" min="1" max="20" step="1"></label>
+                    <div class="m6-exp-out"><strong data-role="total">0</strong><span>{{localize "M6.Experience.Points"}}</span></div>
+                </div>
+                <p class="m6-exp-steps" data-role="steps"></p>
+                <div class="m6-exp-listino">
+                    {{#each experience.rows as |row|}}
+                        <div class="m6-riga m6-riga-listino">
+                            <i class="{{row.icon}} m6-riga-icona" aria-hidden="true"></i>
+                            <span class="m6-riga-nome m6-riga-nome-fermo"><span>{{row.label}}</span></span>
+                            <small class="m6-exp-formula">{{row.formula}}</small>
+                        </div>
+                    {{/each}}
+                </div>
+            </div>
+        </section>
+    </div>
+</section>

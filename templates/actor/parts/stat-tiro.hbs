@@ -1,0 +1,140 @@
+{{!-- Il Tiro (16/9; 23/9 largo due colonne; 30/9 rifatto sul mock di Blue;
+     1/10 la quarta passata, approvata: «meno parole ci sono, meglio è»).
+     In testa il tipo di tiro a parole e, nella Magick, la Sfera col sigillo
+     (e l'incantesimo del Grimorio). Due colonne: la Riserva (chi dà dadi) e
+     la Soglia (quanti successi servono); ogni riga ha il simbolo del pezzo com'è
+     nella scheda, il nome, il valore e la × che compare al sorvolo. Nella
+     Magick la Soglia mostra sempre i sei Ambiti: il simbolo, la lettura del
+     livello scelto e il livello, spenti a zero; sotto, il premio dell'Areté
+     con la sua spunta. In fondo a ogni colonna un numero solo, il totale,
+     col meno e il più: è lui che si cambia a mano, e la matita dice di
+     quanto. Dal Sistema (14/11) la Riserva sono i dadi che si tirano, tutti,
+     e la Soglia i successi che servono. Sotto, in una riga, i dadi che si
+     tirano e i successi che servono, la Dissonanza al centro (solo nella Magick), Indulgi
+     la realtà e Dal Narratore; poi i tasti: TIRA, o i tre tipi col solo
+     nome; spento, il tasto dice cosa manca. --}}
+<section class="m6-riq m6-riq-tiro{{#if tiro.magick}} magick{{/if}}">
+    <header class="m6-riq-title m6-tiro-testa">
+        <span>{{localize "M6.Stat.IlTiro"}}</span>
+        {{#if tiro.testa.tipo}}
+            <span class="m6-tiro-tipo tipo-{{tiro.testa.tipo}}" title="{{tiro.testa.hint}}">{{tiro.testa.label}}</span>
+            {{#if tiro.testa.spell}}
+                <span class="m6-tiro-chip tipo-spell" title="{{tiro.testa.spell.hint}}"><span>{{tiro.testa.spell.name}}</span><button type="button" class="m6-tiro-via" data-action="tiroPill" data-kind="spell" data-id="{{tiro.testa.spell.id}}" title="{{localize 'M6.Tiro.PillolaVia'}}" aria-label="{{localize 'M6.Tiro.PillolaVia'}}: {{tiro.testa.spell.name}}"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button></span>
+            {{/if}}
+            {{#each tiro.testa.spheres as |sphere|}}
+                <span class="m6-tiro-chip tipo-sphere" title="{{sphere.hint}}">{{#if sphere.icon}}<img class="m6-sfera-sigillo" src="{{sphere.icon}}" alt="">{{/if}}<span>{{sphere.label}}</span><button type="button" class="m6-tiro-via" data-action="tiroPill" data-kind="sphere" data-id="{{sphere.id}}" title="{{localize 'M6.Tiro.PillolaVia'}}" aria-label="{{localize 'M6.Tiro.PillolaVia'}}: {{sphere.label}}"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button></span>
+            {{/each}}
+        {{/if}}
+        {{#unless tiro.empty}}
+            <button type="button" class="m6-tiro-azzera" data-action="tiroClear" title="{{localize 'M6.Tiro.Clear'}}" aria-label="{{localize 'M6.Tiro.Clear'}}"><i class="fa-solid fa-rotate-left" aria-hidden="true"></i></button>
+        {{/unless}}
+    </header>
+    <div class="m6-riq-body m6-tiro-corpo">
+        <div class="m6-tiro-colonne">
+            {{!-- La Riserva: chi dà dadi. --}}
+            <section class="m6-tiro-colonna riserva" aria-label="{{localize 'M6.Tiro.Riserva'}}">
+                <div class="m6-tiro-colonna-testa" title="{{tiro.riserva.hint}}">{{localize "M6.Tiro.Riserva"}}</div>
+                <div class="m6-tiro-voci">
+                    {{#each tiro.riserva.righe as |voce|}}
+                        <div class="m6-tiro-voce tipo-{{voce.kind}}{{#if voce.indent}} rientro{{/if}}{{#if voce.off}} fuori{{/if}}" title="{{voce.hint}}">
+                            {{#if voce.check}}<input type="checkbox" class="m6-tiro-spunta" data-action="{{voce.check.action}}" data-condizione="{{voce.id}}" {{#if voce.check.on}}checked{{/if}} aria-label="{{voce.name}}">{{/if}}
+                            {{#if voce.img}}<img class="m6-tiro-voce-icona{{#if voce.disc}} m6-sfera-sigillo{{/if}}" src="{{voce.img}}" alt="">{{else if voce.fa}}<i class="{{voce.fa}} m6-tiro-voce-icona" aria-hidden="true"></i>{{else if voce.mask}}<span class="m6-cond-icona m6-tiro-voce-icona"><i style="-webkit-mask-image: url({{voce.mask}}); mask-image: url({{voce.mask}})"></i>{{#if voce.numeral}}<b>{{voce.numeral}}</b>{{/if}}</span>{{else}}<span class="m6-tiro-voce-icona vuota" aria-hidden="true"></span>{{/if}}
+                            <span class="m6-tiro-voce-nome">{{voce.name}}</span>
+                            {{#if voce.stepper}}
+                                <span class="m6-tiro-passo">
+                                    <button type="button" data-action="{{voce.stepper.action}}" data-delta="-1" aria-label="{{voce.name}} −1" {{#if voce.stepper.min}}disabled{{/if}}><i class="fa-solid fa-minus" aria-hidden="true"></i></button>
+                                    <b class="m6-tiro-campo">{{voce.stepper.value}}</b>
+                                    <button type="button" data-action="{{voce.stepper.action}}" data-delta="1" aria-label="{{voce.name}} +1" {{#if voce.stepper.max}}disabled{{/if}}><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+                                    {{#if voce.stepper.extra}}<small>{{voce.stepper.extra}}</small>{{/if}}
+                                </span>
+                            {{else}}
+                                <b class="m6-tiro-voce-valore{{#if voce.meno}} meno{{/if}}">{{voce.value}}</b>
+                            {{/if}}
+                            {{#if voce.via}}<button type="button" class="m6-tiro-via" data-action="tiroPill" data-kind="{{voce.kind}}" data-id="{{voce.id}}" {{#if voce.skill}}data-skill="{{voce.skill}}"{{/if}} title="{{localize 'M6.Tiro.PillolaVia'}}" aria-label="{{localize 'M6.Tiro.PillolaVia'}}: {{voce.name}}"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>{{/if}}
+                        </div>
+                    {{/each}}
+                    {{#if tiro.riserva.vuote.attributo}}<div class="m6-tiro-voce vuota" title="{{localize 'M6.Tiro.AttributeHint'}}"><span class="m6-tiro-voce-nome">{{localize "M6.Tiro.VuotoAttributo"}}</span></div>{{/if}}
+                    {{#if tiro.riserva.vuote.abilita}}<div class="m6-tiro-voce vuota" title="{{localize 'M6.Tiro.SkillHint'}}"><span class="m6-tiro-voce-nome">{{localize "M6.Tiro.VuotoAbilita"}}</span></div>{{/if}}
+                </div>
+                {{!-- Il totale (1/10): la riserva col ritocco dentro; il meno e il più sono il ritocco, la matita dice di quanto. --}}
+                <div class="m6-tiro-totale" title="{{tiro.riserva.totale.hint}}">
+                    {{#if tiro.riserva.totale.ritocco}}<span class="m6-tiro-penna"><i class="fa-solid fa-pen" aria-hidden="true"></i>{{tiro.riserva.totale.ritocco}}</span>{{/if}}
+                    <span class="m6-tiro-passo">
+                        <button type="button" data-action="tiroDadi" data-delta="-1" aria-label="{{localize 'M6.Tiro.Riserva'}} −1" {{#if tiro.riserva.totale.meno}}disabled{{/if}}><i class="fa-solid fa-minus" aria-hidden="true"></i></button>
+                        <b class="m6-tiro-totale-numero{{#if tiro.riserva.totale.vuoto}} vuoto{{/if}}">{{tiro.riserva.totale.label}}</b>
+                        <button type="button" data-action="tiroDadi" data-delta="1" aria-label="{{localize 'M6.Tiro.Riserva'}} +1" {{#if tiro.riserva.totale.piu}}disabled{{/if}}><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+                    </span>
+                </div>
+            </section>
+
+            {{!-- La Soglia: i successi che servono. Nella Magick i sei Ambiti, sempre: il simbolo, la lettura del livello, il livello; poi il premio dell'Areté, con la spunta. --}}
+            <section class="m6-tiro-colonna soglia" aria-label="{{localize 'M6.Tiro.Soglia'}}">
+                <div class="m6-tiro-colonna-testa" title="{{tiro.soglia.hint}}">{{localize "M6.Tiro.Soglia"}}</div>
+                <div class="m6-tiro-voci">
+                    {{#each tiro.soglia.righe as |voce|}}
+                        <div class="m6-tiro-voce tipo-{{voce.kind}}{{#if voce.base}} base{{/if}}{{#if voce.spenta}} spenta{{/if}}{{#if voce.off}} fuori{{/if}}" title="{{voce.hint}}">
+                            {{#if voce.check}}<input type="checkbox" class="m6-tiro-spunta" data-action="{{voce.check.action}}" data-condizione="{{voce.id}}" {{#if voce.check.on}}checked{{/if}} aria-label="{{voce.name}}">{{/if}}
+                            {{#if voce.img}}<img class="m6-tiro-voce-icona{{#if voce.disc}} m6-sfera-sigillo{{/if}}" src="{{voce.img}}" alt="">{{else if voce.fa}}<i class="{{voce.fa}} m6-tiro-voce-icona" aria-hidden="true"></i>{{else}}<span class="m6-tiro-voce-icona vuota" aria-hidden="true"></span>{{/if}}
+                            <span class="m6-tiro-voce-nome">{{voce.name}}</span>
+                            <b class="m6-tiro-voce-valore">{{voce.value}}</b>
+                            {{#if voce.via}}<button type="button" class="m6-tiro-via" data-action="tiroPill" data-kind="{{voce.kind}}" data-id="{{voce.id}}" title="{{localize 'M6.Tiro.PillolaVia'}}" aria-label="{{localize 'M6.Tiro.PillolaVia'}}: {{voce.label}}"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>{{/if}}
+                        </div>
+                    {{/each}}
+                    {{#if tiro.soglia.vuota}}<div class="m6-tiro-voce vuota" title="{{localize 'M6.Tiro.ScopeHint'}}"><span class="m6-tiro-voce-nome">{{localize "M6.Tiro.VuotoAmbiti"}}</span></div>{{/if}}
+                </div>
+                {{!-- Il totale (1/10): la soglia; il meno e il più la alzano o abbassano sopra il conto degli Ambiti (nell'Abilità la fanno), la matita dice di quanto. --}}
+                <div class="m6-tiro-totale" title="{{tiro.soglia.totale.hint}}">
+                    {{#if tiro.soglia.totale.ritocco}}<span class="m6-tiro-penna{{#if tiro.soglia.totale.oltre}} oltre{{/if}}"{{#if tiro.soglia.totale.oltre}} title="{{tiro.soglia.totale.oltreHint}}"{{/if}}><i class="fa-solid fa-pen" aria-hidden="true"></i>{{tiro.soglia.totale.ritocco}}</span>{{/if}}
+                    <span class="m6-tiro-passo">
+                        <button type="button" data-action="tiroSoglia" data-delta="-1" aria-label="{{localize 'M6.Tiro.Soglia'}} −1" {{#if tiro.soglia.totale.meno}}disabled{{/if}}><i class="fa-solid fa-minus" aria-hidden="true"></i></button>
+                        <b class="m6-tiro-totale-numero{{#if tiro.soglia.totale.vuoto}} vuoto{{/if}}">{{tiro.soglia.totale.label}}</b>
+                        <button type="button" data-action="tiroSoglia" data-delta="1" aria-label="{{localize 'M6.Tiro.Soglia'}} +1" {{#if tiro.soglia.totale.piu}}disabled{{/if}}><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+                    </span>
+                </div>
+            </section>
+        </div>
+
+        {{!-- Le opzioni (1/10): i dadi che si tirano e i successi che servono; la coppia Quintessenza | Paradosso
+             al centro (29/9: ogni lancio si paga); Indulgi (3/10, il lato che dice il Narratore) e Dal Narratore (27/9). Parole, non simboli. --}}
+        <div class="m6-tiro-opzioni">
+            {{#if tiro.esito.riesce}}
+                <span class="m6-tiro-esito riesce"><i class="fa-solid fa-check" aria-hidden="true"></i><span>{{tiro.esito.riesce}}</span></span>
+            {{else if tiro.esito.fallisce}}
+                <span class="m6-tiro-esito fallisce"><i class="fa-solid fa-ban" aria-hidden="true"></i><span>{{tiro.esito.fallisceTesto}}</span></span>
+            {{else}}
+                <span class="m6-tiro-esito{{#if tiro.esito.spento}} spento{{/if}}{{#if tiro.esito.impossibile}} impossibile{{/if}}" title="{{localize 'M6.Tiro.ServonoHint'}}"><i class="fa-solid fa-dice-d10" aria-hidden="true"></i><b>{{tiro.esito.dadi}}</b><span>{{tiro.esito.parola}}{{#if tiro.esito.servono}} · {{tiro.esito.servono}}{{/if}}</span></span>
+            {{/if}}
+            {{#if tiro.dissonanza}}
+                {{!-- La dissonanza (il Sistema): lanciare non costa; qui si dice solo se il lancio stride con la realtà intorno. --}}
+                <span class="m6-tiro-paga">
+                    <button type="button" class="m6-tiro-paga-tasto paradosso{{#if tiro.dissonanza.on}} acceso{{/if}}" data-action="tiroDissonanza" aria-pressed="{{#if tiro.dissonanza.on}}true{{else}}false{{/if}}" title="{{localize 'M6.Tiro.DissonanzaHint'}}">{{localize "M6.Tiro.Dissonanza"}}</button>
+                </span>
+            {{else}}
+                <span class="m6-tiro-paga vuota" aria-hidden="true"></span>
+            {{/if}}
+            <span class="m6-tiro-interruttori">
+                {{!-- La Bussola (la scala del 16/11): il menù chiede la voce, a favore o contro una Convinzione; a favore 2 dadi o 1 Quintessenza, una volta per scena. Acceso, il tasto dice cosa si è scelto. --}}
+                <button type="button" class="m6-tiro-bussola{{#if tiro.bussola.on}} acceso{{/if}}{{#if tiro.bussola.contro}} contro{{/if}}" data-action="tiroBussola" aria-pressed="{{#if tiro.bussola.on}}true{{else}}false{{/if}}" title="{{tiro.bussola.hint}}"{{#if tiro.bussola.spento}} disabled{{/if}}>{{tiro.bussola.label}}</button>
+                <button type="button" class="m6-tiro-indulgi{{#if tiro.indulgi}} acceso{{/if}}" data-action="tiroIndulgi" aria-pressed="{{#if tiro.indulgi}}true{{else}}false{{/if}}" title="{{localize 'M6.Tiro.IndulgiHint'}}">{{#if tiro.indulgi}}{{tiro.indulgi.label}}{{else}}{{localize "M6.Tiro.Indulgi"}}{{/if}}</button>
+                {{#if tiro.narratore}}
+                    <button type="button" class="m6-tiro-narratore{{#if tiro.narratore.on}} acceso{{/if}}" data-action="tiroNarratore" aria-pressed="{{tiro.narratore.on}}" title="{{tiro.narratore.hint}}">{{localize "M6.Verdetto.DalNarratore"}}</button>
+                {{/if}}
+            </span>
+        </div>
+
+        {{!-- I tasti: TIRA, o i tre tipi col solo nome (il prezzo sta nel sorvolo e nella carta); spento, dice cosa manca. --}}
+        {{#if tiro.ready}}
+            {{#if tiro.magick}}
+                <div class="m6-tiro-tasti">
+                    {{#each tiro.kinds as |kind|}}
+                        <button type="button" class="m6-tiro-tasto m6-tiro-tasto-{{kind.kind}}" data-action="tiroRoll" data-kind="{{kind.kind}}" title="{{kind.hint}}">{{kind.label}}</button>
+                    {{/each}}
+                </div>
+            {{else}}
+                <button type="button" class="m6-tiro-tira" data-action="tiroRoll" title="{{localize 'M6.Tiro.RollHint'}}">{{localize "M6.Tiro.Roll"}}</button>
+            {{/if}}
+        {{else}}
+            <button type="button" class="m6-tiro-tira spento" disabled title="{{tiro.blocco}}"><span>{{localize "M6.Tiro.Roll"}}</span><small><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i> {{tiro.blocco}}</small></button>
+        {{/if}}
+    </div>
+</section>

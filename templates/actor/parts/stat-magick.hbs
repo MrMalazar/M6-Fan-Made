@@ -1,0 +1,112 @@
+{{!-- Magick (16/9): l'Areté, le Sfere possedute e gli Ambiti, tutti
+     cliccabili. L'Areté cliccato fa il tiro di Magick; la Sfera entra in
+     catena e al sorvolo apre il cassetto dei suoi poteri (uno solo per
+     lancio, porta con sé la Sfera); l'Ambito mostra dopo il nome il
+     pallino del livello scelto con la sua lettura dalla tavola; in fondo
+     alla riga il tastino della lettura (la «modalità»: Peso, Influenza,
+     Danni…) e la freccia, che apre la tendina dei sette livelli, ognuno col
+     suo pallino e la lettura (lo stesso numero lo toglie). La tendina si
+     apre solo col clic. I pallini dell'Areté e delle Sfere restano quelli
+     della scheda: cambiano il valore, non la catena. (Blue, 16/9 sera.) --}}
+<section class="m6-riq m6-riq-magick">
+    {{!-- Col memo di creazione acceso (23/9): l'Areté del grado e i pallini delle Sfere (col premio della Sfida se c'è). --}}
+    <header class="m6-riq-title{{#if memo.on}} memo-{{memo.boxes.magick.state}}{{/if}}">
+        {{#if creazioneReset}}{{> "systems/m6/templates/actor/parts/reset-tasto.hbs" resetsById.spheres}}{{/if}}
+        <span>{{localize "M6.Tabs.Magick"}}{{#if memo.on}} <b class="m6-memo-conto">{{#if memo.boxes.magick.arete}}<span class="m6-memo-voce {{#if memo.boxes.magick.arete.ok}}exact{{else}}under{{/if}}" title="{{localize 'M6.Riepilogo.Arete'}}">{{localize "M6.Arete.Label"}} {{memo.boxes.magick.arete.target}}</span> · {{/if}}<span class="m6-memo-voce {{memo.boxes.magick.domini.state}}" title="{{localize 'M6.Riepilogo.Domini'}}">{{localize "M6.Riepilogo.DominiBreve"}} {{memo.boxes.magick.domini.text}}</span> · <span class="m6-memo-voce {{memo.boxes.magick.poteri.state}}" title="{{localize 'M6.Riepilogo.PoteriHint'}}">{{localize "M6.Riepilogo.PoteriBreve"}} {{memo.boxes.magick.poteri.text}}</span>{{#if memo.boxes.magick.poteri.sfida}} <small class="m6-memo-premio preso" title="{{localize 'M6.Riepilogo.SfidaPremi.poteri'}}">+{{memo.boxes.magick.poteri.sfida}} {{localize "M6.Tabs.Short.conceptChallenge"}}</small>{{/if}}</b>{{/if}}</span>
+    </header>
+    <div class="m6-riq-body">
+        {{!-- La riga dell'Areté: il nome è il tasto, i pallini il valore. --}}
+        <div class="m6-riga m6-riga-arete{{#if tiro.magick}} scelta{{/if}}">
+            <button type="button" class="m6-riga-nome" data-action="tiroArete" title="{{localize 'M6.Tiro.AreteHint'}}" aria-pressed="{{tiro.magick}}">
+                <img class="m6-arete-sigillo" src="systems/m6/assets/icons/ui/arete.svg" alt="" aria-hidden="true">
+                <span>{{localize "M6.Arete.Label"}}</span>
+            </button>
+            <div class="m6-arete-dots" role="group" aria-label="{{localize 'M6.Arete.Label'}}">
+                {{#each arete.steps as |step|}}
+                    <button type="button" class="m6-arete-dot {{#if step.active}}active{{/if}}" data-action="areteChange" data-value="{{step.value}}" aria-label="{{step.value}}"></button>
+                {{/each}}
+            </div>
+        </div>
+
+        <span class="m6-riq-occhiello">{{localize "M6.Tabs.Spheres"}}</span>
+        <div class="m6-sfere-lista">
+            {{#each spheres as |sphere|}}
+                {{!-- La riga della Sfera (Blue, 20/9 sera: cambio di direttiva): niente
+                     pallini, «non servono più». Il sigillo, il conto dei poteri
+                     conosciuti, il nome (il clic mette la Sfera nel lancio), e in
+                     fondo la scelta del potere: una tendina a caselle, come un
+                     menù, un potere solo per lancio (la casella scelta si spegne
+                     con un altro clic; scegliere un potere porta con sé la Sfera). --}}
+                <div class="m6-riga m6-riga-sfera{{#if sphere.chosen}} scelta{{/if}}{{#if sphere.family}} family{{/if}}{{#if sphere.poteri.length}} con-tendina{{/if}}" data-cassetto="sfera-{{sphere.id}}">
+                    <img class="m6-riga-icona m6-sfera-sigillo" src="{{sphere.icon}}" alt="">
+                    <b class="m6-sfera-conto{{#unless sphere.poteri.length}} vuoto{{/unless}}" title="{{localize 'M6.Stat.PoteriConosciuti'}}" data-tooltip="{{localize 'M6.Stat.PoteriConosciuti'}}">{{sphere.poteri.length}}</b>
+                    <button type="button" class="m6-riga-nome" data-action="tiroSphere" data-sphere="{{sphere.id}}" aria-pressed="{{sphere.chosen}}" title="{{localize 'M6.Tiro.SphereHint'}}">
+                        <span>{{localize sphere.label}}</span>
+                    </button>
+                    {{#if sphere.poteri.length}}
+                        <button type="button" class="m6-sfera-potere{{#if sphere.potere}} pieno{{/if}}" data-action="cassettoToggle" title="{{localize 'M6.Tiro.PoteriHint'}}" aria-label="{{localize 'M6.Stat.PotereScegli'}}">
+                            <span>{{#if sphere.potere}}{{sphere.potere.short}}{{else}}{{localize "M6.Stat.PotereScegli"}}{{/if}}</span><i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+                        </button>
+                        {{!-- La tendina a caselle: un potere per riga, la casella spuntata su quello scelto.
+                             Dalla tappa 3 (24/9) la riga porta in che tiri entra (`data-any`: anche fuori
+                             dalla Magick, senza accendere l'Areté), e un potere con effetti passivi e
+                             attivi sul tiro ha la seconda riga «· attivo» (costo e usi in piccolo, spenta
+                             se gli usi sono finiti o la Quintessenza manca). --}}
+                        <div class="m6-cassetto m6-cassetto-poteri" role="group" aria-label="{{localize 'M6.Stat.Poteri'}}">
+                            {{#each sphere.poteri as |power|}}
+                                <button type="button" class="m6-potere-voce{{#if power.selected}} scelta{{/if}}{{#if power.variant}} variante{{/if}}{{#unless power.ok}} spenta{{/unless}}" role="checkbox" aria-checked="{{power.selected}}" data-action="tiroPower" data-power="{{power.id}}" data-sphere="{{power.sphere}}" data-any="{{power.any}}" title="{{#if power.hint}}{{power.hint}}&#10;{{/if}}{{power.text}}">
+                                    <i class="m6-casella{{#if power.selected}} spuntata{{/if}}" aria-hidden="true"></i>
+                                    <span>{{power.label}}</span>{{#if power.nota}}<small class="m6-potere-voce-nota">{{power.nota}}</small>{{/if}}
+                                </button>
+                            {{/each}}
+                        </div>
+                    {{/if}}
+                </div>
+            {{/each}}
+        </div>
+
+        <span class="m6-riq-occhiello">{{localize "M6.Scopes.TableTitle"}}</span>
+        <div class="m6-ambiti-lista">
+            {{#each scopeRows as |scope|}}
+                {{!-- La riga (20/9, sera; 21/9; 23/9): una linea sola. La testa col
+                     nome (il chevron in oro se l'Ambito ha più letture: il clic
+                     apre la tendina delle letture, una pastiglia per lettura), la
+                     pastiglia della lettura scelta subito dopo il nome, e in fondo
+                     i sette pallini dei livelli, sempre (Blue, 21/9: «lasciamo solo i pallini:
+                     se vuole l'utente può specificare il sottotipo, ma può anche
+                     solo cliccare i pallini necessari e via»; 2/10: via il pallino
+                     dello 0), della misura e del colore di quelli delle Sfere, a
+                     riposo al 40%. Sul pallino il sorvolo dice il livello e, se la
+                     lettura è scelta, la sua lettura; il clic lo dichiara, di nuovo
+                     lo toglie. In cima l'Epicità (2/10), staccata dagli altri, col
+                     primo pallino sempre acceso: ogni lancio vale almeno 1. La
+                     seconda linea con la lettura non c'è più (Blue, 23/9: «il
+                     sottoambito dà fastidio, crea spazio tra i pallini»); il testo
+                     del livello scelto sta nel tooltip del pallino e nel Tiro. --}}
+                <div class="m6-riga m6-riga-ambito{{#if scope.base}} base{{/if}}{{#if scope.multi}} con-tendina{{/if}}{{#if scope.declared}} scelta{{/if}}" data-cassetto="ambito-{{scope.id}}" {{#if scope.reading}}title="{{scope.reading}}"{{/if}}>
+                    <div class="m6-riga-testa">
+                        <i class="{{scope.faIcon}} m6-riga-icona" aria-hidden="true"></i>
+                        {{#if scope.multi}}
+                            <button type="button" class="m6-riga-nome m6-riga-nome-ambito{{#if scope.modeChosen}} con-lente{{/if}}" data-action="cassettoToggle" title="{{#if scope.modeChosen}}{{scope.modeLabel}} · {{/if}}{{localize 'M6.Tiro.ScopeModePick'}}" aria-label="{{scope.label}}: {{localize 'M6.Tiro.ScopeModePick'}}"><span>{{scope.label}}</span>{{#if scope.modeChosen}}<small class="m6-ambito-tag" title="{{scope.modeLabel}}">{{scope.modeShort}}</small>{{else}}<i class="fa-solid fa-chevron-down" aria-hidden="true"></i>{{/if}}</button>
+                        {{else}}
+                            <span class="m6-riga-nome m6-riga-nome-fermo"><span>{{scope.label}}</span></span>
+                        {{/if}}
+                        <span class="m6-ambito-pallini" role="group" aria-label="{{scope.label}}">
+                            {{#each scope.steps as |step|}}
+                                <button type="button" class="m6-pallino-ambito{{#if step.lit}} lit{{/if}}" data-action="tiroScope" data-scope="{{scope.id}}" data-level="{{step.value}}" data-tooltip="{{step.tip}}" data-tooltip-class="m6-tooltip-righe" aria-pressed="{{step.active}}" aria-label="{{scope.label}} {{step.tip}}"></button>
+                            {{/each}}
+                        </span>
+                    </div>
+                    {{#if scope.multi}}
+                        {{!-- La tendina delle letture: una pastiglia per lettura, quella in uso accesa. --}}
+                        <div class="m6-cassetto m6-cassetto-modi" role="group" aria-label="{{localize 'M6.Tiro.ScopeModePick'}}">
+                            {{#each scope.modes as |mode|}}
+                                <button type="button" class="m6-pastiglia m6-pastiglia-modo{{#if mode.selected}} scelta{{/if}}" data-action="scopeMode" data-scope="{{scope.id}}" data-mode="{{mode.id}}" aria-pressed="{{mode.selected}}">{{mode.label}}</button>
+                            {{/each}}
+                        </div>
+                    {{/if}}
+                </div>
+            {{/each}}
+        </div>
+    </div>
+</section>

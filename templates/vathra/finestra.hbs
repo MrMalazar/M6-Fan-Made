@@ -1,0 +1,102 @@
+{{!-- Il traduttore del Vathrâ (Blue, 25/9), nella forma semplificata chiesta
+     da Blue lo stesso giorno («riduci il bombardamento informativo»): la
+     casella, i glifi grandi con la lettura e il ▶, chi capisce e Manda. Il
+     resto è chiuso (Particelle) o sta nelle altre pagine; le spiegazioni
+     sono nei suggerimenti al passaggio del mouse. La traduzione si
+     riscrive senza render mentre si scrive (traduttore.js): i campi che
+     cambiano portano data-ruolo. --}}
+<div class="m6-vathra-corpo{{#if sciolta}} mano-sciolta{{/if}}">
+    <nav class="m6-vathra-linguette" role="tablist">
+        {{#each pagine}}
+        <button type="button" class="m6-vathra-linguetta{{#if attiva}} attiva{{/if}}" data-action="pagina" data-pagina="{{id}}" role="tab" aria-selected="{{#if attiva}}true{{else}}false{{/if}}">{{label}}</button>
+        {{/each}}
+    </nav>
+
+    <section class="m6-vathra-pagina{{#if (eq pagina "traduttore")}} attiva{{/if}}" data-pagina="traduttore">
+        <textarea name="testo" rows="2" spellcheck="false" placeholder="{{localize "M6.Vathra.ScriviItaliano"}}" aria-label="{{localize "M6.Vathra.ScriviItaliano"}}" data-tooltip="{{localize "M6.Vathra.Segnaposto"}}">{{testo}}</textarea>
+
+        <div class="m6-vathra-uscita{{#if uscita.vuoto}} vuota{{/if}}" data-ruolo="uscita">
+            <div class="m6-vathra-angolo">
+                <button type="button" class="m6-vathra-icona" data-action="mano" data-ruolo="mano" data-tooltip="{{manoAltra}}" aria-label="{{manoAltra}}"><i class="fa-solid fa-feather-pointed" aria-hidden="true"></i></button>
+                <button type="button" class="m6-vathra-icona" data-action="copia" data-cosa="glifi" data-tooltip="{{localize "M6.Vathra.CopiaGlifi"}}" aria-label="{{localize "M6.Vathra.CopiaGlifi"}}"><i class="fa-regular fa-copy" aria-hidden="true"></i></button>
+            </div>
+            <div class="m6-vathra-glifi" data-ruolo="glifi" title="{{uscita.glossa}}">{{uscita.glifi}}</div>
+            <div class="m6-vathra-lettura">
+                <span class="m6-vathra-roman" data-ruolo="roman" title="{{uscita.leggeTitolo}}">{{uscita.romanizzazione}}</span>
+                <button type="button" class="m6-vathra-icona" data-action="ascolta" data-tooltip="{{localize "M6.Vathra.Ascolta"}}" aria-label="{{localize "M6.Vathra.Ascolta"}}"><i class="fa-solid fa-play" aria-hidden="true"></i></button>
+            </div>
+        </div>
+
+        <div class="m6-vathra-invio">
+            <span class="m6-vathra-etichetta" data-tooltip="{{localize "M6.Vathra.ChiCapisceNota"}}">{{localize "M6.Vathra.ChiCapisce"}}</span>
+            <div class="m6-vathra-chi">
+                {{#each giocatori}}
+                <button type="button" class="m6-vathra-chip{{#if scelto}} scelto{{/if}}{{#unless attivo}} assente{{/unless}}" data-action="capisce" data-user="{{id}}" aria-pressed="{{#if scelto}}true{{else}}false{{/if}}"{{#if personaggio}} title="{{personaggio}}"{{/if}}>{{nome}}</button>
+                {{else}}
+                <span class="m6-vathra-nota">{{localize "M6.Vathra.NessunGiocatore"}}</span>
+                {{/each}}
+            </div>
+            <button type="button" class="primo" data-action="manda"{{#if uscita.vuoto}} disabled{{/if}}><i class="fa-solid fa-comment" aria-hidden="true"></i> <span data-ruolo="parla">{{parlaLabel}}</span></button>
+        </div>
+
+        <details class="m6-vathra-particelle">
+            <summary>{{localize "M6.Vathra.Particelle"}}</summary>
+            <div class="m6-vathra-gettoni">
+                {{#each gettoni}}
+                {{#if sep}}<span class="m6-vathra-sep" aria-hidden="true"></span>{{else}}<button type="button" class="m6-vathra-gettone{{#if acceso}} acceso{{/if}}{{#if eco}} eco{{/if}}" data-action="gettone" data-k="{{k}}" data-v="{{v}}" aria-pressed="{{#if acceso}}true{{else}}false{{/if}}" title="{{ecoLabel}}">{{label}}</button>{{/if}}
+                {{/each}}
+            </div>
+            <div class="m6-vathra-griglia">
+                {{#each manopole}}
+                <label class="m6-vathra-campo">
+                    <span>{{label}}</span>
+                    <select name="{{k}}" data-manopola="{{k}}">
+                        {{#each scelte}}<option value="{{v}}"{{#if scelto}} selected{{/if}}>{{label}}</option>{{/each}}
+                    </select>
+                </label>
+                {{/each}}
+            </div>
+        </details>
+    </section>
+
+    <section class="m6-vathra-pagina{{#if (eq pagina "frasario")}} attiva{{/if}}" data-pagina="frasario">
+        <input type="search" name="filtro" value="{{filtro}}" placeholder="{{localize "M6.Vathra.Frasario.Cerca"}}" aria-label="{{localize "M6.Vathra.Frasario.Cerca"}}">
+        {{#each frasario}}
+        <details class="m6-vathra-gruppo" data-gruppo="{{id}}"{{#if aperto}} open{{/if}}{{#if nascosto}} hidden{{/if}}>
+            <summary>{{titolo}}</summary>
+            {{#each frasi}}
+            <div class="m6-vathra-frase" data-action="frase" data-gruppo="{{../id}}" data-indice="{{indice}}" data-cerca="{{cerca}}" role="button" tabindex="0" title="{{romanizzazione}}"{{#if nascosta}} hidden{{/if}}>
+                <span class="it">{{it}}</span>
+                <button type="button" class="m6-vathra-icona{{#if registrata}} registrata{{/if}}" data-action="fraseAscolta" data-gruppo="{{../id}}" data-indice="{{indice}}" aria-label="{{localize "M6.Vathra.Ascolta"}}"><i class="fa-solid fa-play" aria-hidden="true"></i></button>
+            </div>
+            {{/each}}
+        </details>
+        {{/each}}
+    </section>
+
+    <section class="m6-vathra-pagina{{#if (eq pagina "radice")}} attiva{{/if}}" data-pagina="radice">
+        <input type="text" name="parola" value="{{parola}}" spellcheck="false" placeholder="{{localize "M6.Vathra.Radice.Parola"}}" aria-label="{{localize "M6.Vathra.Radice.Parola"}}">
+        <div data-ruolo="radice">{{{radiceHtml}}}</div>
+        <details class="m6-vathra-particelle">
+            <summary>{{localize "M6.Vathra.Radice.Regole"}}</summary>
+            <ol class="m6-vathra-regole">
+                {{#each regole}}<li>{{{this}}}</li>{{/each}}
+            </ol>
+        </details>
+    </section>
+
+    <section class="m6-vathra-pagina{{#if (eq pagina "alfabeto")}} attiva{{/if}}" data-pagina="alfabeto">
+        {{#each alfabeto}}
+        <div class="m6-vathra-tavola-gruppo">{{titolo}}</div>
+        <div class="m6-vathra-tavola">
+            {{#each lettere}}
+            {{#if suono}}
+            <button type="button" class="m6-vathra-cella con-suono" data-action="suono" data-indice="{{suono.indice}}" title="{{#if nota}}{{nota}} · {{/if}}{{suono.parola}}"><span class="g">{{glifo}}</span><span class="r">{{roman}}</span><i class="fa-solid fa-play" aria-hidden="true"></i></button>
+            {{else}}
+            <div class="m6-vathra-cella"{{#if nota}} title="{{nota}}"{{/if}}><span class="g">{{glifo}}</span><span class="r">{{roman}}</span></div>
+            {{/if}}
+            {{/each}}
+        </div>
+        {{/each}}
+    </section>
+</div>

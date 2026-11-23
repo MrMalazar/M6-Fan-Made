@@ -1,0 +1,61 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { PREZZO_FLAG, prezzoState, renderPrezzoButton, renderPriced } from "../scripts/prezzo.js";
+import { indulgereState } from "../scripts/indulgere.js";
+import { volontaState } from "../scripts/volonta.js";
+
+// La Vittoria a un prezzo (Sistema, 14/11): il terzo tasto sotto il tiro fallito, di Abilità o di
+// Magick. Il prezzo lo decide il Narratore, ed è più alto quanti più successi mancano.
+assert.equal(PREZZO_FLAG, "prezzo");
+// Su ogni fallimento con almeno un dado tirato; a zero dadi il tasto c'è ma è spento.
+assert.deepEqual(prezzoState({ total: 0, difficulty: 1, dice: 3 }), { show: true, enabled: true, missing: 1, dice: 3 });
+assert.deepEqual(prezzoState({ total: 0, difficulty: 1, dice: 0 }), { show: true, enabled: false, missing: 1, dice: 0 }, "senza dadi: il tasto c'è ma è spento");
+assert.deepEqual(prezzoState({ total: 1, difficulty: 1, dice: 3 }), { show: false, enabled: false, missing: 0 });
+assert.deepEqual(prezzoState({ total: 0, difficulty: 1, dice: 3, forced: true }), { show: false, enabled: false, missing: 0 });
+assert.deepEqual(prezzoState({ total: 0, difficulty: 1, dice: 3, priced: true }), { show: false, enabled: false, missing: 0 });
+assert.deepEqual(prezzoState({ total: 0, difficulty: 1, dice: 3, burst: true }), { show: false, enabled: false, missing: 0 });
+assert.deepEqual(prezzoState({ total: 0, difficulty: 1, dice: 3, automatic: true }), { show: false, enabled: false, missing: 0 });
+assert.deepEqual(prezzoState({ total: 0, difficulty: 0, dice: 3 }), { show: false, enabled: false, missing: 0 }, "senza soglia niente");
+// Il fallimento è «successi sotto la soglia»: con qualche successo fatto il tasto c'è, e dice quanti mancano.
+assert.deepEqual(prezzoState({ total: 1, difficulty: 3, dice: 6 }), { show: true, enabled: true, missing: 2, dice: 6 });
+assert.deepEqual(prezzoState({ total: 3, difficulty: 3, dice: 6 }), { show: false, enabled: false, missing: 0 });
+// Sui tiri di Saggezza e sul Relax (che conta i successi e basta) non compare.
+assert.deepEqual(prezzoState({ total: 0, difficulty: 2, dice: 3, saggezza: true }), { show: false, enabled: false, missing: 0 });
+assert.deepEqual(prezzoState({ total: 0, difficulty: 1, dice: 3, soloConto: true }), { show: false, enabled: false, missing: 0 });
+
+// Con la vittoria a un prezzo la Volontà tace; il Tira Saggezza dell'Indulgere (3/10) non c'entra col fallimento: compare solo sul lancio indulto.
+assert.deepEqual(indulgereState({ total: 3, difficulty: 5, priced: true }), { show: false, lato: "", soglia: 0 });
+assert.deepEqual(volontaState({ total: 3, difficulty: 5, failedCount: 2, priced: true }), { show: false, max: 0 });
+
+// Il tasto e la riga.
+const it = JSON.parse(readFileSync(new URL("../lang/it.json", import.meta.url), "utf8"));
+const localize = (key) => key.split(".").reduce((o, k) => (o && typeof o === "object" ? o[k] : undefined), it) ?? key;
+const format = (key, data = {}) => String(localize(key)).replace(/\{(\w+)\}/g, (_, k) => String(data[k]));
+assert.equal(
+  renderPrezzoButton({ show: true, enabled: true, missing: 2 }, 5, localize, format),
+  '<button type="button" class="m6-roll-action m6-prezzo-button" data-prezzo="go" title="Successi che mancano: 2. Dadi tirati: 5. L\'azione può riuscire lo stesso: il prezzo lo decide il Narratore, ed è più alto quanti più successi mancano.">Vittoria a un prezzo</button>'
+);
+assert.match(renderPrezzoButton({ show: true, enabled: false, missing: 1 }, 0, localize, format), /data-prezzo="go" disabled title="Nessun dado tirato: senza dadi non c'è Vittoria a un prezzo\."/);
+assert.equal(
+  renderPriced({ missing: 2, dice: 5 }, format, localize),
+  '<p class="m6-roll-note m6-roll-note-prezzo"><b class="m6-prezzo-label">Vittoria a un prezzo</b> <span>successi che mancavano: 2. Il prezzo lo decide il Narratore.</span></p>'
+);
+
+// Il resto della macchina: registrata in main dopo la Volontà e l'Indulgere (l'ordine dei tasti), la carta porta i dadi tirati.
+const main = readFileSync(new URL("../scripts/main.js", import.meta.url), "utf8");
+assert.match(main, /registerVolonta\(\);[\s\S]*registerIndulgere\(\);\r?\n\s*registerSaggezza\(\);\r?\n\s*registerPrezzo\(\);/);
+assert.match(readFileSync(new URL("../scripts/paradox-dice.js", import.meta.url), "utf8"), /dice: conto\.dice,/);
+const source = readFileSync(new URL("../scripts/prezzo.js", import.meta.url), "utf8");
+assert.match(source, /enabled: prezzoAmmesso\(\{ dadi: dice, riuscito: false \}\)/, "la regola è quella del Sistema: almeno un dado tirato");
+assert.doesNotMatch(source, /skill/, "vale anche per i tiri di Abilità");
+assert.match(source, /if \(state\.enabled\) \{\s*markRollOpen\(html\);/);
+assert.match(source, /\[ROLL_CARD_FLAG\]: \{ symbols: \[\], \.\.\.card, priced: true \}/);
+for (const lang of ["it", "en"]) {
+  const strings = JSON.parse(readFileSync(new URL(`../lang/${lang}.json`, import.meta.url), "utf8"));
+  for (const key of ["Label", "Title", "Button", "Hint", "HintFar", "Ask", "AskNote", "Yes", "No", "Done"]) {
+    assert.equal(typeof strings.M6.Prezzo[key], "string", `${lang} ${key}`);
+  }
+}
+assert.match(readFileSync(new URL("../styles/m6.css", import.meta.url), "utf8"), /\.m6-roll-actions > \.m6-prezzo-button\s*\{/);
+
+console.log("Vittoria a un prezzo: test passati.");

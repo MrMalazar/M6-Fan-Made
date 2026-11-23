@@ -1,0 +1,156 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import Handlebars from "handlebars";
+import { POTERI } from "../scripts/data/poteri.js";
+import { chiusoAllaCreazione, pastiglieDelleSfere, prepareCatalogoCompleto, prepareCatalogoPoteri, prezzoDelPotere, testoCondizione, testoPrerequisiti, tipiDelPotere } from "../scripts/catalogo-poteri.js";
+
+// La finestra «Aggiungi» (24/9 sera; 25/9: «i poteri sono acquistabili a
+// principio dalla gerarchia», niente quota sui pallini): tutti i poteri che
+// la Sfera apre, in ordine di grado e poi di nome, in due gruppi, la spunta
+// su chi si conosce, il lucchetto su chi ha prerequisiti che mancano.
+const localize = (key) => key;
+const owned = [{ catalogId: "guasto" }];
+const materia = prepareCatalogoPoteri("matter", { catalog: POTERI, owned, localize });
+assert.equal(materia.sphereLabel, "M6.Spheres.matter");
+assert.equal(materia.totale, materia.propri.length + materia.qualsiasi.length);
+assert.equal(materia.totale, POTERI.filter((p) => p.spheres.includes("matter") || p.spheres.includes("any")).length, "tutti i poteri che Materia apre, nessuno fuori");
+assert.ok(materia.propri.every((riga) => !riga.any) && materia.qualsiasi.every((riga) => riga.any));
+const gradi = materia.propri.map((riga) => riga.dot || 99);
+assert.deepEqual(gradi, [...gradi].sort((a, b) => a - b), "in ordine di grado, quelli da assegnare in coda");
+assert.ok(materia.propri[0].dot > 0 && materia.propri.at(-1).dot === 0);
+// I prerequisiti del rifacimento (30/9: il grado N chiede N-1 poteri della Sfera): con un potere di Materia
+// conosciuto (Guasto) restano chiusi solo quelli che ne chiedono di più; gli altri poteri non ne hanno.
+const chiedePiuDiUno = (riga) => (POTERI.find((p) => p.id === riga.id).prerequisiti ?? []).some((c) => c.numero > 1);
+assert.equal(materia.chiusi, [...materia.propri, ...materia.qualsiasi].filter(chiedePiuDiUno).length, "chiusi solo i poteri che chiedono più poteri di quelli conosciuti");
+assert.ok(materia.chiusi > 0 && [...materia.propri, ...materia.qualsiasi].filter((riga) => riga.locked).every(chiedePiuDiUno));
+assert.deepEqual(materia.gruppi.map((g) => [g.id, g.righe.length]), [["propri", materia.propri.length], ["qualsiasi", materia.qualsiasi.length]]);
+const guasto = materia.propri.find((riga) => riga.id === "guasto");
+assert.deepEqual([guasto.known, guasto.locked, guasto.cost, guasto.tipi, guasto.formulaName], [true, false, "1 M6.Poteri.QuintessenzaBreve", { attivo: true, passivo: false }, "Creare e Distruggere"]);
+assert.ok(guasto.blocchi.length >= 1 && guasto.blocchi[0].titolo === "Effetto attivo");
+assert.equal(materia.conosciuti, 1);
+// Un potere di qualsiasi Sfera preso in Forze sta spuntato anche in Materia, e dice dove è segnato (25/9 sera);
+// il gruppo «Di qualsiasi Sfera» dice in che Sfera si segna quello che prendi qui.
+{
+  const conUniversale = prepareCatalogoPoteri("matter", { catalog: POTERI, owned: [], tutti: [{ catalogId: "coperto", sphere: "forces" }], localize });
+  const coperto = conUniversale.qualsiasi.find((riga) => riga.id === "coperto");
+  assert.deepEqual([coperto.known, coperto.knownSphere, coperto.knownAltrove, coperto.knownHint], [true, "forces", true, "M6.Poteri.ConosciutoIn".replace("{sphere}", "M6.Spheres.forces")]);
+  assert.equal(conUniversale.gruppi.find((g) => g.id === "qualsiasi").nota, "M6.Poteri.QualsiasiSegnato".replace("{sphere}", "M6.Spheres.matter"));
+  const guastoQui = materia.propri.find((riga) => riga.id === "guasto");
+  assert.deepEqual([guastoQui.knownAltrove, guastoQui.knownHint], [false, "M6.Poteri.Conosciuto"], "senza la Sfera nella riga vecchia resta la spunta semplice");
+}
+// I prerequisiti scritti, una condizione per riga (25/9 sera): chiudono la riga e dicono cosa serve.
+const catalogo = POTERI.map((p) => (p.id === "baratto" ? { ...p, prerequisiti: [{ numero: 2 }, { potere: "guasto" }, { potere: "bottino" }, { testo: "Aver venduto qualcosa a un Risvegliato" }] } : p));
+const conChiusi = prepareCatalogoPoteri("matter", { catalog: catalogo, owned, tutti: owned, localize });
+const baratto = conChiusi.propri.find((riga) => riga.id === "baratto");
+assert.deepEqual([conChiusi.chiusi, baratto.locked, baratto.chiuso.map((riga) => riga.id || riga.n)], [materia.chiusi + 1, true, [2, "bottino"]]);
+assert.deepEqual(baratto.condizioni.map((riga) => [riga.stato, riga.icona]), [["manca", "fa-lock"], ["ok", "fa-check"], ["manca", "fa-lock"], ["tavolo", "fa-circle-dot"]], "ogni riga col suo stato");
+assert.equal(baratto.serveConto, "2/4");
+assert.equal(baratto.lockedHint, "M6.Poteri.Prerequisito.numero · M6.Poteri.Prerequisito.poteri".replace("{n}", "2"));
+const parole = (k) => ({ "M6.Poteri.Prerequisito.numero": "{n} poteri di {sphere}", "M6.Poteri.Prerequisito.poteri": "richiede {names}", "M6.Spheres.matter": "Materia" }[k] ?? k);
+assert.equal(testoPrerequisiti([{ kind: "numero", n: 2 }, { kind: "potere", id: "bottino" }], catalogo.find((p) => p.id === "baratto"), parole, new Map([["bottino", "Bottino"]])), "2 poteri di Materia · richiede Bottino");
+assert.equal(testoCondizione({ kind: "testo", testo: "Aver toccato l'oro" }, null, parole), "Aver toccato l'oro");
+// Il grado col prezzo in Esperienza (25/9 sera: «nell'elenco non è capibile»): per 5 di famiglia, per 7 esterno.
+assert.deepEqual(prezzoDelPotere(2, true), { grado: 2, famiglia: 6, esterno: 10, pe: 6 }, "3 per grado in famiglia, 5 fuori (27/9)");
+assert.deepEqual(prezzoDelPotere(3, false).pe, 15);
+assert.deepEqual(prezzoDelPotere(0, true), null, "senza grado non si sa");
+assert.equal(prezzoDelPotere(1).pe, null, "fuori da un Dominio del personaggio tutti e due i prezzi");
+const famiglia = prepareCatalogoPoteri("matter", { catalog: catalogo, owned, tutti: owned, localize, family: true });
+assert.deepEqual([famiglia.family, famiglia.dominioLabel], [true, "M6.Poteri.DominioFamiglia".replace("{n}", "5")]);
+assert.equal(materia.dominioLabel, "M6.Poteri.DominioEsterno".replace("{n}", "7"));
+const conGrado = famiglia.propri.find((riga) => riga.dot > 0 && riga.id !== "baratto");
+assert.deepEqual([conGrado.gradoLabel, conGrado.prezzoLabel, conGrado.serve], ["M6.Poteri.GradoN".replace("{n}", String(conGrado.dot)), "M6.Poteri.PrezzoPE".replace("{pe}", String(conGrado.dot * 3)), ""]);
+// Guasto ha il grado 2 (i gradi di Blue, 25/9 sera): grado e prezzo scritti; Senza residuo aspetta ancora il suo grado.
+const guastoFamiglia = famiglia.propri.find((riga) => riga.id === "guasto");
+assert.deepEqual([guastoFamiglia.gradoLabel, guastoFamiglia.prezzoLabel], ["M6.Poteri.GradoN".replace("{n}", "2"), "M6.Poteri.PrezzoPE".replace("{pe}", "6")]);
+const residuoFamiglia = famiglia.propri.find((riga) => riga.id === "senza-residuo");
+assert.deepEqual([residuoFamiglia.gradoLabel, residuoFamiglia.prezzoLabel], ["M6.Poteri.GradoNessuno", ""]);
+// I prerequisiti si scrivono sempre: col lucchetto se mancano, con la spunta se ci sono già.
+const barattoFamiglia = famiglia.propri.find((riga) => riga.id === "baratto");
+assert.deepEqual([barattoFamiglia.serve.split(" · ").length, barattoFamiglia.serveOk, barattoFamiglia.locked], [4, false, true]);
+const conTutto = prepareCatalogoPoteri("matter", { catalog: catalogo, owned: [{ catalogId: "guasto" }, { catalogId: "bottino" }], tutti: [{ catalogId: "guasto" }, { catalogId: "bottino" }], localize, family: true });
+const barattoAperto = conTutto.propri.find((riga) => riga.id === "baratto");
+const conScritti = [...conTutto.propri, ...conTutto.qualsiasi].filter((riga) => riga.id === "baratto" || POTERI.find((p) => p.id === riga.id).prerequisiti).length;
+assert.deepEqual([barattoAperto.serveOk, barattoAperto.locked, barattoAperto.lockedHint, conTutto.conPrerequisiti, barattoAperto.serveConto], [true, false, "", conScritti, "4/4"], "la condizione del tavolo non chiude");
+// Alla creazione (25/9 sera): solo i poteri di base (grado 1) o di qualsiasi Sfera, senza prerequisiti.
+const creazione = prepareCatalogoPoteri("matter", { catalog: catalogo, owned: [], tutti: [], localize, family: true, creazione: true });
+assert.equal(creazione.creazione, true);
+const aperti = creazione.propri.filter((riga) => !riga.locked);
+assert.ok(aperti.length > 0 && aperti.every((riga) => riga.dot === 1 && !riga.condizioni.length), "di Materia restano i poteri di base senza prerequisiti");
+assert.ok(creazione.qualsiasi.filter((riga) => !riga.locked).every((riga) => !riga.condizioni.length) && creazione.qualsiasi.some((riga) => !riga.locked && riga.dot !== 1), "di qualsiasi Sfera anche oltre il grado 1");
+const barattoCreazione = creazione.propri.find((riga) => riga.id === "baratto");
+assert.deepEqual([barattoCreazione.locked, barattoCreazione.creazioneChiuso, barattoCreazione.lockedHint], [true, "prerequisiti", "M6.Poteri.CreazionePrerequisiti"], "Baratto è di grado 1 ma ha prerequisiti");
+const opera = creazione.propri.find((riga) => riga.id === "opera");
+assert.deepEqual([opera.locked, opera.creazioneChiuso, opera.lockedHint], [true, "grado", "M6.Poteri.CreazioneGrado"]);
+const ceLho = creazione.propri.find((riga) => riga.id === "ce-l-ho");
+assert.deepEqual([ceLho.locked, ceLho.creazioneChiuso], [true, "grado"], "un potere di grado 2 senza prerequisiti si chiude per il grado");
+assert.deepEqual([chiusoAllaCreazione({ dot: 1, spheres: ["matter"] }, []), chiusoAllaCreazione({ dot: 3, spheres: ["any"] }, []), chiusoAllaCreazione({ dot: 2, spheres: ["matter"] }, []), chiusoAllaCreazione({ dot: 1, spheres: ["matter"] }, [{ kind: "numero" }])], ["", "", "grado", "prerequisiti"]);
+assert.equal(prepareCatalogoPoteri("matter", { catalog: catalogo, owned: [], localize }).propri.find((riga) => riga.id === "ce-l-ho").locked, false, "fuori dalla creazione Ce l'ho si prende");
+// Opera rifatta (30/9) è di grado 4: chiede 3 poteri di Materia, e senza si chiude anche fuori dalla creazione.
+const operaFuori = prepareCatalogoPoteri("matter", { catalog: catalogo, owned: [], localize }).propri.find((riga) => riga.id === "opera");
+assert.deepEqual([operaFuori.locked, operaFuori.chiuso.map((riga) => riga.n)], [true, [3]]);
+// I tipi: attivo, passivo, tutti e due.
+assert.deepEqual(tipiDelPotere("attivo e passivo"), { attivo: true, passivo: true });
+assert.deepEqual(tipiDelPotere("passivo"), { attivo: false, passivo: true });
+assert.deepEqual(tipiDelPotere("", "attivo"), { attivo: true, passivo: false });
+const tasca = prepareCatalogoPoteri("correspondence", { catalog: POTERI, localize }).propri.find((riga) => riga.id === "tasca-di-mary");
+assert.deepEqual([tasca.tipi, tasca.typeLabel], [{ attivo: true, passivo: true }, "M6.Poteri.Tipo.attivo · M6.Poteri.Tipo.passivo"]);
+const pronto = prepareCatalogoPoteri("life", { catalog: POTERI, owned: [], localize }).propri.find((riga) => riga.id === "pronto-soccorso");
+assert.deepEqual([pronto.uses, pronto.proposal, pronto.search.includes("guarire")], ["M6.Poteri.Usi.bersaglio", true, true]);
+// Le pastiglie delle Sfere: il conto dei poteri e l'attiva.
+const pastiglie = pastiglieDelleSfere([{ id: "forces", conto: 1 }, { id: "matter", conto: 2 }], { localize, attiva: "matter" });
+assert.deepEqual(pastiglie.map((p) => [p.id, p.conto, p.attiva]), [["forces", 1, false], ["matter", 2, true]]);
+
+// Il Catalogo completo: tutti i 187, un gruppo per Sfera più «qualsiasi», da leggere, in ordine di grado.
+const completo = prepareCatalogoCompleto({ catalog: POTERI, owned, localize });
+assert.equal(completo.tutto, true);
+assert.equal(completo.totale, POTERI.length);
+assert.equal(completo.gruppi.at(-1).id, "qualsiasi");
+assert.equal(completo.gruppi.at(-1).righe.length, POTERI.filter((p) => p.spheres.includes("any")).length);
+assert.ok(completo.gruppi.find((g) => g.id === "matter").righe.some((riga) => riga.id === "guasto" && riga.known));
+assert.ok(completo.gruppi.find((g) => g.id === "time").righe.some((riga) => riga.id === "velocista"), "Velocista sta sotto Tempo");
+assert.ok(completo.gruppi.find((g) => g.id === "forces").righe.some((riga) => riga.id === "velocista"), "e sotto Forze");
+
+// Il dialogo si compila: le pastiglie, la cerca, i gruppi, le righe con Aggiungi e il testo; il lucchetto sui chiusi; nel completo niente tasti.
+Handlebars.registerHelper("localize", (key, options) => {
+  const hash = options?.hash ?? {};
+  return Object.keys(hash).length ? `${key}(${Object.entries(hash).map(([k, v]) => `${k}=${v}`).join(",")})` : String(key);
+});
+// `concat` è di Foundry: incolla gli argomenti (il sigillo dell'Accesso lo usa per il nome della Sfera).
+Handlebars.registerHelper("concat", (...args) => args.slice(0, -1).join(""));
+const template = Handlebars.compile(readFileSync(new URL("../templates/dialogs/catalogo-poteri.hbs", import.meta.url), "utf8"));
+const html = template({ ...materia, pastiglie, icon: "m.png" });
+for (const marker of ['data-role="catalogoSfera" data-sphere="forces"', 'm6-catalogo-sfera attiva" role="tab" aria-selected="true" data-role="catalogoSfera" data-sphere="matter"', "M6.Poteri.CatalogoConosciuti(known&#x3D;2)", 'data-role="catalogoSearch"', 'data-role="catalogoConto"', 'data-catalogo-gruppo="propri"', 'data-catalogo-gruppo="qualsiasi"', 'm6-catalogo-row known"', 'data-catalogo="guasto"', 'data-role="catalogoAggiungi" data-catalogo="guasto" disabled', "M6.Poteri.Conosciuto", "Creare e Distruggere", "M6.Poteri.EffettoAttivo", "M6.Poteri.Carta.Paradosso", 'm6-catalogo-proposta', '<small class="attivo">', "M6.Poteri.Grado"]) {
+  assert.ok(html.includes(marker), `manca ${marker}`);
+}
+// Dal 27/9 (Blue: «mi basta vedere il grado») la riga non dice prezzi: il grado sta nel pallino e nelle quattro parti aperte; il Dominio in testa senza il prezzo.
+assert.ok(!html.includes("M6.Poteri.PrezzoPE") && !html.includes('class="grado"') && html.includes("m6-catalogo-dominio") && html.includes("M6.Poteri.DominioEsterno"), "niente prezzi nella finestra, il Dominio in testa");
+for (const marker of ['<p class="m6-catalogo-blocco m6-catalogo-grado"><b>M6.Poteri.Grado</b><span>M6.Poteri.GradoN', "M6.Poteri.Prerequisiti</b>", "M6.Poteri.EffettoAttivo</b>", "M6.Poteri.EffettoPassivo</b>", 'class="m6-catalogo-tipi"', '<small class="attivo">M6.Poteri.Tipo.attivo</small>', 'class="m6-catalogo-azione"']) {
+  assert.ok(html.includes(marker), `quattro parti e colonne: manca ${marker}`);
+}
+assert.ok(!html.includes('data-role="catalogoModifica"'), "senza Narratore niente matita");
+const htmlNarratore = template({ ...materia, gm: true, pastiglie, icon: "m.png" });
+assert.equal((htmlNarratore.match(/data-role="catalogoModifica"/g) ?? []).length, materia.totale, "il Narratore ha la matita «Per tutti» su ogni potere");
+assert.equal((html.match(/data-role="catalogoAggiungi"/g) ?? []).length, materia.totale, "un tasto per potere");
+assert.equal((html.match(/<details /g) ?? []).length, materia.totale, "tutti i poteri della Sfera in lista");
+assert.ok(!html.includes("CatalogoPosti") && !html.includes("CatalogoPieno"), "niente avvisi di quota");
+// Chiusi solo per i prerequisiti (30/9: quelli del rifacimento): il conto in testa e una riga chiusa per ognuno.
+assert.ok(html.includes(`M6.Poteri.CatalogoChiusi(n&#x3D;${materia.chiusi})`) && (html.match(/m6-catalogo-row chiusa"/g) ?? []).length === materia.chiusi, "i chiusi sono quelli dei prerequisiti");
+const htmlChiusi = template({ ...conChiusi, pastiglie, icon: "m.png" });
+assert.ok(htmlChiusi.includes(`M6.Poteri.CatalogoChiusi(n&#x3D;${materia.chiusi + 1})`) && htmlChiusi.includes('m6-catalogo-row chiusa"') && htmlChiusi.includes("m6-catalogo-lucchetto") && htmlChiusi.includes("M6.Poteri.Prerequisiti</b>"), "la riga chiusa col lucchetto e cosa serve");
+assert.ok(/data-role="catalogoAggiungi" data-catalogo="baratto" disabled title="/.test(htmlChiusi), "il tasto spento dice cosa serve");
+assert.ok(htmlChiusi.includes('m6-catalogo-lucchetto') && !htmlChiusi.includes('<small class="serve') && (htmlChiusi.match(/<li class="manca">/g) ?? []).length === 2 + materia.chiusi && htmlChiusi.includes('<li class="ok">') && htmlChiusi.includes('<li class="tavolo">'), "la pastiglia dei prerequisiti che mancano, e una riga per condizione");
+const htmlAperto = template({ ...conTutto, pastiglie, icon: "m.png" });
+assert.ok(htmlAperto.includes('<li class="ok">') && htmlAperto.includes("m6-catalogo-serve ok") && (htmlAperto.match(/m6-catalogo-row chiusa"/g) ?? []).length === conTutto.chiusi, "i prerequisiti soddisfatti con la spunta");
+assert.ok([...conTutto.propri, ...conTutto.qualsiasi].filter((riga) => riga.locked).every((riga) => (POTERI.find((p) => p.id === riga.id).prerequisiti ?? []).some((c) => c.numero > 2)), "con due poteri conosciuti resta chiuso solo chi ne chiede di più");
+const htmlCreazione = template({ ...creazione, pastiglie, icon: "m.png" });
+assert.ok(htmlCreazione.includes("M6.Poteri.CreazioneRegola") && htmlCreazione.includes('data-role="catalogoAggiungi" data-catalogo="opera" disabled title="M6.Poteri.CreazioneGrado"'), "la regola in testa e il tasto spento che dice perché");
+const htmlCompleto = template({ ...completo });
+assert.ok(!htmlCompleto.includes('data-role="catalogoAggiungi"') && !htmlCompleto.includes("catalogoSfera") && htmlCompleto.includes("m6-catalogo-spunta"), "il completo si legge e basta");
+// La cerchia (il Sistema): con Areté 1 i poteri dalla terza cerchia in su stanno col lucchetto e dicono l'Areté che serve.
+const aAreteUno = prepareCatalogoPoteri("matter", { catalog: POTERI, owned: [], tutti: [], localize, arete: 1 });
+const righeUno = [...aAreteUno.propri, ...aAreteUno.qualsiasi];
+assert.ok(righeUno.filter((riga) => riga.dot >= 3).every((riga) => riga.locked && riga.condizioni[0].kind === "cerchia" && riga.condizioni[0].testo === "M6.Poteri.Prerequisito.cerchia"), "dalla terza cerchia in su, chiusi");
+assert.ok(righeUno.filter((riga) => riga.dot && riga.dot <= 2).every((riga) => !riga.condizioni.some((c) => c.kind === "cerchia")), "la prima e la seconda aperte");
+assert.equal(testoCondizione({ kind: "cerchia", n: 3, arete: 2 }, {}, (key) => (key === "M6.Poteri.Prerequisito.cerchia" ? "cerchia {n}: serve Areté {arete}" : key)), "cerchia 3: serve Areté 2");
+assert.equal(chiusoAllaCreazione({ dot: 1, spheres: ["matter"] }, [{ kind: "cerchia", n: 1, ok: true }]), "", "la cerchia non è un prerequisito della creazione");
+console.log("catalogo dei poteri: ok");

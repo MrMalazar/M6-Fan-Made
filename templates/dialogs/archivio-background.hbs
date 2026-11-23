@@ -1,0 +1,27 @@
+{{!-- Gli appunti del Background: le due domande, scritte per ogni voce (6/9);
+     se una voce non le ha, restano quelle generiche. --}}
+<form class="dialog-contents m6-item-form">
+    {{#if entry.lead}}<p class="m6-archivio-hint">{{entry.lead}}</p>{{/if}}
+    <label class="m6-item-field">
+        <span>{{#if prompts.who}}{{prompts.who}}{{else}}{{localize "M6.Archivi.Who"}}{{/if}}</span>
+        <input type="text" name="who" placeholder="{{#if prompts.whoHint}}{{prompts.whoHint}}{{else}}{{localize 'M6.Archivi.WhoHint'}}{{/if}}" autofocus>
+    </label>
+    {{#if types.length}}
+        <label class="m6-item-field">
+            <span>{{#if prompts.type}}{{prompts.type}}{{else}}{{localize "M6.Archivi.Type"}}{{/if}}</span>
+            <select name="typeChoice">
+                <option value="">{{localize "M6.Archivi.TypeNone"}}</option>
+                {{#each types as |type|}}<option value="{{type}}">{{type}}</option>{{/each}}
+            </select>
+        </label>
+        <label class="m6-item-field">
+            <span>{{localize "M6.Archivi.TypeFree"}}</span>
+            <input type="text" name="type" placeholder="{{localize 'M6.Archivi.TypeHint'}}">
+        </label>
+    {{else}}
+        <label class="m6-item-field">
+            <span>{{#if prompts.type}}{{prompts.type}}{{else}}{{localize "M6.Archivi.TypeFree"}}{{/if}}</span>
+            <input type="text" name="type" placeholder="{{#if prompts.typeHint}}{{prompts.typeHint}}{{else}}{{localize 'M6.Archivi.TypeHint'}}{{/if}}">
+        </label>
+    {{/if}}
+</form>

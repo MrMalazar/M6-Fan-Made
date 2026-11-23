@@ -1,0 +1,48 @@
+{{!-- La Ruota (20/9), dentro le Risorse: da sola, senza etichetta né
+     cornice, il mezzo cerchio coi nove nodi (o la barra, a scelta del
+     giocatore). Il meno e il più non stanno più sull'arco: sono sulle righe
+     di Quintessenza e Paradosso, sopra. Sotto l'arco, centrati, i «Dettagli
+     della Ruota» chiusi: Quintessenza generata, Paradosso permanente, Negare
+     il Contraccolpo, il modo. --}}
+<div class="m6-ruota m6-ruota-stat">
+    {{#if wheelAsBar}}
+        <div class="m6-magick-bar m6-magick-bar-stat" role="group" aria-label="{{localize 'M6.MagickBalance.Wheel'}}">
+            <div class="m6-magick-cells">
+                {{#each magickTrack.cells as |cell|}}
+                    <span class="m6-magick-cell {{cell.state}}" title="{{cell.number}}"></span>
+                {{/each}}
+            </div>
+        </div>
+    {{else}}
+        <div class="m6-magick-track m6-magick-track-compact m6-magick-track-stat" role="group" aria-label="{{localize 'M6.MagickBalance.Wheel'}}">
+            <svg class="m6-magick-arc" viewBox="0 0 400 190" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+                <path d="M50 170 A150 150 0 0 1 350 170"></path>
+            </svg>
+            {{#each magickTrack.cells as |cell|}}
+                <span class="m6-magick-node {{cell.state}}" style="{{cell.position}}" title="{{cell.number}}"></span>
+            {{/each}}
+        </div>
+    {{/if}}
+
+    <details class="m6-ruota-dettagli">
+        <summary><i class="fa-solid fa-chevron-right" aria-hidden="true"></i> <span>{{localize "M6.Stat.DettagliRuota"}}</span></summary>
+        <div class="m6-ruota-dettagli-body">
+            <label class="m6-ruota-dettaglio">
+                <span>{{localize "M6.MagickBalance.GeneratedQuintessence"}}</span>
+                <input type="text" name="flags.m6.persistentMagickResources.generatedQuintessence" value="{{persistentMagickResources.generatedQuintessence}}" aria-label="{{localize 'M6.MagickBalance.GeneratedQuintessence'}}" {{#if locked}}disabled{{/if}}>
+            </label>
+            <label class="m6-ruota-dettaglio">
+                <span>{{localize "M6.MagickBalance.PermanentParadox"}}{{#if magickTrack.locked}} <em class="m6-paradox-locked" title="{{localize 'M6.MagickBalance.LockedHint'}}"><i class="fa-solid fa-lock" aria-hidden="true"></i>{{magickTrack.locked}}</em>{{/if}}</span>
+                <input type="number" min="0" step="1" name="flags.m6.persistentMagickResources.permanentParadox" value="{{persistentMagickResources.permanentParadox}}" aria-label="{{localize 'M6.MagickBalance.PermanentParadox'}}" {{#if locked}}disabled{{/if}}>
+            </label>
+            <div class="m6-ruota-dettagli-tasti">
+                <button type="button" class="m6-contraccolpo-button" data-action="contraccolpoNega" title="{{localize 'M6.Contraccolpo.Hint'}}" {{#if contraccolpo.used}}disabled{{/if}}>
+                    <i class="fa-solid fa-hand" aria-hidden="true"></i> {{localize "M6.Contraccolpo.Label"}}{{#if contraccolpo.used}} <small>{{localize "M6.Contraccolpo.Used"}}</small>{{/if}}
+                </button>
+                <button type="button" class="m6-wheel-mode" data-action="wheelModeToggle" aria-label="{{localize 'M6.MagickBalance.ToggleMode'}}" title="{{localize 'M6.MagickBalance.ToggleMode'}}">
+                    <i class="fa-solid {{#if wheelAsBar}}fa-bezier-curve{{else}}fa-grip-lines{{/if}}"></i>
+                </button>
+            </div>
+        </div>
+    </details>
+</div>

@@ -1,0 +1,59 @@
+<form class="dialog-contents m6-item-form">
+    <p class="m6-arete-hint">{{localize (concat "M6.Items.Hints." kindKey)}}</p>
+    <label class="m6-item-field">
+        <span class="m6-arete-row-label">{{localize "M6.Items.Name"}}</span>
+        <input type="text" name="name" required autofocus placeholder="{{localize (concat 'M6.Items.NameHints.' kindKey)}}">
+    </label>
+    {{#if isWeapon}}
+        <label class="m6-item-field">
+            <span class="m6-arete-row-label">{{localize "M6.Items.WeaponType"}}</span>
+            <select name="weaponType">
+                {{#each weaponTypes as |kind|}}<option value="{{kind.id}}" {{#if kind.selected}}selected{{/if}}>{{kind.label}}</option>{{/each}}
+            </select>
+        </label>
+        <label class="m6-item-field">
+            <span class="m6-arete-row-label">{{localize "M6.Items.Damage"}}</span>
+            <input type="number" name="value" min="0" max="20" step="1" value="1">
+            <small>{{localize "M6.Items.DamageHint"}}</small>
+        </label>
+        {{!-- La spunta dell'Aggravato (Blue, 25/9): spenta, il danno è Superficiale. --}}
+        <label class="m6-item-field m6-item-spunta">
+            <span class="m6-arete-row-label">{{localize "M6.Items.Aggravated"}}</span>
+            <input type="checkbox" name="aggravato">
+            <small>{{localize "M6.Items.AggravatedHint"}}</small>
+        </label>
+    {{/if}}
+    {{#if isArmor}}
+        <label class="m6-item-field">
+            <span class="m6-arete-row-label">{{localize "M6.Items.ArmorValue"}}</span>
+            <input type="number" name="value" min="0" max="7" step="1" value="1">
+            <small>{{localize "M6.Items.ArmorHint"}}</small>
+        </label>
+        {{!-- Fisica o mentale (Blue, 25/9): la fisica si ripara, la mentale si ricostruisce. --}}
+        <label class="m6-item-field">
+            <span class="m6-arete-row-label">{{localize "M6.Items.ArmorKind"}}</span>
+            <select name="armatura">
+                {{#each armorKinds as |kind|}}<option value="{{kind.id}}">{{kind.label}}</option>{{/each}}
+            </select>
+        </label>
+    {{/if}}
+    {{#if isGear}}
+        <label class="m6-item-field">
+            <span class="m6-arete-row-label">{{localize "M6.Items.Quantity"}}</span>
+            <input type="number" name="quantity" min="1" max="999" step="1" value="1">
+        </label>
+    {{/if}}
+    {{#if isFeature}}
+        <label class="m6-item-field">
+            <span class="m6-arete-row-label">{{localize "M6.Items.Points"}}</span>
+            <select name="points">
+                {{#each points as |dot|}}<option value="{{dot}}" {{#if (eq dot 1)}}selected{{/if}}>{{dot}}</option>{{/each}}
+            </select>
+            <small>{{localize "M6.Items.PointsHint"}}</small>
+        </label>
+    {{/if}}
+    <label class="m6-item-field">
+        <span class="m6-arete-row-label">{{localize "M6.Items.Description"}}</span>
+        <textarea name="description" rows="3" placeholder="{{localize (concat 'M6.Items.DescriptionHints.' kindKey)}}"></textarea>
+    </label>
+</form>

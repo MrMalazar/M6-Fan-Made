@@ -1,0 +1,59 @@
+{{!-- Una Formula nella pagina (26/9): chiusa, il nome, «In genere» e i sigilli
+     d'Accesso (accesi se la Sfera è del personaggio); aperta, la matrice a due
+     colonne come nel Grimorio, poi la scelta della Sfera d'Accesso, delle
+     Amalgame e della soglia (tasti, non radio: siamo nel form della scheda) e
+     i due tasti, scrivi fra gli effetti e lancia dal Tiro. --}}
+<details class="m6-grimorio-row m6-grimorio-formula-row m6-formula{{#unless formula.open}} closed{{/unless}}" data-formula="{{formula.id}}" data-search="{{formula.name}} {{formula.use}}" data-kinds="{{formula.kinds}}">
+    <summary>
+        <span class="m6-grimorio-formula-name">{{formula.name}}</span>
+        <span class="m6-grimorio-formula-brief">{{formula.use}}</span>
+        <span class="m6-grimorio-accessi">{{#each formula.access as |s|}}<img src="{{s.icon}}" alt="{{s.label}}" title="{{s.label}}" class="{{#if s.owned}}lit{{/if}}">{{/each}}</span>
+        <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+    </summary>
+    <div class="m6-matrice">
+        <b class="m6-matrice-k">{{localize "M6.Grimorio.Access"}}</b>
+        <div class="m6-matrice-corpo m6-matrice-riga">{{#each formula.access as |s|}}<span class="m6-matrice-sfera{{#if s.owned}} lit{{/if}}"><img src="{{s.icon}}" alt="">{{s.label}}</span>{{/each}}</div>
+        <b class="m6-matrice-k">{{localize "M6.Grimorio.Amalgams"}}</b>
+        <div class="m6-matrice-corpo m6-matrice-riga">{{#if formula.amalgamsFree}}<em>{{#if formula.amalgamsNote}}{{formula.amalgamsNote}}{{else}}{{localize "M6.Grimorio.AmalgamsFree"}}{{/if}}</em>{{else}}{{#each formula.amalgams as |s|}}<span class="m6-matrice-sfera{{#if s.owned}} lit{{/if}}"><img src="{{s.icon}}" alt="">{{s.label}}</span>{{/each}}{{/if}}</div>
+        <b class="m6-matrice-k">{{localize "M6.Grimorio.Description"}}</b>
+        <div class="m6-matrice-corpo m6-matrice-descrizione">
+            {{#if formula.intro}}<p class="m6-matrice-testo">{{formula.intro}}</p>{{/if}}
+            {{#each formula.rows as |row|}}
+                <p class="m6-matrice-sfera-riga{{#if row.owned}} lit{{/if}}"><span class="m6-matrice-sigilli">{{#each row.spheres as |s|}}<img src="{{s.icon}}" alt="">{{/each}}</span><span class="m6-matrice-sfera-testo"><b>{{row.label}}:</b> {{row.text}}</span></p>
+            {{/each}}
+            {{#if formula.coda}}<p class="m6-matrice-testo">{{formula.coda}}</p>{{/if}}
+        </div>
+        <b class="m6-matrice-k">{{localize "M6.Grimorio.Limit"}}</b>
+        <div class="m6-matrice-corpo"><p class="m6-matrice-testo">{{formula.limit}}</p></div>
+        <b class="m6-matrice-k">{{localize "M6.Grimorio.Threshold"}}</b>
+        <div class="m6-matrice-corpo m6-matrice-soglia">
+            {{#if (gt formula.thresholds.length 1)}}
+                {{#each formula.thresholds as |t|}}<button type="button" class="m6-formula-scelta{{#unless @index}} scelta{{/unless}}" data-role="formulaThreshold" data-index="{{@index}}" aria-pressed="{{#if @index}}false{{else}}true{{/if}}">{{t.text}}</button>{{/each}}
+            {{else}}
+                {{#each formula.thresholds as |t|}}<span>{{t.text}}</span>{{/each}}
+            {{/if}}
+        </div>
+        {{#if formula.powers.length}}
+            <b class="m6-matrice-k">{{localize "M6.Grimorio.Powers"}}</b>
+            <div class="m6-matrice-corpo m6-matrice-poteri">{{#each formula.powers as |power|}}<span{{#if power.proposal}} class="proposta" title="{{localize 'M6.Grimorio.Proposal'}}"{{/if}}>{{power.name}}</span>{{/each}}</div>
+        {{/if}}
+        {{#if formula.open}}
+            <div class="m6-matrice-scelte">
+                <span class="m6-matrice-k">{{localize "M6.Grimorio.ChooseAccess"}}</span>
+                {{#each formula.accessOwned as |s|}}<button type="button" class="m6-formula-scelta{{#if s.checked}} scelta{{/if}}" data-role="formulaAccess" data-sphere="{{s.id}}" aria-pressed="{{s.checked}}"><img src="{{s.icon}}" alt="">{{s.label}}</button>{{/each}}
+            </div>
+            {{#if formula.amalgamChoices.length}}
+                <div class="m6-matrice-scelte">
+                    <span class="m6-matrice-k">{{localize "M6.Grimorio.ChooseAmalgam"}}</span>
+                    {{#each formula.amalgamChoices as |s|}}<button type="button" class="m6-formula-scelta" data-role="formulaAmalgam" data-sphere="{{s.id}}" aria-pressed="false"><img src="{{s.icon}}" alt="">{{s.label}}</button>{{/each}}
+                </div>
+            {{/if}}
+            <div class="m6-matrice-tasti">
+                <button type="button" data-action="formulaScrivi" data-formula="{{formula.id}}" title="{{localize 'M6.Formule.ScriviHint'}}" {{#if @root.locked}}disabled data-fermo="true"{{/if}}><i class="fa-solid fa-feather" aria-hidden="true"></i> {{localize "M6.Formule.Scrivi"}}</button>
+                <button type="button" data-action="formulaLancia" data-formula="{{formula.id}}" title="{{localize 'M6.Formule.LanciaHint'}}"><i class="fa-solid fa-dice" aria-hidden="true"></i> {{localize "M6.Formule.Lancia"}}</button>
+            </div>
+        {{else}}
+            <p class="m6-grimorio-missing">{{localize "M6.Grimorio.NoAccess"}}</p>
+        {{/if}}
+    </div>
+</details>

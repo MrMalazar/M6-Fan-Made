@@ -1,0 +1,44 @@
+{{!-- La scheda di un effetto di Magick del giocatore: una tendina (6/9).
+     Chiusa restano il nome, l'Obiettivo (Blue, 26/9: «deve comunque mostrare
+     l'obiettivo») e il dado, che carica l'effetto nel Tiro della prima
+     pagina; aperta, tutto il resto. --}}
+<details class="m6-incantesimo" data-row="{{spell.id}}" data-search="{{spell.name}} {{spell.goal}}" data-kinds="{{spell.kinds}}">
+    <summary class="m6-incantesimo-head">
+        <i class="fa-solid fa-chevron-down m6-incantesimo-chevron" aria-hidden="true"></i>
+        <span class="m6-incantesimo-spheres">
+            {{#each spell.spheres as |s|}}<span class="m6-incantesimo-sphere" title="{{s.label}}"><img src="{{s.icon}}" alt=""></span>{{/each}}
+        </span>
+        <strong class="m6-incantesimo-name">{{spell.name}}</strong>
+        <span class="m6-incantesimo-type {{spell.magickTypeId}}">{{spell.magickType}}</span>
+        <span class="m6-incantesimo-controls">
+            <button type="button" data-action="incantesimoRoll" data-row="{{spell.id}}" title="{{localize 'M6.Incantesimi.RollHint'}}" aria-label="{{localize 'M6.Incantesimi.Roll'}}"><i class="fa-solid fa-dice-d10"></i></button>
+        </span>
+        {{#if spell.goal}}<span class="m6-incantesimo-obiettivo" title="{{spell.goal}}"><b>{{localize "M6.Arete.Goal"}}</b> {{spell.goal}}</span>{{/if}}
+    </summary>
+    <div class="m6-incantesimo-body">
+    <span class="m6-incantesimo-controls m6-incantesimo-tools">
+        <button type="button" data-action="incantesimoShare" data-row="{{spell.id}}" title="{{localize 'M6.GrimorioComune.Share'}}" aria-label="{{localize 'M6.GrimorioComune.Share'}}" {{#if @root.locked}}disabled{{/if}}><i class="fa-solid fa-upload"></i></button>
+        <button type="button" data-action="incantesimoChat" data-row="{{spell.id}}" title="{{localize 'M6.Incantesimi.Chat'}}" aria-label="{{localize 'M6.Incantesimi.Chat'}}"><i class="fa-solid fa-comment"></i></button>
+        <button type="button" data-action="incantesimoEdit" data-row="{{spell.id}}" title="{{localize 'M6.Incantesimi.Edit'}}" aria-label="{{localize 'M6.Incantesimi.Edit'}}" {{#if @root.locked}}disabled{{/if}}><i class="fa-solid fa-pen"></i></button>
+        <button type="button" data-action="incantesimoDelete" data-row="{{spell.id}}" title="{{localize 'M6.Incantesimi.Remove'}}" aria-label="{{localize 'M6.Incantesimi.Remove'}}" {{#if @root.locked}}disabled{{/if}}><i class="fa-solid fa-trash"></i></button>
+    </span>
+    <div class="m6-incantesimo-grid">
+        {{#if spell.formulaName}}<span><b>{{localize "M6.Incantesimi.Formula"}}</b> {{spell.formulaName}}</span>{{/if}}
+        {{#if spell.credo}}<span><b>{{localize "M6.Focus.Credo"}}</b> {{spell.credo}}</span>{{/if}}
+        {{#if spell.practiceForm}}<span><b>{{localize "M6.Focus.Type"}}</b> {{spell.practiceForm}}</span>{{/if}}
+        {{#if spell.instruments}}<span><b>{{localize "M6.Incantesimi.Instrument"}}</b> {{spell.instruments}}</span>{{/if}}
+        {{#if spell.traits}}<span><b>{{localize "M6.Arete.Pool"}}</b> {{spell.traits}}{{#if spell.prize}} + {{localize "M6.Arete.Prize"}}{{/if}}</span>{{/if}}
+        {{#if spell.spheres.length}}<span><b>{{localize "M6.Arete.Spheres"}}</b> {{#each spell.spheres as |s|}}{{s.label}}{{#unless @last}}, {{/unless}}{{/each}}</span>{{/if}}
+        {{#if spell.scopes.length}}<span><b>{{localize "M6.Scopes.Label"}}</b> {{#each spell.scopes as |s|}}<i class="{{s.faIcon}}" aria-hidden="true"></i> {{s.label}} {{s.level}}{{#unless @last}}, {{/unless}}{{/each}}</span>{{/if}}
+        {{#if spell.effectKind}}<span><b>{{localize "M6.Arete.EffectKind"}}</b> {{spell.effectKind}}</span>{{/if}}
+        {{#if spell.maintained}}<span><b>{{localize "M6.Arete.Maintained"}}</b></span>{{/if}}
+    </div>
+    {{#if spell.goal}}<p class="m6-incantesimo-goal"><b>{{localize "M6.Arete.Goal"}}</b> {{spell.goal}}</p>{{/if}}
+    {{#if spell.narrative}}
+        <details class="m6-incantesimo-narrative">
+            <summary><i class="fa-solid fa-chevron-down" aria-hidden="true"></i>{{localize "M6.Incantesimi.Narrative"}}</summary>
+            <p>{{spell.narrative}}</p>
+        </details>
+    {{/if}}
+    </div>
+</details>

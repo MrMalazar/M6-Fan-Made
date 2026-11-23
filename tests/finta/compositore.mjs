@@ -1,0 +1,609 @@
+import assert from "node:assert/strict";
+globalThis.__sim = { rolls: [], messages: [], faces: [], situational: [] };
+const strings = { "M6.RamoC.NoDice": "Nessun dado", "M6.Arete.Label": "Areté", "M6.Skills.Veil": "Velo", "M6.Spheres.forces": "Forze", "M6.Scopes.potency": "Potenza", "M6.Scopes.range": "Portata", "M6.Tiro.Kinds.testimoni": "Volgare con testimoni", "M6.Tiro.KindMagick": "Tiro di Magick", "M6.Tiro.KindSkill": "Tiro di Abilità", "M6.Tiro.KindNone": "Componi", "M6.Tiro.PowerNote": "Potere: {name}.", "M6.Arete.SkillSpecialtyFlavor": "Specializzazione +{dice}", "M6.Arete.QuintessenceFlavor": "Quintessenza {points}", "M6.Arete.QuintessenceSpent": "spesa {points}", "M6.MagickBalance.ParadoxGained": "+{amount} Paradosso", "M6.Tiro.ManualDifficultyNote": "a mano {difficulty} ({computed})" };
+const fmt = (k, d = {}) => Object.entries(d).reduce((t, [a, b]) => t.replace(`{${a}}`, String(b)), strings[k] ?? k);
+globalThis.game = { i18n: { lang: "it", localize: (k) => strings[k] ?? k, format: fmt }, settings: { get: () => "publicroll" } };
+globalThis.CONFIG = { Dice: { terms: {}, rollModes: {} } };
+globalThis.Hooks = { once() {} };
+globalThis.ChatMessage = { getSpeaker: ({ actor }) => ({ alias: actor.name }), applyRollMode: (d) => d, create: async (d) => { const m = { ...d, getFlag: (s, k) => d.flags?.[s]?.[k] }; globalThis.__sim.messages.push(m); return m; } };
+globalThis.foundry = { applications: { api: { DialogV2: {} }, handlebars: {} }, utils: { randomID: () => "id" + Math.random().toString(36).slice(2, 8) } };
+const infos = []; globalThis.ui = { notifications: { info: (m) => infos.push(m), warn: (m) => infos.push("WARN " + m) } };
+
+// I poteri inseriti dal giocatore (21/9): tre su Forze, uno su Mente, nessun segnaposto.
+const flags = { "m6": { arete: { value: 3 }, spheres: { forces: 3, mind: 1 }, sphereSelection: { forces: true, mind: true }, magickBalance: { quintessence: 4, paradox: 1 }, focus: { practiceForm: "magick" }, poteri: { pf1: { sphere: "forces", name: "Conduttore", dot: 2, type: "passivo" }, pf2: { sphere: "forces", name: "Vestire lo scudo", dot: 3, type: "passivo" }, pf3: { sphere: "forces", name: "Buco nero", dot: 5, type: "attivo", effects: [{ on: "threshold", value: -2 }] }, pm1: { sphere: "mind", name: "Testa dura", dot: 1, type: "passivo" } } } };
+const items = new Map([["i1", { id: "i1", name: "Occhio di lince", type: "feature", img: "", system: { featuretype: "merit", bonuses: [{ value: 1 }] } }]]);
+const actor = {
+  name: "Ianira", isOwner: true, items,
+  system: {
+    locked: false,
+    sortedAttributes: { physical: [{ id: "dexterity", displayName: "Destrezza", value: 4 }], social: [], mental: [{ id: "wits", displayName: "Prontezza", value: 2 }] },
+    sortedSkills: { mental: [{ id: "occult", displayName: "Velo", value: 5 }], physical: [{ id: "athletics", displayName: "Atletica", value: 2 }], social: [] },
+    skills: { occult: { value: 5, bonuses: [{ source: "rituali", value: 1 }] }, athletics: { value: 2, bonuses: [] } },
+    attributes: { dexterity: { value: 4 }, wits: { value: 2 } }
+  },
+  getFlag: (scope, key) => flags[scope]?.[key],
+  setFlag: async (scope, key, value) => { flags[scope][key] = value; },
+  update: async (data) => { for (const [k, v] of Object.entries(data)) { const path = k.split("."); if (path[0] === "flags") { let node = flags; for (const p of path.slice(1, -1)) node[p] ??= {}, node = node[p]; const last = path.at(-1); if (last.startsWith("-=")) delete node[last.slice(2)]; else node[last] = v; } } }
+};
+const spheresMod = await import(new URL("../../scripts/spheres.js", import.meta.url).href);
+// prepareSpheres legge la selezione dalla bandiera: controlla che la finta la regga.
+const sel = spheresMod.prepareSpheres(actor, { localize: (k) => strings[k] ?? k, locale: "it" });
+assert.ok(sel.selected.some((s) => s.id === "forces"), "Forze selezionata nella finta");
+
+const T = await import(new URL("../../scripts/tiro.js", import.meta.url).href);
+const S = await import(new URL("../../scripts/tiro-scheda.js", import.meta.url).href);
+const { ROLL_CARD_FLAG } = await import(new URL("../../scripts/roll-card.js", import.meta.url).href);
+
+// Componi: Areté, Forze, Potenza 4, Portata 3, Destrezza, Velo con rituali, il Pregio.
+let tiro = T.toggleArete(T.emptyTiro());
+tiro = T.toggleSphere(tiro, "forces");
+tiro = T.setScope(T.setScope(tiro, "potency", 4), "range", 3);
+tiro = T.pickAttribute(tiro, "dexterity");
+tiro = T.pickSpecialty(tiro, "skill:occult", "rituali");
+tiro = T.toggleTrait(tiro, "i1");
+const ctx = S.prepareTiroContext(actor, tiro);
+assert.equal(ctx.magick, true);
+assert.equal(ctx.size, 8, "otto pezzi in catena (la catena non si stampa, ma si conta)");
+// Il Sistema (14/11): si tirano tutti gli 11 dadi. Il conto degli Ambiti è 4 (la Potenza; Portata 3 ed Epicità 1
+// non passano l'Areté 3), e il premio dell'Areté la abbassa di 3: servono 1 successo.
+assert.deepEqual([ctx.pool, ctx.computed, ctx.difficulty, ctx.dice, ctx.successFrom, ctx.ready], [4 + 5 + 1 + 1, 4, 1, 11, 6, true]);
+// Il riquadro dell'1/10: in testa il tipo e la Sfera (l'Areté resta fra le pillole ma non si stampa), nella Riserva
+// le righe di chi dà dadi (con la Quintessenza da spendere), nella Soglia i sei Ambiti, sempre, con la lettura e il
+// livello, e in fondo il premio dell'Areté spuntato.
+assert.deepEqual([ctx.testa.tipo, ctx.testa.arete.value, ctx.testa.spheres.map((s) => s.id)], ["magick", 3, ["forces"]]);
+assert.deepEqual(ctx.riserva.righe.map((r) => [r.kind, r.value]), [["attribute", "4"], ["skill", "5"], ["specialty", "1"], ["trait", "1"], ["extra", undefined], ["quintessence", undefined]], "la Riserva: Destrezza, Velo, rituali, il Pregio, i bonus, la Quintessenza");
+{
+  // I bonus dentro il tetto (il Sistema, voci Bonus e Supporto): il passo da 0 a 3, col sorvolo dell'Armonia nella Magick.
+  const bonus = ctx.riserva.righe.find((r) => r.kind === "extra");
+  assert.deepEqual([bonus.stepper.action, bonus.stepper.value, bonus.stepper.min, bonus.stepper.max, bonus.stepper.extra, bonus.hint], ["tiroExtra", "0", true, false, "/ 3", "M6.Tiro.BonusHintMagick"]);
+}
+{
+  const quint = ctx.riserva.righe.at(-1).stepper;
+  assert.deepEqual([quint.action, quint.value, quint.min, quint.max, quint.extra], ["tiroQuintessence", "0", true, false, "/ 3"], "la Quintessenza in dadi: da zero, fino al tetto dei +3");
+  const premio = ctx.soglia.righe.at(-1);
+  assert.deepEqual([premio.kind, premio.value, premio.check, premio.off], ["prize", "−3", { action: "tiroPrize", on: true }, false], "il premio sta nella Soglia: la abbassa di quant'è l'Areté");
+  const spento = S.prepareTiroContext(actor, T.togglePrize(tiro));
+  assert.deepEqual([spento.soglia.righe.at(-1).value, spento.soglia.righe.at(-1).off, spento.difficulty], ["−3", true, 4], "spento, dice quanto toglierebbe e la soglia torna 4");
+}
+assert.ok(ctx.riserva.righe[0].img.endsWith("/tratti/dexterity.svg") && ctx.riserva.righe[2].indent, "il sigillo dell'Attributo; la Specializzazione rientrata");
+assert.equal(ctx.soglia.righe.length, 8, "la Soglia della Magick: l'Epicità, tutti e sei gli Ambiti e il premio");
+assert.deepEqual(ctx.soglia.righe.filter((r) => r.kind === "scope" && !r.spenta).map((r) => [r.kind, r.id, r.value, r.fa, r.via, r.base]), [["scope", "epic", "1", "fa-solid fa-wand-magic-sparkles", false, true], ["scope", "range", "3", "fa-solid fa-location-crosshairs", true, false], ["scope", "potency", "4", "fa-solid fa-burst", true, false]], "l'Epicità in cima, a 1 senza ×; poi gli alzati, Portata e Potenza, in ordine alfabetico, con la ×");
+assert.deepEqual(ctx.soglia.righe.filter((r) => r.spenta).map((r) => [r.id, r.value, r.via]), [["conditions", "0", false], ["duration", "0", false], ["precision", "0", false], ["targets", "0", false]], "a zero: spenti, senza ×");
+assert.ok(ctx.soglia.righe.filter((r) => r.kind === "scope" && !r.base).every((r) => r.name && r.hint.startsWith(`${r.label} · `)), "ogni riga legge il livello con la lente; nome e lente stanno nel sorvolo");
+assert.ok(ctx.soglia.righe[0].hint.startsWith(`${ctx.soglia.righe[0].label} 1`), "l'Epicità ha una lente sola, e il sorvolo non la nomina");
+assert.deepEqual([ctx.riserva.totale.label, ctx.riserva.totale.ritocco, ctx.soglia.totale.label, ctx.soglia.totale.ritocco, ctx.esito.dadi, ctx.esito.parola, ctx.esito.dal, ctx.esito.spento, ctx.blocco], ["11", "", "1", "", 11, "M6.Tiro.DadiParola", 6, false, ""], "i totali in fondo: 11 dadi e soglia 1, niente matita; l'esito: 11 dadi");
+assert.equal(ctx.esito.servono, "M6.Tiro.ServeUno", "e dice quanti successi servono");
+assert.deepEqual([ctx.riserva.totale.meno, ctx.riserva.totale.piu, ctx.soglia.totale.meno, ctx.soglia.totale.piu, ctx.manual], [false, false, true, false, false], "la soglia è già a 1: il meno è spento");
+assert.deepEqual([ctx.extra.value, ctx.extra.cap], [0, 3]);
+const conExtra = S.prepareTiroContext(actor, T.setExtra(tiro, 2));
+assert.deepEqual([conExtra.extra.value, conExtra.extra.dice, conExtra.pool, conExtra.riserva.totale.label], [2, 2, 13, "13"], "i bonus entrano nella riserva");
+assert.deepEqual(conExtra.riserva.righe.find((r) => r.kind === "extra").stepper.value, "2", "e il passo dice quanti");
+assert.equal(conExtra.riserva.righe.at(-1).stepper.extra, "/ 1", "coi due dadi extra resta posto per un punto di Quintessenza");
+// Il ritocco (1/10) sta nel totale della Riserva: −2 fa 9, la matita lo dice, e l'esito scende a 9.
+const conRitocco = S.prepareTiroContext(actor, T.setDadi(tiro, -2));
+assert.deepEqual([conRitocco.riserva.totale.label, conRitocco.riserva.totale.ritocco, conRitocco.esito.dadi, conRitocco.riservaTotale], ["9", "−2", 9, 11]);
+// La difficoltà a mano si somma al conto degli Ambiti: 4 + 1 − 3 del premio fa 2, la matita lo dice; i dadi restano 11.
+const conSoglia = S.prepareTiroContext(actor, T.bumpSoglia(tiro, 1));
+assert.deepEqual([conSoglia.computed, conSoglia.difficulty, conSoglia.soglia.totale.label, conSoglia.soglia.totale.ritocco, conSoglia.esito.dadi], [4, 2, "2", "+1", 11]);
+assert.equal(conSoglia.esito.servono, "M6.Tiro.Servono");
+// La mano del Narratore è libera (Blue, 15/11): +4 fa 4 + 4 − 3 = 5, e oltre +3 o −3 la matita va in rosso.
+{
+  const piu3 = S.prepareTiroContext(actor, T.setSoglia(tiro, 3));
+  const piu4 = S.prepareTiroContext(actor, T.setSoglia(tiro, 4));
+  assert.deepEqual([piu3.difficulty, piu3.soglia.totale.ritocco, piu3.soglia.totale.oltre, piu3.soglia.totale.oltreHint], [4, "+3", false, ""]);
+  assert.deepEqual([piu4.difficulty, piu4.soglia.totale.ritocco, piu4.soglia.totale.oltre, piu4.soglia.totale.oltreHint, piu4.soglia.totale.piu], [5, "+4", true, "M6.Tiro.SogliaOltre", false]);
+  assert.deepEqual([conSoglia.soglia.totale.oltre, ctx.soglia.totale.oltre], [false, false]);
+}
+// Un dado solo: la parola al singolare.
+assert.equal(S.prepareTiroContext(actor, T.setDadi(tiro, -10)).esito.parola, "M6.Tiro.DadoParola");
+assert.deepEqual([ctx.prize.on, ctx.prize.arete, ctx.quintessence.available], [true, 3, 4]);
+const rows = S.prepareScopeRows(tiro, (k) => strings[k] ?? k, { arete: 3 });
+assert.equal(rows.length, 7, "l'Epicità e sei Ambiti: l'Impatto è uscito il 29/9, l'Epicità è entrata il 2/10");
+// L'Epicità in cima (2/10), staccata, a una lente sola, col primo pallino acceso anche se nessuno l'ha dichiarata.
+assert.deepEqual([rows[0].id, rows[0].base, rows[0].level, rows[0].declared, rows[0].multi, rows[0].steps[0].lit, rows[0].steps[0].active, rows[0].steps[1].lit], ["epic", true, 1, false, false, true, true, false]);
+assert.deepEqual(rows.slice(1).map((r) => r.base), [false, false, false, false, false, false]);
+assert.equal(rows.every((r) => r.zero === undefined && r.steps.length === 7 && r.steps[0].value === 1), true, "via il pallino dello 0: sette pallini, da 1 a 7");
+const epicaDichiarata = S.prepareScopeRows(T.setScope(tiro, "epic", 5), (k) => strings[k] ?? k, { arete: 3 })[0];
+assert.deepEqual([epicaDichiarata.level, epicaDichiarata.declared, epicaDichiarata.steps.filter((s) => s.lit).length, epicaDichiarata.reading], [5, true, 5, "M6.Scopes.Table.epic.5"]);
+assert.equal(rows.find((r) => r.id === "potency").steps[3].active, true);
+const poteri = S.preparePoteriRows(actor, tiro, (k) => strings[k] ?? k);
+assert.equal(poteri.length, 3 + 1, "i poteri inseriti: tre su Forze e uno su Mente (21/9: non gli slot)");
+assert.deepEqual(poteri.map((p) => p.label), ["Conduttore", "Vestire lo scudo", "Buco nero", "Testa dura"], "in ordine di Sfera e di pallino, col nome vero");
+assert.equal(poteri[0].short, "Conduttore");
+assert.deepEqual(S.poteriOfSphere(poteri, "mind").map((p) => p.id), ["pm1"], "la tendina di Mente ha il suo");
+// Il potere scelto porta la sua Sfera (la casella la passa) e i suoi effetti entrano nel conto.
+const conPotere = S.prepareTiroContext(actor, T.pickPower(T.toggleArete(T.emptyTiro()), "pf3", "forces"));
+assert.deepEqual([conPotere.magick, conPotere.size], [true, 3], "Areté, Forze e il potere");
+assert.equal(S.contoInputs(actor, T.pickPower(T.emptyTiro(), "pf3", "forces")).inputs.power.name, "Buco nero", "il potere si legge fra quelli del personaggio");
+assert.equal(S.contoInputs(actor, T.pickPower(T.emptyTiro(), "zzz", "forces")).inputs.power, null);
+assert.equal(rows.find((r) => r.id === "potency").steps[3].reading, rows.find((r) => r.id === "potency").reading, "la lettura sul numero è quella della riga");
+// Senza una lettura scelta (21/9) la Potenza, che ne ha due, non stampa nessuna lettura: solo il numero.
+assert.deepEqual([rows.find((r) => r.id === "potency").reading, rows.find((r) => r.id === "potency").steps[3].tip], ["", "4"]);
+// La lettura («lente») dell'Ambito (16/9 sera; tavola del 23/9, rifatta il 29/9: due o tre lenti l'uno): la prima della tavola, o quella scelta col tastino.
+const potenza = rows.find((r) => r.id === "potency");
+assert.deepEqual([potenza.mode, potenza.modeCount, potenza.modeLabel, potenza.nextModeLabel], ["potencyDamage", 3, "M6.Scopes.Sub.potencyDamage", "M6.Scopes.Sub.potencyWeight"]);
+assert.equal(potenza.reading, "", "nessuna lettura scelta: niente testo");
+const potenzaPeso = S.prepareScopeRows(tiro, (k) => strings[k] ?? k, { arete: 3, modes: { potency: "potencyWeight" } }).find((r) => r.id === "potency");
+assert.match(potenzaPeso.reading, /Table\.potencyWeight\.4/);
+assert.match(potenzaPeso.steps[3].tip, /Table\.potencyWeight\.4/);
+assert.ok(!potenzaPeso.steps[3].tip.startsWith("4 · "), "niente numero davanti alla voce (27/9)");
+// I pallini partono dall'1: lo 0 è la base (23/9), e la riga a riposo la legge.
+const portataRiposo = S.prepareScopeRows(T.emptyTiro(), (k) => strings[k] ?? k, { arete: 3, modes: { range: "range" } }).find((r) => r.id === "range");
+assert.deepEqual([portataRiposo.level, portataRiposo.reading, portataRiposo.steps.length, portataRiposo.steps[0].value], [0, "M6.Scopes.Table.range.0", 7, 1]);
+assert.deepEqual(Object.fromEntries(rows.map((r) => [r.id, r.modeCount])), { epic: 1, targets: 2, conditions: 2, duration: 2, range: 3, potency: 3, precision: 2 }, "una, due o tre lenti per Ambito (29/9, 2/10; il Legame nella Portata il 3/10)");
+const conDanni = S.prepareScopeRows(tiro, (k) => strings[k] ?? k, { arete: 3, modes: { potency: "potencyDamage", targets: "boh" } }).find((r) => r.id === "potency");
+assert.deepEqual([conDanni.mode, conDanni.nextModeLabel], ["potencyDamage", "M6.Scopes.Sub.potencyWeight"], "dai Danni si passa al Peso");
+assert.equal(conDanni.reading, "M6.Scopes.Table.potencyDamage.4", "i Danni: i dadi dei danni del quarto pallino, senza l'Areté (il Sistema)");
+// Il tastino: chi possiede scrive la bandiera; la scheda rilegge la bandiera.
+const sheetModi = { actor, _tiro: T.emptyTiro(), render: async () => {} };
+await S.onScopeMode.call(sheetModi, { preventDefault() {} }, { dataset: { scope: "potency" } });
+assert.equal(flags["m6"].scopeModes.potency, "potencyWeight");
+await S.onScopeMode.call(sheetModi, { preventDefault() {} }, { dataset: { scope: "potency" } });
+assert.equal(flags["m6"].scopeModes.potency, "potencyInfluence", "la terza lente della Potenza (29/9)");
+await S.onScopeMode.call(sheetModi, { preventDefault() {} }, { dataset: { scope: "potency" } });
+assert.equal(flags["m6"].scopeModes.potency, "potencyDamage", "e si torna ai Danni");
+assert.deepEqual(S.scopeModesOf(sheetModi), { potency: "potencyDamage" });
+await S.onScopeMode.call(sheetModi, { preventDefault() {} }, { dataset: { scope: "boh" } });
+assert.equal(flags["m6"].scopeModes.boh, undefined, "un Ambito che non c'è non scrive niente");
+// La tendina delle letture (20/9 sera): la lettura chiesta per nome, e la riga sa se è scelta.
+await S.onScopeMode.call(sheetModi, { preventDefault() {} }, { dataset: { scope: "potency", mode: "potencyWeight" } });
+assert.equal(flags["m6"].scopeModes.potency, "potencyWeight", "dalla tendina arriva la lettura chiesta");
+await S.onScopeMode.call(sheetModi, { preventDefault() {} }, { dataset: { scope: "potency", mode: "boh" } });
+assert.equal(flags["m6"].scopeModes.potency, "potencyWeight", "una lettura che non esiste non cambia niente");
+const righeTendina = S.prepareScopeRows(tiro, (k) => strings[k] ?? k, { arete: 3, modes: { potency: "potencyWeight" } });
+const potenzaTendina = righeTendina.find((r) => r.id === "potency");
+assert.deepEqual([potenzaTendina.multi, potenzaTendina.modeChosen, potenzaTendina.modes.map((m) => m.id), potenzaTendina.modes.find((m) => m.selected).id], [true, true, ["potencyDamage", "potencyWeight", "potencyInfluence"], "potencyWeight"]);
+const durataTendina = righeTendina.find((r) => r.id === "duration");
+assert.deepEqual([durataTendina.multi, durataTendina.modeChosen, durataTendina.modeShown, durataTendina.steps.length, durataTendina.steps[2].tip, durataTendina.steps[2].reading, durataTendina.modes.some((m) => m.selected)], [true, false, false, 7, "3", "", false], "più letture, nessuna scelta (21/9): i pallini ci sono lo stesso, col solo numero, e nessuna pastiglia accesa");
+assert.equal(potenzaTendina.steps[3].tip, potenzaTendina.steps[3].reading, "con la lettura il tooltip dice solo la voce (27/9)");
+const durataScelta = S.prepareScopeRows(tiro, (k) => strings[k] ?? k, { arete: 3, modes: { duration: "duration" } }).find((r) => r.id === "duration");
+assert.deepEqual([durataScelta.modeChosen, durataScelta.modeShown], [true, durataScelta.level === 0], "scelta la lettura: i pallini, e la lettura in piccolo finché non c'è il livello");
+// Tre Ambiti per lancio (23/9): il quarto pallino cliccato non si accende, e la scheda avvisa.
+{
+  const tre = T.setScope(T.setScope(T.setScope(T.toggleArete(T.emptyTiro()), "potency", 1), "range", 1), "duration", 1);
+  const sheetTre = { actor, _tiro: tre, render: async () => {} };
+  const primaWarn = infos.length;
+  await S.onTiroScope.call(sheetTre, { preventDefault() {} }, { dataset: { scope: "targets", level: "2" } });
+  assert.deepEqual([sheetTre._tiro.scopes.targets, infos.length - primaWarn, infos.at(-1)], [undefined, 1, "WARN M6.Tiro.ScopeCapWarning"]);
+  await S.onTiroScope.call(sheetTre, { preventDefault() {} }, { dataset: { scope: "range", level: "4" } });
+  assert.equal(sheetTre._tiro.scopes.range, 4, "un Ambito già alzato si alza ancora");
+  await S.onTiroScope.call(sheetTre, { preventDefault() {} }, { dataset: { scope: "range", level: "4" } });
+  assert.equal(sheetTre._tiro.scopes.range, undefined, "lo stesso pallino lo toglie");
+  await S.onTiroScope.call(sheetTre, { preventDefault() {} }, { dataset: { scope: "targets", level: "2" } });
+  assert.equal(sheetTre._tiro.scopes.targets, 2, "tolto uno, il posto si libera");
+}
+
+// I bonus (il Sistema): il più sale fino a 3, il meno scende a 0, e non si va oltre.
+{
+  const sheetBonus = { actor, _tiro: T.emptyTiro(), render: async () => {} };
+  for (let i = 0; i < 5; i += 1) await S.onTiroExtra.call(sheetBonus, { preventDefault() {} }, { dataset: { delta: "1" } });
+  assert.equal(sheetBonus._tiro.extra, 3, "fermo al tetto");
+  for (let i = 0; i < 5; i += 1) await S.onTiroExtra.call(sheetBonus, { preventDefault() {} }, { dataset: { delta: "-1" } });
+  assert.equal(sheetBonus._tiro.extra, 0, "mai sotto zero");
+}
+
+// Il tiro di Abilità nel riquadro (il Sistema): Destrezza + Atletica, soglia 2 a mano. Si tirano tutti e 6 i
+// dadi e servono 2 successi; la soglia va da 1 a 7, e i tasti si spengono agli estremi.
+{
+  const soloAbilita = T.pickSkill(T.pickAttribute(T.emptyTiro(), "dexterity"), "skill:athletics");
+  const senza = S.prepareTiroContext(actor, soloAbilita);
+  assert.deepEqual([senza.ready, senza.esito.dadi, senza.esito.servono, senza.soglia.totale.label], [false, 6, "", "?"], "senza soglia il tiro non parte, ma i dadi si sanno già");
+  const due = S.prepareTiroContext(actor, T.setSoglia(soloAbilita, 2));
+  assert.deepEqual([due.magick, due.pool, due.difficulty, due.dice, due.manual, due.ready], [false, 6, 2, 6, true, true]);
+  assert.deepEqual([due.soglia.righe.length, due.soglia.totale.label, due.soglia.totale.ritocco, due.soglia.totale.meno, due.soglia.totale.piu, due.esito.servono], [0, "2", "", false, false, "M6.Tiro.Servono"]);
+  assert.equal(due.riserva.righe.some((r) => r.kind === "quintessence"), false, "in un tiro di Abilità la Quintessenza non dà dadi");
+  assert.deepEqual([S.prepareTiroContext(actor, T.setSoglia(soloAbilita, 1)).soglia.totale.meno, S.prepareTiroContext(actor, T.setSoglia(soloAbilita, 7)).soglia.totale.piu], [true, true]);
+}
+
+// IL LANCIO. I dadi, il conto dei successi, la soglia, il margine e il Paradosso del lancio sono sul Sistema
+// (14/11, 16/11): lanciare un incantesimo non costa niente, e «paga con» non c'è più.
+
+// Il Paradosso del lancio: ogni tasto del tipo dice quanto ne dà; la Dissonanza ne aggiunge uno ai soli Volgari.
+assert.deepEqual([ctx.costo, ctx.dissonanza], [undefined, { on: false }]);
+assert.deepEqual(ctx.kinds.map((k) => [k.kind, k.paradosso]), [["accidentale", 0], ["volgare", 1], ["testimoni", 2]]);
+assert.match(ctx.kinds[0].hint, /M6\.Costo\.TastoNiente$/, "l'Accidentale lo dice: non dà Paradosso");
+const dissonante = S.prepareTiroContext(actor, T.setDissonanza(tiro, true));
+assert.deepEqual([dissonante.dissonanza, dissonante.kinds.map((k) => [k.kind, k.paradosso])], [{ on: true }, [["accidentale", 0], ["volgare", 2], ["testimoni", 3]]]);
+
+// Il lancio: Volgare con testimoni. Due punti di Quintessenza danno due dadi (dentro il tetto dei +3): si
+// tirano tutti e 13, e a soglia 1 ne basta uno. Non paga niente e prende i 2 Paradosso del tipo.
+tiro = T.setQuintessence(tiro, 2);
+tiro = T.setKind(tiro, "testimoni");
+globalThis.__sim.faces = [8, 8, 3, 3, 5, 6, 7, 10, 2, 4, 2, 3, 4, 5, 4, 3];
+const message = await S.launchTiro(actor, tiro);
+assert.ok(message, "il tiro parte");
+const card = message.getFlag("m6", ROLL_CARD_FLAG);
+const roll = globalThis.__sim.rolls.at(-1);
+assert.equal(roll.formula, "13dmcs>5 + 3dpcs>5", "riserva 11 più i 2 dadi della Quintessenza: si tira tutta; la Ruota paga prima del tiro (+2 Paradosso): 3 rossi a parte");
+assert.deepEqual([card.pool, card.threshold, card.dice, card.difficulty, card.successFrom, card.total, card.margin, card.sistema], [13, 1, 13, 1, 6, 5, 4, true], "quattro scintille e una stellina spaiata: 5 successi a soglia 1, margine 4; i rossi non contano");
+assert.equal(card.ustione, undefined, "nessun occhio sui rossi (5, 4, 3): niente Contraccolpo");
+assert.deepEqual([card.kind, card.dissonanza, card.costo, card.paradossoPreso], ["testimoni", false, { quintessenza: 0, paradosso: 2 }, 2], "la carta porta il Paradosso del tipo, il Narratore copia il Paradosso preso");
+assert.equal(card.tiro.power, "");
+assert.deepEqual(card.tiro.traits, ["i1"]);
+assert.equal(flags["m6"].magickBalance.paradox, 1 + 2, "Volgare con testimoni: +2 Paradosso");
+assert.equal(flags["m6"].magickBalance.quintessence, 4 - 2, "scendono solo i due punti spesi in dadi: il lancio non costa");
+assert.match(message.flavor, /M6\.Costo\.Nota/, "la carta dice il Paradosso che il lancio dà");
+assert.equal(flags["m6"].lastThreshold, 1, "la soglia salvata è quella del lancio, col premio già tolto");
+assert.match(message.flavor, /Occhio di lince \+1/);
+
+// Il tiro di Abilità: Destrezza + Atletica, soglia 2 a mano: sei dadi, servono due successi, niente rossi.
+let abilita = T.pickSkill(T.pickAttribute(T.emptyTiro(), "dexterity"), "skill:athletics");
+abilita = T.setSoglia(abilita, 2);
+const ctx2 = S.prepareTiroContext(actor, abilita);
+assert.deepEqual([ctx2.magick, ctx2.pool, ctx2.difficulty, ctx2.dice, ctx2.manual], [false, 6, 2, 6, true]);
+assert.deepEqual([ctx2.testa.tipo, ctx2.testa.arete, ctx2.soglia.righe.length, ctx2.soglia.totale.label, ctx2.soglia.totale.ritocco, ctx2.soglia.vuota], ["abilita", null, 0, "2", "", false], "nell'Abilità la soglia è tutta a mano: il totale la dice, senza matita");
+globalThis.__sim.faces = [6, 1, 1, 9, 2, 3];
+const m2 = await S.launchTiro(actor, abilita);
+const roll2 = globalThis.__sim.rolls.at(-1);
+assert.equal(roll2.formula, "6dmcs>5 + 0dpcs>5");
+assert.deepEqual([m2.getFlag("m6", ROLL_CARD_FLAG).total, m2.getFlag("m6", ROLL_CARD_FLAG).difficulty, m2.getFlag("m6", ROLL_CARD_FLAG).margin, m2.getFlag("m6", ROLL_CARD_FLAG).skill], [2, 2, 0, true], "due successi a soglia 2: riesce giusto");
+
+// Senza soglia non si tira (16/9 sera): il riquadro spegne il tasto e dice cosa manca.
+const senza = T.pickSkill(T.pickAttribute(T.emptyTiro(), "dexterity"), "skill:athletics");
+const ctxSenza = S.prepareTiroContext(actor, senza);
+assert.deepEqual([ctxSenza.ready, ctxSenza.needsDifficulty, ctxSenza.blocco, ctxSenza.soglia.totale.label, ctxSenza.soglia.totale.vuoto, ctxSenza.esito.dadi, ctxSenza.esito.spento], [false, true, "M6.Tiro.MancaSoglia", "?", true, 6, true]);
+assert.deepEqual([ctx2.needsDifficulty, ctx.needsDifficulty], [false, false]);
+assert.equal(S.prepareTiroContext(actor, T.emptyTiro()).blocco, "M6.Tiro.MancaTratto", "senza tratti il tasto dice che manca l'Attributo o l'Abilità");
+const primaDelSenza = globalThis.__sim.rolls.length;
+assert.equal(await S.launchTiro(actor, senza), null);
+assert.equal(globalThis.__sim.rolls.length, primaDelSenza);
+// Senza tratti non si tira; con la Magick senza tipo nemmeno.
+assert.equal(await S.launchTiro(actor, T.toggleArete(T.emptyTiro())), null);
+assert.equal(await S.launchTiro(actor, T.toggleArete(T.pickAttribute(T.emptyTiro(), "dexterity"))), null);
+assert.ok(infos.some((m) => m.startsWith("WARN")));
+// Il Grimorio nel riquadro (16/9 sera): l'incantesimo scritto entra nel compositore com'è.
+flags["m6"].grimorio = { s1: { name: "Lama di fuoco", goal: "Una lama", prize: false, magickType: "vulgar", spheres: { forces: 3, prime: 1 }, scopes: { potency: 2 }, traits: [{ field: "attributeTrait", key: "attribute:wits", label: "Prontezza" }, { field: "primaryTrait", key: "skill:athletics", label: "Atletica" }], sort: 0 } };
+const spellRows = S.prepareIncantesimiRows(actor, T.emptyTiro(), (k) => strings[k] ?? k);
+assert.equal(spellRows.length, 1);
+assert.deepEqual([spellRows[0].name, spellRows[0].coda, spellRows[0].chosen], ["Lama di fuoco", "Forze, M6.Spheres.prime", false]);
+const sheetFinta = { actor, _tiro: T.emptyTiro(), render: async () => {} };
+await S.onTiroIncantesimo.call(sheetFinta, { preventDefault() {} }, { dataset: { row: "s1" } });
+const caricato = sheetFinta._tiro;
+assert.deepEqual([caricato.arete, caricato.prize, caricato.spheres, caricato.scopes, caricato.attribute, caricato.skill, caricato.kind, caricato.spell], [true, false, ["forces"], { potency: 2 }, "wits", "skill:athletics", "volgare", "s1"], "Primordio non c'è sulla scheda: resta fuori");
+assert.equal(S.prepareIncantesimiRows(actor, caricato, (k) => strings[k] ?? k)[0].chosen, true);
+// Il verdetto del Narratore (16/9 sera, e 27/9: a tutti i Narratori collegati):
+// il tiro arriva sul socket a tutti e due; qui Blue risponde subito alzando
+// la Difficoltà di uno e dando un dado: si tira coi suoi numeri e la carta lo
+// dice col suo nome. Con «Dal Narratore» spento il tiro parte senza chiedere.
+{
+  const V = await import(new URL("../../scripts/verdetto-narratore.js", import.meta.url).href);
+  const mandati = [];
+  strings["M6.Verdetto.Note"] = "Narratore: {changes}.";
+  strings["M6.Verdetto.NoteChi"] = "Narratore {name}: {changes}.";
+  strings["M6.Verdetto.NoteDifficulty"] = "Soglia {before} → {after}";
+  strings["M6.Verdetto.NoteDice"] = "dadi {dice}";
+  globalThis.game.user = { id: "p1" };
+  globalThis.game.users = [{ id: "gm", name: "Anna", active: true, isGM: true }, { id: "gm2", name: "Blue", active: true, isGM: true }, { id: "p1", active: true, isGM: false }];
+  globalThis.game.socket = {
+    emit: (name, payload) => {
+      mandati.push(payload);
+      if (payload.type === V.TIPO_RICHIESTA) queueMicrotask(() => V.onSocketVerdetto(V.verdettoTiro(payload, { difficulty: payload.difficulty + 1, dice: 1 }, { from: "gm2", fromName: "Blue" })));
+    }
+  };
+  globalThis.__sim.faces = [7, 7, 7, 1, 2, 3, 4];
+  const conVerdetto = await S.launchTiro(actor, abilita);
+  assert.equal(mandati[0].type, V.TIPO_RICHIESTA);
+  assert.deepEqual([mandati[0].to, mandati[0].pool, mandati[0].difficulty, mandati[0].actorName], [["gm", "gm2"], 6, 2, "Ianira"], "la richiesta va a tutti e due i Narratori");
+  assert.equal(globalThis.__sim.rolls.at(-1).formula, "7dmcs>5 + 0dpcs>5", "sei dadi più quello del Narratore; la soglia 3 non ne toglie");
+  assert.deepEqual([conVerdetto.getFlag("m6", ROLL_CARD_FLAG).total, conVerdetto.getFlag("m6", ROLL_CARD_FLAG).difficulty], [3, 3], "tre successi alla soglia 3 del Narratore");
+  assert.match(conVerdetto.flavor, /Narratore Blue: Soglia 2 → 3 · dadi \+1\./, "la carta dice cosa ha toccato il Narratore, e chi");
+  assert.equal(conVerdetto.getFlag("m6", ROLL_CARD_FLAG).threshold, 3);
+  // «Dal Narratore» spento: niente richiesta, si tira coi numeri del riquadro.
+  const getPrima = globalThis.game.settings.get;
+  globalThis.game.settings.get = (modulo, key) => (key === V.TIRO_NARRATORE_SETTING ? false : getPrima(modulo, key));
+  globalThis.__sim.faces = [7, 7, 7, 1, 1, 2];
+  const senza = await S.launchTiro(actor, abilita);
+  assert.deepEqual([mandati.length, globalThis.__sim.rolls.at(-1).formula], [1, "6dmcs>5 + 0dpcs>5"], "nessuna richiesta in più; sei dadi a soglia 2, coi numeri del riquadro");
+  assert.doesNotMatch(senza.flavor, /Narratore/);
+  globalThis.game.settings.get = getPrima;
+  delete globalThis.game.user; delete globalThis.game.users; delete globalThis.game.socket;
+}
+const ctxSpell = S.prepareTiroContext(actor, caricato);
+assert.deepEqual([ctxSpell.magick, ctxSpell.pool, ctxSpell.computed, ctxSpell.ready], [true, 2 + 2, 2, true], "Prontezza 2 + Atletica 2; soglia 2: fa da base la Potenza 2, l'Epicità 1 non passa l'Areté 3; senza premio");
+globalThis.__sim.faces = [9, 2, 4, 3, 2, 3, 4, 5, 2, 3];
+const m3 = await S.launchTiro(actor, caricato);
+assert.ok(m3, "l'incantesimo caricato tira coi tre tasti (Volgare com'era scritto)");
+assert.match(String(globalThis.__sim.rolls.at(-1).options.title), /^Lama di fuoco · Prontezza \+ Atletica$/, "il nome dell'incantesimo dà il titolo al tiro");
+assert.match(m3.flavor, /Una lama/, "e l'Obiettivo va in carta");
+await S.onTiroIncantesimo.call(sheetFinta, { preventDefault() {} }, { dataset: { row: "s1" } });
+assert.equal(sheetFinta._tiro.spell, null, "lo stesso incantesimo cliccato di nuovo si toglie");
+await S.onTiroIncantesimo.call(sheetFinta, { preventDefault() {} }, { dataset: { row: "nessuno" } });
+assert.deepEqual(sheetFinta._tiro, T.emptyTiro());
+
+// Gli effetti dei poteri sul tiro (tappa 3, 24/9), coi poteri del catalogo.
+{
+  strings["M6.Tiro.PotereNote.dice"] = "{name}: {value} dadi";
+  strings["M6.Tiro.PotereNote.freeScope"] = "{name}: {scope} non conta fino a {value}";
+  strings["M6.Tiro.PotereEscluso.dadi2"] = "servono due dadi";
+  strings["M6.Tiro.RiesceSenzaTirare"] = "Riesce senza tirare: {name}";
+  strings["M6.Poteri.Tipo.attivo"] = "attivo";
+  strings["M6.Poteri.Usi.scena"] = "per scena";
+  strings["M6.Poteri.UsiFiniti"] = "usi finiti";
+  flags["m6"].poteri.pmest = { sphere: "mind", name: "Mestiere", dot: 0, type: "attivo", source: "catalogo", catalogId: "mestiere", scelta: "skill:athletics" };
+  flags["m6"].poteri.pniente = { sphere: "forces", name: "Niente al caso", dot: 0, type: "attivo", source: "catalogo", catalogId: "niente-al-caso" };
+  flags["m6"].poteri.plascio = { sphere: "mind", name: "Lascio fare a lui", dot: 0, type: "attivo", source: "catalogo", catalogId: "lascio-fare-a-lui", uses: { per: "scena", n: 1 } };
+  flags["m6"].poteri.pcasa = { sphere: "forces", name: "Ambito di Casa", dot: 0, type: "attivo", source: "catalogo", catalogId: "ambito-di-casa", scelta: "potency" };
+  flags["m6"].poteri.pappoggio = { sphere: "forces", name: "Appoggio", dot: 0, type: "attivo", source: "catalogo", catalogId: "appoggio", costValue: 2 };
+  delete flags["m6"].poteriUsi;
+  flags["m6"].magickBalance = { quintessence: 6, paradox: 1 };
+
+  // La tendina: Mestiere vale fuori dalla Magick e non ha attivi sul tiro; Ambito di casa ha la riga «· attivo»,
+  // col costo variabile (1 Quintessenza per livello in più) che si paga col tasto «Usa», non dal tiro.
+  const righe = S.preparePoteriRows(actor, T.emptyTiro(), (k) => strings[k] ?? k);
+  const mestiereRiga = righe.find((r) => r.id === "pmest");
+  assert.deepEqual([mestiereRiga.any, mestiereRiga.roll, mestiereRiga.variant], [true, "abilita", ""]);
+  assert.equal(righe.find((r) => r.id === "pmest#attivo"), undefined, "Mestiere rifatto: l'attivo non tocca il tiro");
+  const casaAttiva = righe.find((r) => r.id === "pcasa#attivo");
+  assert.deepEqual([casaAttiva.any, casaAttiva.attivo, casaAttiva.label, casaAttiva.ok], [false, true, "Ambito di Casa · attivo", true]);
+  assert.deepEqual([righe.find((r) => r.id === "pcasa").attivo, righe.find((r) => r.id === "pappoggio#attivo")], [false, undefined], "Appoggio non ha attivi sul tiro: una riga sola");
+
+  // Mestiere in un tiro di Abilità: Forze e Mente sono le Sfere conosciute, due dadi in più su Atletica.
+  const sheetPotere = { actor, _tiro: T.setSoglia(T.pickSkill(T.pickAttribute(T.emptyTiro(), "dexterity"), "skill:athletics"), 2), render: async () => {} };
+  await S.onTiroPower.call(sheetPotere, { preventDefault() {} }, { dataset: { power: "pmest", sphere: "mind", any: "true" } });
+  const conMestiere = sheetPotere._tiro;
+  assert.deepEqual([conMestiere.arete, conMestiere.power, conMestiere.powerAny], [false, "pmest", true], "niente Areté: resta un tiro di Abilità");
+  const ctxMestiere = S.prepareTiroContext(actor, conMestiere);
+  assert.deepEqual([ctxMestiere.magick, ctxMestiere.pool, ctxMestiere.dice, ctxMestiere.potere.note], [false, 6 + 2, 8, ["Mestiere: +2 dadi · Quando la tiri fuori dalla Magick hai 1 dado in più per ogni tua Sfera che c'entra, fino a 3"]]);
+  globalThis.__sim.faces = [6, 6, 6, 6, 6, 6, 2, 3];
+  const mMestiere = await S.launchTiro(actor, conMestiere);
+  assert.equal(globalThis.__sim.rolls.at(-1).formula, "8dmcs>5 + 0dpcs>5", "riserva 8, tutta; servono 2 successi");
+  assert.deepEqual([mMestiere.getFlag("m6", ROLL_CARD_FLAG).total, mMestiere.getFlag("m6", ROLL_CARD_FLAG).margin], [6, 4], "sei successi a soglia 2: margine 4");
+  assert.match(mMestiere.flavor, /Mestiere: \+2 dadi/);
+  assert.match(mMestiere.flavor, /\+2/, "i dadi del potere stanno nel numero della carta");
+  assert.equal(mMestiere.getFlag("m6", ROLL_CARD_FLAG).tiro.power, "pmest");
+
+  // Niente al caso, rifatto (1/10): il passivo dà 2 dadi al tiro per cui ti sei preparato, e non fa riuscire senza tirare.
+  const tiroNiente = T.pickPower(T.setSoglia(T.pickSkill(T.pickAttribute(T.emptyTiro(), "dexterity"), "skill:athletics"), 4), "pniente", "forces", { any: true });
+  const ctxNiente = S.prepareTiroContext(actor, tiroNiente);
+  assert.deepEqual([ctxNiente.dice, ctxNiente.potere.autoSuccess, ctxNiente.potere.active], [8, false, false], "sei dadi più i due del potere; la soglia 4 non ne toglie");
+  assert.match(ctxNiente.potere.note[0], /^Niente al caso: \+2 dadi · Quando ti prepari a un'azione/);
+
+  // La riuscita senza tirare con l'uso per scena (Lascio fare a lui): nessun dado tirato, l'uso si conta, il secondo non parte.
+  const tiroLascio = T.pickPower(T.setSoglia(T.pickSkill(T.pickAttribute(T.emptyTiro(), "dexterity"), "skill:athletics"), 4), "plascio", "mind", { any: true });
+  const ctxLascio = S.prepareTiroContext(actor, tiroLascio);
+  assert.deepEqual([ctxLascio.dice, ctxLascio.potere.autoSuccess, ctxLascio.potere.active], [6, true, true]);
+  const primaDiLascio = globalThis.__sim.rolls.length;
+  const mLascio = await S.launchTiro(actor, tiroLascio);
+  assert.equal(globalThis.__sim.rolls.length, primaDiLascio, "nessun dado tirato");
+  assert.match(mLascio.content, /Riesce senza tirare: Lascio fare a lui/);
+  assert.deepEqual([mLascio.getFlag("m6", ROLL_CARD_FLAG).total, mLascio.getFlag("m6", ROLL_CARD_FLAG).difficulty, mLascio.getFlag("m6", ROLL_CARD_FLAG).margin, mLascio.getFlag("m6", ROLL_CARD_FLAG).bought], [4, 4, 0, true], "chi riesce senza tirare fa i successi della soglia, senza margine");
+  assert.deepEqual(flags["m6"].poteriUsi, { plascio: { scena: 1 } }, "l'uso si conta");
+  assert.equal(await S.launchTiro(actor, tiroLascio), null, "una volta per scena");
+  assert.equal(infos.at(-1), "WARN usi finiti");
+
+  // Appoggio nella Magick: Potenza 5 conta 1 sopra il 4, e fa da base con l'Epicità 1: il conto è 1. Il premio vale 3.
+  const tiroAppoggio = T.setScope(T.pickPower(T.pickSkill(T.pickAttribute(T.toggleArete(T.emptyTiro()), "dexterity"), "skill:occult"), "pappoggio", "forces"), "potency", 5);
+  const ctxAppoggio = S.prepareTiroContext(actor, tiroAppoggio);
+  assert.deepEqual([ctxAppoggio.magick, ctxAppoggio.computed, ctxAppoggio.prize.value, ctxAppoggio.potere.note[0]], [true, 1, 3, "Appoggio: Potenza non conta fino a 4 · L'Ambito di Potenza di un tuo lancio non conta fino al livello 4, se in scena c'è una leva"]);
+
+  // Ambito di casa, rifatto (1/10): la Potenza scelta non conta fino ai poteri conosciuti in Forze (sei sulla scheda), al
+  // massimo 7: a Potenza 7 conta 1, come l'Epicità, e il conto è 1. L'attivo porta la sua nota; il suo costo non passa dal tiro.
+  const tiroCasaPassivo = T.setKind(T.setScope(T.pickPower(T.pickSkill(T.pickAttribute(T.toggleArete(T.emptyTiro()), "dexterity"), "skill:occult"), "pcasa", "forces"), "potency", 7), "accidentale");
+  const ctxCasaPassivo = S.prepareTiroContext(actor, tiroCasaPassivo);
+  assert.deepEqual([ctxCasaPassivo.computed, ctxCasaPassivo.potere.note], [1, ["Ambito di Casa: Potenza non conta fino a 6 · Nei tuoi lanci non lo paghi fino al livello pari ai poteri che conosci nella Sfera che stai lanciando, al massimo fino al 7"]]);
+  flags["m6"].magickBalance = { quintessence: 6, paradox: 0 };
+  const tiroCasa = T.setKind(T.setScope(T.pickPower(T.pickSkill(T.pickAttribute(T.toggleArete(T.emptyTiro()), "dexterity"), "skill:occult"), "pcasa#attivo", "forces"), "potency", 7), "accidentale");
+  const ctxCasa = S.prepareTiroContext(actor, T.setQuintessence(tiroCasa, 1));
+  assert.deepEqual([ctxCasa.computed, ctxCasa.potere.active, ctxCasa.potere.cost, ctxCasa.potere.note.at(-1)], [1, true, 0, "Ambito di Casa · per ogni Quintessenza che paghi, l'Ambito scelto non lo paghi per un livello in più"]);
+  globalThis.__sim.faces = [8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8];
+  const mCasa = await S.launchTiro(actor, T.setQuintessence(tiroCasa, 1));
+  assert.ok(mCasa);
+  assert.equal(flags["m6"].magickBalance.quintessence, 6 - 1, "solo il punto speso in dadi: il lancio non costa, e il potere a costo variabile si paga col tasto «Usa»");
+  assert.equal(flags["m6"].magickBalance.paradox, 0, "Accidentale: niente Paradosso");
+  assert.equal(flags["m6"].poteriUsi.pcasa, undefined);
+}
+
+// La pagina Magick (poteri-scheda.js) con le righe che chiedono una scelta: la
+// tendina dell'Ambito, delle Abilità e degli incantesimi. (Nella 1.7.0 e 1.7.1
+// una variabile con lo stesso nome di `scelte` rompeva la pagina: la scheda
+// non si apriva più. Blue, 24/9 sera.)
+{
+  const P = await import(new URL("../../scripts/poteri-scheda.js", import.meta.url).href);
+  flags["m6"].poteri.ppratica = { sphere: "mind", name: "La Pratica rende Perfetti", dot: 0, type: "attivo", source: "catalogo", catalogId: "la-pratica-rende-perfetti", scelta: "s1" };
+  const pagina = P.preparePoteriPagina(actor, { _poteriInModifica: new Set() }, { localize: (k) => strings[k] ?? k, locale: "it" });
+  // Una semplice lista (Blue, 24/9 sera): in ordine di nome, col sigillo della Sfera e i tipi.
+  const lista = pagina.poteriLista;
+  assert.equal(lista.length, pagina.poteriTotale);
+  assert.deepEqual(lista.map((p) => p.label), [...lista.map((p) => p.label)].sort((a, b) => a.localeCompare(b, "it")), "in ordine di nome");
+  assert.ok(lista.every((p) => p.sphereIcon && p.sphereLabel && p.tipi && typeof p.tipi.attivo === "boolean"), "sigillo e tipi su ogni riga");
+  const casaRiga = lista.find((p) => p.catalogId === "ambito-di-casa");
+  assert.deepEqual([casaRiga.sphere, casaRiga.tipi], ["forces", { attivo: true, passivo: true }]);
+  assert.deepEqual([casaRiga.sceltaCampo.kind, casaRiga.sceltaCampo.options.map((o) => o.value), casaRiga.sceltaCampo.options.find((o) => o.selected)?.value], ["ambito", ["targets", "conditions", "duration", "range", "potency", "precision"], "potency"], "dal 1/10 un Ambito qualsiasi");
+  assert.equal(lista.find((p) => p.catalogId === "appoggio").sceltaCampo, null, "Appoggio non chiede niente");
+  const mestiereRiga = lista.find((p) => p.catalogId === "mestiere");
+  assert.deepEqual([mestiereRiga.sceltaCampo.kind, mestiereRiga.sceltaCampo.options.map((o) => o.value), mestiereRiga.sceltaCampo.options.find((o) => o.selected)?.value], ["abilita", ["skill:athletics", "skill:occult"], "skill:athletics"]);
+  const praticaRiga = lista.find((p) => p.catalogId === "la-pratica-rende-perfetti");
+  assert.deepEqual([praticaRiga.sceltaCampo.kind, praticaRiga.sceltaCampo.options.map((o) => [o.value, o.label, o.selected])], ["incantesimo", [["s1", "Lama di fuoco", true]]]);
+  assert.ok(lista.every((p) => p.options?.pallini?.length === 5), "le tendine dei pallini restano");
+  // Le Sfere conosciute con il conto dei poteri; niente quota (25/9: i pallini sono un promemoria).
+  const forze = pagina.sfereConosciute.find((s) => s.id === "forces");
+  assert.ok(forze && typeof forze.conto === "number" && forze.pieno === undefined);
+  assert.equal(forze.conto, lista.filter((p) => p.sphere === "forces").length);
+  assert.ok(P.sferePerCatalogo(actor).every((s) => s.id && Array.isArray(s.owned) && s.rating === undefined));
+  assert.equal(P.quotaDellaSfera, undefined, "la quota non c'è più");
+  // Le due schede della prima pagina (Blue, 25/9): Poteri attivi e Poteri passivi, col testo dell'effetto.
+  const filtri = P.preparePoteriFiltri(actor, S.preparePoteriRows(actor, T.emptyTiro(), (k) => strings[k] ?? k), { localize: (k) => strings[k] ?? k, locale: "it" });
+  assert.deepEqual(filtri.map((r) => r.name), [...filtri.map((r) => r.name)].sort((a, b) => a.localeCompare(b, "it")), "in ordine di nome");
+  const casaAttivo = filtri.find((r) => r.id === "pcasa" && r.kind === "attivi");
+  const casaPassivo = filtri.find((r) => r.id === "pcasa" && r.kind === "passivi");
+  assert.ok(casaAttivo && casaPassivo, "Ambito di casa sta in tutte e due le schede");
+  assert.equal(casaAttivo.pick, "pcasa#attivo", "l'attivo sceglie la riga «· attivo» per il tiro");
+  assert.equal(casaPassivo.pick, "pcasa");
+  assert.ok(casaAttivo.blocchi.every((b) => b.kind === "attivo") && casaPassivo.blocchi.every((b) => b.kind === "passivo" || b.kind === "amalgama"));
+  assert.ok(casaAttivo.search.includes("Ambito di Casa") && casaAttivo.sphereIcon.endsWith("/forces.png"));
+  assert.ok(filtri.every((r) => ["attivi", "passivi"].includes(r.kind) && Array.isArray(r.blocchi)));
+  delete flags["m6"].poteri.ppratica;
+}
+
+// Le Condizioni sul tiro, coi tre gradi del Sistema (2 dadi in meno, riserva dimezzata, il tiro
+// fallisce): Contuso toglie un dado e Offuscato (Vista II) dimezza quel che resta; un clic toglie
+// Offuscato; Cieco fa fallire il tiro senza tirare, e la carta dice perché. Gli oggetti stanno in una raccolta come quelle di Foundry.
+{
+  const C = await import(new URL("../../scripts/condizioni.js", import.meta.url).href);
+  class Raccolta extends Map { [Symbol.iterator]() { return this.values(); } }
+  const conCondizioni = { ...actor, items: new Raccolta([["c1", { id: "c1", ...C.condizioneItemData(C.findCondizione("offuscato")) }], ["c2", { id: "c2", ...C.condizioneItemData(C.findCondizione("contuso")) }], ["c3", { id: "c3", ...C.condizioneItemData(C.findCondizione("nervoso")) }]]) };
+  strings["M6.Condizioni.TiroFallisce"] = "Il tiro fallisce: {names}";
+  strings["M6.Condizioni.CartaPesano"] = "Condizioni: {list}";
+  strings["M6.Condizioni.CartaFuori"] = "Tolte da questo tiro: {list}";
+  delete globalThis.game.socket;
+  let fisico = T.setSoglia(T.pickSkill(T.pickAttribute(T.emptyTiro(), "dexterity"), "skill:athletics"), 1);
+  const ctxCond = S.prepareTiroContext(conCondizioni, fisico);
+  // Le Condizioni stanno nella Riserva (30/9), con la spunta e il peso, dopo i tratti.
+  const condRighe = (ctx) => ctx.riserva.righe.filter((r) => r.kind === "condizione");
+  assert.deepEqual(condRighe(ctxCond).map((r) => [r.name, r.value, r.check.on, r.numeral]), [["Offuscato", "½", true, "II"], ["Contuso", "−1", true, ""]], "Nervoso pesa sui sociali, non qui");
+  assert.deepEqual([ctxCond.riservaTotale, ctxCond.pool, ctxCond.dice, ctxCond.successFrom, ctxCond.esito.fallisce, ctxCond.riserva.totale.label, ctxCond.esito.dal], [5, 2, 2, 6, false, "2", 6], "sei dadi meno uno di Contuso fa 5, dimezzati da Offuscato: se ne tirano 2");
+  // Il clic sulla riga: Offuscato non c'entra (tira a tentoni), e resta Contuso.
+  const sheetCond = { actor: conCondizioni, _tiro: fisico, render: async () => {} };
+  await S.onTiroCondizione.call(sheetCond, { preventDefault() {} }, { dataset: { condizione: "offuscato" } });
+  fisico = sheetCond._tiro;
+  const ctxTolta = S.prepareTiroContext(conCondizioni, fisico);
+  assert.deepEqual([ctxTolta.dice, ctxTolta.successFrom, condRighe(ctxTolta).find((r) => r.id === "offuscato").check.on, condRighe(ctxTolta).find((r) => r.id === "offuscato").off], [5, 6, false, true]);
+  globalThis.__sim.faces = [6, 2, 2, 2, 3];
+  const mCond = await S.launchTiro(conCondizioni, fisico);
+  assert.equal(globalThis.__sim.rolls.at(-1).formula, "5dmcs>5 + 0dpcs>5", "tolto Offuscato resta Contuso: cinque dadi");
+  assert.match(mCond.flavor, /Condizioni: Contuso −1/);
+  assert.match(mCond.flavor, /Tolte da questo tiro: Offuscato/);
+  // Cieco: il tiro fisico fallisce senza dadi, anche di Magick coi rossi sulla Ruota.
+  const cieco = { ...actor, items: new Raccolta([["c9", { id: "c9", ...C.condizioneItemData(C.findCondizione("cieco")) }]]) };
+  const ctxCieco = S.prepareTiroContext(cieco, T.setSoglia(T.pickSkill(T.pickAttribute(T.emptyTiro(), "dexterity"), "skill:athletics"), 1));
+  assert.deepEqual([ctxCieco.dice, ctxCieco.impossible, ctxCieco.esito.fallisce, ctxCieco.esito.fallisceTesto, ctxCieco.ready], [0, true, true, "Il tiro fallisce: Cieco", true], "il tiro che fallisce si tira lo stesso: la carta dice perché");
+  flags["m6"].magickBalance = { quintessence: 0, paradox: 3 };
+  const prima = globalThis.__sim.rolls.length;
+  const lancioCieco = T.setKind(T.setScope(T.toggleSphere(T.pickSkill(T.pickAttribute(T.toggleArete(T.emptyTiro()), "dexterity"), "skill:athletics"), "forces"), "potency", 1), "volgare");
+  const mCieco = await S.launchTiro(cieco, lancioCieco);
+  assert.equal(globalThis.__sim.rolls.length, prima, "niente dadi, nemmeno i rossi");
+  assert.equal(mCieco.getFlag("m6", ROLL_CARD_FLAG).total, 0);
+  assert.match(mCieco.content, /Il tiro fallisce: Cieco/);
+}
+
+// La Bussola (la scala del 16/11): la scelta entra nel riquadro come riga della Riserva (i dadi) e
+// della Soglia (la difficoltà); il tasto dice cosa si è scelto; a tiro fatto la scala si aggiorna.
+// A favore una volta per scena; contro tre volte, e alla terza la Convinzione si spegne; servirla
+// di nuovo, col gesto diverso, dà anche difficoltà −1 e azzera le volte contro.
+{
+  const B = await import(new URL("../../scripts/bussola.js", import.meta.url).href);
+  Object.assign(strings, {
+    "M6.Bussola.Nota.Serve": "Serve «{testo}»: {cosa}.",
+    "M6.Bussola.Nota.Ambizione": "Segue l'Ambizione, «{testo}»: {cosa}.",
+    "M6.Bussola.Nota.Contro": "Contro «{testo}», {volta}: {effetto}.",
+    "M6.Bussola.Nota.Modi.dadi": "2 dadi in più",
+    "M6.Bussola.Nota.ModiGesto.quintessenza": "1 Quintessenza e difficoltà −1",
+    "M6.Bussola.Volte.3": "terza volta",
+    "M6.Bussola.Contro.3": "si spegne",
+    "M6.Bussola.Spenta": "«{testo}» si spegne.",
+    "M6.Bussola.Gained": "+1 Quintessenza da «{testo}».",
+    "M6.Bussola.Nota.Modi.volonta": "1 Volontà a tiro fatto",
+    "M6.Bussola.Volonta.ms": "+1 Volontà da «{testo}».",
+    "M6.Bussola.Volonta.ma": "+1 Volontà, un aggravato in meno, da «{testo}».",
+    "M6.Bussola.Nota.Modi.volontaAmbizione": "1 Volontà a tiro fatto, anche aggravato",
+    "M6.Bussola.Nota.Desiderio": "Segue il Desiderio, «{testo}»: {cosa}."
+  });
+  actor.system.headers = { ambition: "Aprire la scuola", desire: "" };
+  flags["m6"].convinzioni = { c1: { group: "", text: "Non lascio indietro nessuno", serve: "", cross: "" } };
+  flags["m6"].magickBalance = { quintessence: 2, paradox: 0 };
+  delete flags["m6"].convinzioneScena;
+  delete flags["m6"].bussolaScala;
+  const fisico = T.setSoglia(T.pickSkill(T.pickAttribute(T.emptyTiro(), "dexterity"), "skill:athletics"), 2);
+  const righe = (ctx, colonna) => ctx[colonna].righe.filter((r) => r.kind === "bussola").map((r) => r.value);
+
+  // A favore: 2 dadi fuori dal tetto, la riga nella Riserva, il tasto acceso col nome della scelta.
+  const serve = T.setBussola(fisico, { voce: "convinzione:c1", modo: "dadi" });
+  let ctxB = S.prepareTiroContext(actor, serve);
+  assert.deepEqual([righe(ctxB, "riserva"), righe(ctxB, "soglia"), ctxB.pool, ctxB.difficulty], [["+2"], [], 8, 2]);
+  assert.deepEqual([ctxB.bussola.on, ctxB.bussola.contro, ctxB.bussola.label, ctxB.bussola.spento, ctxB.bussola.hint], [true, false, "M6.Tiro.Bussola", false, "Serve «Non lascio indietro nessuno»: 2 dadi in più."]);
+  const spento = S.prepareTiroContext(actor, fisico).bussola;
+  assert.deepEqual([spento.on, spento.label, spento.hint, spento.spento], [false, "M6.Tiro.Bussola", "M6.Tiro.BussolaHint", false]);
+  globalThis.__sim.faces = [6, 6, 1, 1, 1, 1, 1, 1];
+  const mServe = await S.launchTiro(actor, serve);
+  assert.equal(globalThis.__sim.rolls.at(-1).formula, "8dmcs>5 + 0dpcs>5");
+  assert.match(mServe.flavor, /Serve «Non lascio indietro nessuno»: 2 dadi in più\./);
+  assert.deepEqual([flags["m6"].convinzioneScena.convinzione, flags["m6"].bussolaScala.favore], [true, { c1: 1 }]);
+  // Le Convinzioni hanno dato in questa scena: a favore non valgono più, il tasto lo dice; restano
+  // l'Ambizione, che ha il suo premio, e il contro.
+  ctxB = S.prepareTiroContext(actor, serve);
+  assert.deepEqual([righe(ctxB, "riserva"), ctxB.pool, ctxB.bussola.on, ctxB.bussola.hint, ctxB.bussola.spento], [[], 6, false, "M6.Tiro.BussolaUsataParte", false]);
+  assert.deepEqual(B.menuBussolaVoci(B.statoBussola(actor)).map((v) => v.state), ["favore|ambizione", "contro|convinzione:c1", ""]);
+
+  // Contro: la prima volta 2 dadi in meno; la seconda anche difficoltà +1; la terza si spegne.
+  const contro = T.setBussola(fisico, { voce: "convinzione:c1", verso: "contro" });
+  ctxB = S.prepareTiroContext(actor, contro);
+  assert.deepEqual([righe(ctxB, "riserva"), righe(ctxB, "soglia"), ctxB.pool, ctxB.difficulty, ctxB.bussola.contro, ctxB.bussola.label], [["−2"], [], 4, 2, true, "M6.Tiro.BussolaContro"]);
+  globalThis.__sim.faces = [6, 6, 1, 1];
+  await S.launchTiro(actor, contro);
+  assert.equal(globalThis.__sim.rolls.at(-1).formula, "4dmcs>5 + 0dpcs>5");
+  assert.deepEqual([flags["m6"].bussolaScala.contro, flags["m6"].bussolaScala.scena], [{ c1: 1 }, { c1: true }]);
+  ctxB = S.prepareTiroContext(actor, contro);
+  assert.deepEqual([righe(ctxB, "riserva"), righe(ctxB, "soglia"), ctxB.pool, ctxB.difficulty, ctxB.soglia.totale.piu, ctxB.soglia.totale.meno], [["−2"], ["+1"], 4, 3, false, false], "la seconda volta: la soglia del Narratore, 2, sale a 3; i suoi tasti guardano il 2");
+  globalThis.__sim.faces = [6, 6, 6, 1];
+  await S.launchTiro(actor, contro);
+  assert.deepEqual(flags["m6"].bussolaScala.contro, { c1: 2 });
+  globalThis.__sim.faces = [6, 6, 6, 1];
+  const mTerza = await S.launchTiro(actor, contro);
+  assert.match(mTerza.flavor, /Contro «Non lascio indietro nessuno», terza volta: si spegne\./);
+  assert.deepEqual([flags["m6"].convinzioni.c1.spenta, flags["m6"].bussolaScala.contro], [true, {}], "spenta, e il conto riparte");
+  assert.ok(infos.includes("«Non lascio indietro nessuno» si spegne."));
+  // Spenta, e le Convinzioni già servite: resta l'Ambizione; servita anche lei, niente da scegliere.
+  ctxB = S.prepareTiroContext(actor, fisico);
+  assert.deepEqual([ctxB.bussola.spento, B.menuBussolaVoci(B.statoBussola(actor)).map((v) => v.state)], [false, ["favore|ambizione", ""]]);
+  flags["m6"].convinzioneScena.ambizione = true;
+  ctxB = S.prepareTiroContext(actor, fisico);
+  assert.deepEqual([ctxB.bussola.spento, ctxB.bussola.hint], [true, "M6.Tiro.BussolaUsata"]);
+
+  // Nuova scena, la Convinzione riaccesa: servirla di nuovo col gesto diverso dà la Quintessenza e la
+  // difficoltà −1, e azzera le volte contro.
+  delete flags["m6"].convinzioneScena;
+  flags["m6"].convinzioni.c1.spenta = false;
+  flags["m6"].bussolaScala.contro = { c1: 2 };
+  flags["m6"].bussolaScala.scena = {};
+  const gesto = T.setBussola(fisico, { voce: "convinzione:c1", modo: "quintessenza", gesto: true });
+  ctxB = S.prepareTiroContext(actor, gesto);
+  assert.deepEqual([righe(ctxB, "riserva"), righe(ctxB, "soglia"), ctxB.pool, ctxB.difficulty], [[], ["−1"], 6, 1]);
+  globalThis.__sim.faces = [6, 1, 1, 1, 1, 1];
+  await S.launchTiro(actor, gesto);
+  assert.deepEqual([flags["m6"].magickBalance.quintessence, flags["m6"].bussolaScala.favore, flags["m6"].bussolaScala.contro], [3, { c1: 2 }, {}]);
+  assert.ok(infos.includes("+1 Quintessenza da «Non lascio indietro nessuno»."));
+
+  // Nel lancio di Magick: i 2 dadi entrano nella riserva, e a tiro fatto la scena è servita.
+  delete flags["m6"].convinzioneScena;
+  const lancio = T.setBussola(T.setKind(T.setScope(T.toggleSphere(T.pickSkill(T.pickAttribute(T.toggleArete(T.emptyTiro()), "dexterity"), "skill:athletics"), "forces"), "potency", 1), "accidentale"), { voce: "convinzione:c1", modo: "dadi" });
+  globalThis.__sim.faces = [6, 6, 1, 1, 1, 1, 1, 1];
+  const mLancio = await S.launchTiro(actor, lancio);
+  assert.equal(globalThis.__sim.rolls.at(-1).formula, "8dmcs>5 + 0dpcs>5");
+  assert.match(mLancio.flavor, /Serve «Non lascio indietro nessuno»: 2 dadi in più\./);
+  assert.equal(flags["m6"].convinzioneScena.convinzione, true);
+
+  // L'Ambizione (Blue, 17/11): niente dadi; a tiro fatto 1 Volontà, cioè un danno mentale in meno,
+  // anche aggravato (mai quelli del Sacrificio), oppure 1 Quintessenza. Il Desiderio ha il suo premio
+  // a parte, con la Volontà che toglie solo un superficiale: nella stessa scena si prendono tutti e due,
+  // una volta ciascuno.
+  delete flags["m6"].convinzioneScena;
+  flags["m6"].salute = { ma: 1, ms: 2, debito: { ms: 1 } };
+  actor.system.headers.desire = "Una notte di sonno intera";
+  const ambizione = T.setBussola(fisico, { voce: "ambizione", modo: "dadi" });
+  assert.equal(ambizione.bussola.modo, "volonta", "i dadi non sono un premio dell'Ambizione");
+  ctxB = S.prepareTiroContext(actor, ambizione);
+  assert.deepEqual([righe(ctxB, "riserva"), righe(ctxB, "soglia"), ctxB.pool, ctxB.bussola.on], [[], [], 6, true]);
+  globalThis.__sim.faces = [6, 6, 1, 1, 1, 1];
+  const mAmbizione = await S.launchTiro(actor, ambizione);
+  assert.equal(globalThis.__sim.rolls.at(-1).formula, "6dmcs>5 + 0dpcs>5");
+  assert.match(mAmbizione.flavor, /Segue l'Ambizione, «Aprire la scuola»: 1 Volontà a tiro fatto, anche aggravato\./);
+  assert.deepEqual([flags["m6"].salute.ma, flags["m6"].salute.ms, flags["m6"].convinzioneScena.ambizione], [0, 2, true], "l'aggravato per primo");
+  assert.ok(infos.includes("+1 Volontà, un aggravato in meno, da «Aprire la scuola»."));
+  const desiderio = T.setBussola(fisico, { voce: "desiderio" });
+  assert.equal(S.prepareTiroContext(actor, desiderio).bussola.on, true, "il Desiderio ha il suo premio nella stessa scena");
+  globalThis.__sim.faces = [6, 6, 1, 1, 1, 1];
+  const mDesiderio = await S.launchTiro(actor, desiderio);
+  assert.match(mDesiderio.flavor, /Segue il Desiderio, «Una notte di sonno intera»: 1 Volontà a tiro fatto\./);
+  assert.deepEqual([flags["m6"].salute.ms, flags["m6"].convinzioneScena.desiderio], [1, true]);
+  assert.ok(infos.includes("+1 Volontà da «Una notte di sonno intera»."));
+  // Già servite tutte e due in questa scena: l'Ambizione non dà più niente.
+  assert.equal(S.prepareTiroContext(actor, ambizione).bussola.on, false);
+  // A scena nuova, di nuovo il Desiderio: il superficiale che resta è del Sacrificio, e non si toglie.
+  delete flags["m6"].convinzioneScena;
+  globalThis.__sim.faces = [6, 6, 1, 1, 1, 1];
+  await S.launchTiro(actor, desiderio);
+  assert.equal(flags["m6"].salute.ms, 1);
+  assert.equal(infos.at(-1), "M6.Bussola.Volonta.Piena");
+}
+
+console.log("compositore: ok,", globalThis.__sim.messages.length, "messaggi");

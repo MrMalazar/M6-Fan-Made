@@ -1,0 +1,162 @@
+import { MODULE_ID } from "./constants.js";
+import { getMagickBalance, getParadoxFloor } from "./magick-balance.js";
+import { renderRollNote } from "./roll-card.js";
+import { addSaluteDamage } from "./salute.js";
+
+/**
+ * Lo Scoppio del Paradosso (verdetto di Blue, 6/9/2026): dalla parola
+ * PARADOSSO sulla Ruota si tirano SOLO i dadi rossi, tanti quante le celle
+ * di Paradosso. Se scoppia (un 1 o un 10 sui rossi) il Mago subisce danni
+ * pari alla soglia dell'incantesimo che ha generato lo scoppio: la soglia si
+ * chiede nella finestra, proposta dall'ultimo lancio. L'Ustione va sulla
+ * Salute come superficiale fisico; ogni due 10 un punto diventa aggravato;
+ * per ogni danno la Ruota scarica un punto di Paradosso, fino al pavimento.
+ */
+
+/** Il conto dell'Ustione: tetto della soglia, conversioni per coppie di 10. */
+export function burstDamage({ eyes = 0, tens = 0, threshold = 0 } = {}) {
+  const total = Math.max(Math.trunc(Number(threshold) || 0), 0);
+  if (eyes <= 0 || total <= 0) return { total: 0, pa: 0, ps: 0 };
+  const pa = Math.min(Math.floor(Math.max(Math.trunc(Number(tens) || 0), 0) / 2), total);
+  return { total, pa, ps: total - pa };
+}
+
+/** I tipi di effetto: dicono dove va il Contraccolpo (verdetto di Blue, 6/9). */
+export const EFFECT_KINDS = Object.freeze(["", "physical", "mental", "variable"]);
+
+export function normalizeEffectKind(value) {
+  const kind = String(value ?? "");
+  return EFFECT_KINDS.includes(kind) ? kind : "";
+}
+
+/**
+ * Dove va l'Ustione: fisico se l'effetto è fisico (o non dichiarato), mentale
+ * se è mentale, metà e metà arrotondando per difetto se è variabile. Le
+ * conversioni in aggravato (una ogni due 10) vanno prima sul fisico.
+ */
+export function ustioneSplit({ threshold = 0, tens = 0, kind = "", random = Math.random } = {}) {
+  const total = Math.max(Math.trunc(Number(threshold) || 0), 0);
+  let aggravated = Math.min(Math.floor(Math.max(Math.trunc(Number(tens) || 0), 0) / 2), total);
+  const effect = normalizeEffectKind(kind);
+  let physical = total;
+  let mental = 0;
+  if (effect === "mental") { physical = 0; mental = total; }
+  // Variabile: a metà; il punto che avanza cade a caso (verdetto di Blue, 6/9).
+  if (effect === "variable") {
+    physical = Math.floor(total / 2);
+    mental = Math.floor(total / 2);
+    if (total % 2 === 1) {
+      if (random() < 0.5) physical += 1;
+      else mental += 1;
+    }
+  }
+  const pa = Math.min(aggravated, physical);
+  aggravated -= pa;
+  const ma = Math.min(aggravated, mental);
+  return { total, applied: physical + mental, pa, ps: physical - pa, ma, ms: mental - ma, kind: effect };
+}
+
+/**
+ * Segna l'Ustione sulla Salute e scarica la Ruota di un punto per danno.
+ * Dal ramo C (11/9) le caselle dell'Ustione restano «bloccate» in rosso
+ * per la scena (un effetto visivo: Cambio Scena ne sblocca una).
+ */
+export async function applyUstione(actor, { threshold = 0, tens = 0, kind = "", random, lock = true } = {}) {
+  const split = ustioneSplit({ threshold, tens, kind, random });
+  if (split.applied <= 0) return { ...split, discharged: 0 };
+  await addSaluteDamage(actor, { pa: split.pa, ps: split.ps, ma: split.ma, ms: split.ms }, { lock });
+  const balance = getMagickBalance(actor);
+  const paradox = paradoxAfterBurst(balance.paradox, split.applied, getParadoxFloor(actor));
+  if (paradox !== balance.paradox) {
+    await actor.setFlag(MODULE_ID, "magickBalance", { quintessence: balance.quintessence, paradox });
+  }
+  return { ...split, discharged: balance.paradox - paradox };
+}
+
+/** La riga in chat: quanto è andato dove, e quanto ha scaricato la Ruota. */
+export function ustioneText(applied, format) {
+  // Solo le parti che ci sono: «3 fisici (1 aggravato), 2 mentali».
+  const parts = [];
+  const physical = applied.pa + applied.ps;
+  const mental = applied.ma + applied.ms;
+  if (physical > 0) {
+    let text = physical === 1 ? format("M6.Burst.PhysicalOne", { n: physical }) : format("M6.Burst.Physical", { n: physical });
+    if (applied.pa > 0) text += ` (${applied.pa === 1 ? format("M6.Burst.AggravatedOne", { n: applied.pa }) : format("M6.Burst.Aggravated", { n: applied.pa })})`;
+    parts.push(text);
+  }
+  if (mental > 0) {
+    let text = mental === 1 ? format("M6.Burst.MentalOne", { n: mental }) : format("M6.Burst.Mental", { n: mental });
+    if (applied.ma > 0) text += ` (${applied.ma === 1 ? format("M6.Burst.AggravatedOne", { n: applied.ma }) : format("M6.Burst.Aggravated", { n: applied.ma })})`;
+    parts.push(text);
+  }
+  return format("M6.Burst.Applied", {
+    total: applied.applied,
+    detail: parts.join(", "),
+    discharged: applied.discharged
+  });
+}
+
+/** La Ruota si scarica di un punto per danno, mai sotto il pavimento. */
+export function paradoxAfterBurst(paradox, damage, floor = 0) {
+  const current = Math.max(Math.trunc(Number(paradox) || 0), 0);
+  const bottom = Math.max(Math.trunc(Number(floor) || 0), 0);
+  return Math.max(current - Math.max(Math.trunc(Number(damage) || 0), 0), bottom);
+}
+
+export async function onParadoxBurst(event) {
+  event?.preventDefault?.();
+  const actor = this.actor;
+  if (!actor.isOwner) {
+    ui.notifications.warn(game.i18n.format("M6.Comuni.Notifications.NoSufficientPermission", { string: actor.name }));
+    return;
+  }
+  const balance = getMagickBalance(actor);
+  if (balance.paradox <= 0) {
+    ui.notifications.warn(game.i18n.localize("M6.Burst.NoParadox"));
+    return;
+  }
+
+  const suggested = Math.max(Math.trunc(Number(actor.getFlag(MODULE_ID, "lastThreshold")) || 0), 0);
+  const answer = await foundry.applications.api.DialogV2.input({
+    window: { title: game.i18n.localize("M6.Burst.Title") },
+    classes: ["m6w", "m6", "mage", "m6-roll-dialog"],
+    content: `<div class="m6-burst-ask">
+      <label>${game.i18n.localize("M6.Burst.Threshold")}
+        <input type="number" name="threshold" min="0" step="1" value="${suggested}" autofocus>
+      </label>
+      <label>${game.i18n.localize("M6.Arete.EffectKind")}
+        <select name="effectKind">${EFFECT_KINDS.map((kind) => `<option value="${kind}">${game.i18n.localize(`M6.Arete.EffectKinds.${kind || "none"}`)}</option>`).join("")}</select>
+      </label>
+      <p class="m6-burst-dice">${game.i18n.format("M6.Burst.Dice", { dice: balance.paradox })}</p>
+    </div>`,
+    ok: { icon: "fas fa-dice", label: game.i18n.localize("M6.Burst.Roll") },
+    buttons: [{ action: "cancel", icon: "fas fa-times", label: game.i18n.localize("M6.Comuni.Cancel") }]
+  }).catch(() => null);
+  if (!answer || answer === "cancel") return;
+  const threshold = Math.max(Math.trunc(Number(answer.threshold) || 0), 0);
+  // Niente livelli di Sfera (25/9 sera): i punti al Narratore sono la soglia.
+  const sphereLevel = 0;
+  const effectKind = normalizeEffectKind(answer.effectKind);
+
+  // Il tiro dei soli rossi: se scoppia, l'Ustione la segna il tiro stesso.
+  const { rollAreteWithParadox } = await import("./paradox-dice.js");
+  const title = game.i18n.localize("M6.Burst.Title");
+  try {
+    await rollAreteWithParadox({
+      actor,
+      data: actor.system,
+      pool: 0,
+      threshold: 0,
+      paradoxRating: balance.paradox,
+      onlyParadox: true,
+      burn: threshold,
+      sphereLevel,
+      effectKind,
+      title,
+      flavor: renderRollNote(game.i18n.format("M6.Burst.Flavor", { dice: balance.paradox, threshold })),
+      card: { symbols: [], burst: true }
+    });
+  } catch (error) {
+    console.warn("m6 | Scoppio interrotto.", error);
+  }
+}

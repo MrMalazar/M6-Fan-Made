@@ -1,0 +1,42 @@
+{{!-- Note, rifatta l'1/10 sul mock approvato: a sinistra «Cosa vuole adesso» e
+     «Quando molla», due campi della bandiera; a destra la biografia che
+     l'attore ha già. In Gioca si leggono, in Scrivi si scrivono. Le vede solo
+     il Narratore. --}}
+<section class="tab {{tab.cssClass}} m6-nemico-corpo" data-tab="{{tab.id}}" data-group="{{tab.group}}">
+    {{#if isGM}}
+        <div class="m6-nemico-due">
+            <div class="m6-nemico-col">
+                <div class="m6-nemico-riq">
+                    <h3 class="m6-nemico-titolo">{{localize "M6.Nemico.Vuole"}}</h3>
+                    {{#if scrivi}}
+                        <textarea class="m6-nemico-nota" name="flags.m6.nemico.note.vuole" rows="3" placeholder="{{localize 'M6.Nemico.DaScrivere'}}" aria-label="{{localize 'M6.Nemico.Vuole'}}">{{note.vuole}}</textarea>
+                    {{else}}
+                        {{#if note.vuole}}<p class="m6-nemico-testo">{{note.vuole}}</p>{{else}}<p class="m6-nemico-nessuna">{{localize "M6.Nemico.DaScrivere"}}</p>{{/if}}
+                    {{/if}}
+                </div>
+                <div class="m6-nemico-riq">
+                    <h3 class="m6-nemico-titolo">{{localize "M6.Nemico.Molla"}}</h3>
+                    {{#if scrivi}}
+                        <textarea class="m6-nemico-nota" name="flags.m6.nemico.note.molla" rows="3" placeholder="{{localize 'M6.Nemico.DaScrivere'}}" aria-label="{{localize 'M6.Nemico.Molla'}}">{{note.molla}}</textarea>
+                    {{else}}
+                        {{#if note.molla}}<p class="m6-nemico-testo">{{note.molla}}</p>{{else}}<p class="m6-nemico-nessuna">{{localize "M6.Nemico.DaScrivere"}}</p>{{/if}}
+                    {{/if}}
+                </div>
+            </div>
+            <div class="m6-nemico-col">
+                <div class="m6-nemico-riq m6-nemico-biografia">
+                    <h3 class="m6-nemico-titolo">{{localize "M6.Nemico.Biografia"}}</h3>
+                    {{!-- La biografia è HTML del sistema: in Scrivi l'editor con la matita, come le note del Credo. --}}
+                    {{#if scrivi}}
+                        <prose-mirror name="system.biography" value="{{biografia}}" toggled="true" compact="true">
+                            {{{biografiaArricchita}}}
+                        </prose-mirror>
+                    {{else}}
+                        {{#if biografia}}<div class="m6-nemico-testo">{{{biografiaArricchita}}}</div>{{else}}<p class="m6-nemico-nessuna">{{localize "M6.Nemico.DaScrivere"}}</p>{{/if}}
+                    {{/if}}
+                </div>
+            </div>
+        </div>
+    {{/if}}
+    <p class="m6-nemico-solo">{{localize "M6.Nemico.SoloNarratore"}}</p>
+</section>

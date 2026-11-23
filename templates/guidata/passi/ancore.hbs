@@ -1,0 +1,66 @@
+{{!-- Passo 12 · le Ancore, da una a tre persone, sette righe l'una (Blue, 25/9):
+     nome, ruolo, mestiere, età, cosa ti dà, la Convinzione che ti fa tenere,
+     cosa non sa, dove morde. Il dado tira tutto tranne la Convinzione. --}}
+<section class="m6-guidata-riq m6-guidata-cosa">
+    <header class="m6-guidata-riq-titolo"><span>{{localize "M6.Guidata.Cosa"}}</span><small>{{passo.sotto}}</small></header>
+    <h2 class="m6-guidata-domanda">{{passo.domanda}}</h2>
+    <div class="m6-guidata-etichetta"><i class="fa-solid fa-anchor" aria-hidden="true"></i> {{localize "M6.Guidata.Passi.ancore.Label"}}
+        <button type="button" class="m6-guidata-tastino" data-action="catalogoApri" data-kind="ancora" title="{{localize 'M6.Guidata.Catalogo'}}" {{#unless @root.canEdit}}disabled{{/unless}}><i class="fa-solid fa-book-open" aria-hidden="true"></i></button>
+        <button type="button" class="m6-guidata-tastino m6-guidata-tastino-testo" data-action="ancoraGenera" title="{{localize 'M6.Guidata.Ancore.Genera'}}" {{#unless @root.canEdit}}disabled{{/unless}}><i class="fa-solid fa-dice" aria-hidden="true"></i> {{localize "M6.Guidata.Ancore.GeneraBreve"}}</button>
+        <button type="button" class="m6-guidata-tastino" data-action="rigaNuova" data-table="ancore" title="{{localize 'M6.Guidata.Ancore.Nuova'}}" {{#unless @root.canEdit}}disabled{{/unless}}><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+    </div>
+    {{#each corpo.ancore as |row|}}
+        <div class="m6-guidata-ancora" data-row="{{row.id}}">
+            <div class="m6-guidata-ancora-riga m6-guidata-ancora-testa">
+                <input type="text" name="flags.m6.ancore.{{row.id}}.name" value="{{row.name}}" placeholder="{{localize 'M6.Guidata.Ancore.Nome'}}" aria-label="{{localize 'M6.Guidata.Ancore.Nome'}}" {{#unless @root.canEdit}}disabled{{/unless}}>
+                <select name="flags.m6.ancore.{{row.id}}.role" aria-label="{{localize 'M6.Guidata.Ancore.Ruolo'}}" {{#unless @root.canEdit}}disabled{{/unless}}>
+                    <option value="">{{localize "M6.Guidata.Ancore.Ruolo"}}</option>
+                    {{#each row.roles as |ruolo|}}
+                        <option value="{{ruolo.id}}" title="{{ruolo.definizione}}" {{#if ruolo.selected}}selected{{/if}}>{{ruolo.id}}</option>
+                    {{/each}}
+                </select>
+                <input type="text" name="flags.m6.ancore.{{row.id}}.job" value="{{row.job}}" placeholder="{{localize 'M6.Guidata.Ancore.Mestiere'}}" aria-label="{{localize 'M6.Guidata.Ancore.Mestiere'}}" {{#unless @root.canEdit}}disabled{{/unless}}>
+                <input type="text" class="m6-guidata-ancora-eta" name="flags.m6.ancore.{{row.id}}.age" value="{{row.age}}" placeholder="{{localize 'M6.Guidata.Ancore.Eta'}}" aria-label="{{localize 'M6.Guidata.Ancore.Eta'}}" inputmode="numeric" {{#unless @root.canEdit}}disabled{{/unless}}>
+                <button type="button" class="m6-guidata-tastino" data-action="ancoraGenera" data-row="{{row.id}}" title="{{localize 'M6.Guidata.Ancore.GeneraRiga'}}" {{#unless @root.canEdit}}disabled{{/unless}}><i class="fa-solid fa-dice" aria-hidden="true"></i></button>
+                <button type="button" class="m6-guidata-tastino" data-action="rigaTogli" data-table="ancore" data-row="{{row.id}}" title="{{localize 'M6.Guidata.Togli'}}" {{#unless @root.canEdit}}disabled{{/unless}}><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+            </div>
+            <div class="m6-guidata-ancora-riga">
+                <label><span>{{localize "M6.Guidata.Ancore.CosaTiDa"}}</span><input type="text" name="flags.m6.ancore.{{row.id}}.gives" value="{{row.gives}}" {{#unless @root.canEdit}}disabled{{/unless}}></label>
+                <label><span>{{localize "M6.Guidata.Ancore.Convinzione"}}</span>
+                    <select name="flags.m6.ancore.{{row.id}}.conviction" {{#unless @root.canEdit}}disabled{{/unless}}>
+                        <option value="">{{localize "M6.Guidata.Ancore.ConvinzioneNessuna"}}</option>
+                        {{#each row.convictions as |conv|}}
+                            <option value="{{conv.id}}" {{#if conv.selected}}selected{{/if}}>{{conv.text}}</option>
+                        {{/each}}
+                    </select>
+                </label>
+            </div>
+            <div class="m6-guidata-ancora-riga">
+                <label><span>{{localize "M6.Guidata.Ancore.CosaNonSa"}}</span><input type="text" name="flags.m6.ancore.{{row.id}}.unknown" value="{{row.unknown}}" {{#unless @root.canEdit}}disabled{{/unless}}></label>
+                <label><span>{{localize "M6.Guidata.Ancore.DoveMorde"}}</span><input type="text" name="flags.m6.ancore.{{row.id}}.bites" value="{{row.bites}}" {{#unless @root.canEdit}}disabled{{/unless}}></label>
+            </div>
+            {{#if row.description}}
+                <input type="text" class="m6-guidata-ancora-note" name="flags.m6.ancore.{{row.id}}.description" value="{{row.description}}" placeholder="{{localize 'M6.Guidata.Ancore.Note'}}" aria-label="{{localize 'M6.Guidata.Ancore.Note'}}" {{#unless @root.canEdit}}disabled{{/unless}}>
+            {{/if}}
+        </div>
+    {{else}}
+        <p class="m6-guidata-nota-passo">{{localize "M6.Guidata.Ancore.Vuota"}}</p>
+    {{/each}}
+    {{#if corpo.proposte.length}}
+        {{!-- Le dodici Ancore montate: ruolo, cosa ti dà, cosa non sa, dove morde; nome, mestiere ed età li tira il dado. --}}
+        <div class="m6-guidata-proposte"><small>{{localize "M6.Guidata.Ancore.Montate"}}</small>
+            {{#each corpo.proposte as |p|}}<button type="button" class="m6-guidata-chip" data-action="propostaMetti" data-kind="ancora" data-uuid="{{p.uuid}}" title="{{p.gives}} · {{p.unknown}} · {{p.bites}}" {{#unless @root.canEdit}}disabled{{/unless}}><b>{{p.name}}</b> {{p.role}}</button>{{/each}}
+        </div>
+    {{/if}}
+</section>
+<aside class="m6-guidata-spiega">
+    {{> "systems/m6/templates/guidata/perche.hbs"}}
+    <section class="m6-guidata-riq m6-guidata-guadagni">
+        <header class="m6-guidata-riq-titolo"><span>{{localize "M6.Guidata.Guadagni"}}</span></header>
+        <div class="m6-guidata-voci">
+            <div class="m6-guidata-voce {{#if corpo.fatte}}exact{{else}}under{{/if}}"><i class="fa-solid fa-anchor" aria-hidden="true"></i> {{localize "M6.Guidata.Ancore.Scritte"}} <b>{{corpo.fatte}}/3</b></div>
+            <div class="m6-guidata-voce"><i class="fa-solid fa-hand-fist" aria-hidden="true"></i> {{localize "M6.Guidata.Ancore.Volonta"}}</div>
+            <div class="m6-guidata-voce"><i class="fa-solid fa-scale-balanced" aria-hidden="true"></i> {{localize "M6.Guidata.Ancore.Legame"}}</div>
+        </div>
+    </section>
+</aside>

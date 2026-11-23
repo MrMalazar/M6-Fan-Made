@@ -1,0 +1,32 @@
+{{!-- Note: una pagina vuota, riquadri a piacere col + e il meno. Ogni
+     riquadro: un titolo corto e un testo lungo. --}}
+<section class="tab {{tab.cssClass}} m6-note" data-tab="{{tab.id}}" data-group="{{tab.group}}">
+    <header class="m6-section-title m6-note-head">
+        <span>{{localize "M6.Tabs.Notes"}}</span>
+        <button type="button" class="m6-row-add" data-action="noteAdd" title="{{localize 'M6.Note.Add'}}" aria-label="{{localize 'M6.Note.Add'}}" {{#if locked}}disabled{{/if}}>
+            <i class="fa-solid fa-plus"></i>
+        </button>
+    </header>
+
+    {{!-- La lavagna (6/9): ogni riquadro sta dove lo metti (la presa lo
+         trascina) ed è grande quanto lo fai (l'angolo lo ridimensiona). --}}
+    {{#if note.length}}
+        <div class="m6-note-board" data-locked="{{#if locked}}true{{else}}false{{/if}}" style="min-height: {{noteBoardHeight}}px;">
+            {{#each note as |row|}}
+                <div class="m6-note-block" data-row="{{row.id}}" style="left: {{row.x}}px; top: {{row.y}}px; width: {{row.w}}px; height: {{row.h}}px;">
+                    <div class="m6-note-block-head">
+                        <span class="m6-note-grip" title="{{localize 'M6.Note.Move'}}" aria-hidden="true"><i class="fa-solid fa-grip-vertical"></i></span>
+                        <input type="text" name="flags.m6.note.{{row.id}}.title" value="{{row.title}}" placeholder="{{localize 'M6.Note.TitleHint'}}" aria-label="{{localize 'M6.Note.Title'}}" {{#if ../locked}}disabled{{/if}}>
+                        <button type="button" data-action="noteDelete" data-row="{{row.id}}" title="{{localize 'M6.Note.Remove'}}" aria-label="{{localize 'M6.Note.Remove'}}" {{#if ../locked}}disabled{{/if}}>
+                            <i class="fa-solid fa-minus"></i>
+                        </button>
+                    </div>
+                    <textarea name="flags.m6.note.{{row.id}}.text" placeholder="{{localize 'M6.Note.TextHint'}}" aria-label="{{localize 'M6.Note.Text'}}" {{#if ../locked}}disabled{{/if}}>{{row.text}}</textarea>
+                    <span class="m6-note-resize" title="{{localize 'M6.Note.Resize'}}" aria-hidden="true"></span>
+                </div>
+            {{/each}}
+        </div>
+    {{else}}
+        <p class="m6-row-empty">{{localize "M6.Note.Empty"}}</p>
+    {{/if}}
+</section>

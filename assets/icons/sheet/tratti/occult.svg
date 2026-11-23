@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="34.0 31.5 132.0 132.0" width="200" height="200">
+<title>Velo</title>
+<g stroke="#d9a827" fill="none" stroke-width="13" stroke-linecap="round" stroke-linejoin="round">
+<path d="M50,104 C66,80 134,80 150,104"/>
+<path d="M50,104 C66,128 134,128 150,104"/>
+<path d="M48,58 C60,46 74,46 86,58 C98,70 112,70 124,58 C136,46 150,46 152,52"/>
+</g>
+<circle cx="100" cy="104" r="12" fill="#d9a827"/>
+</svg>

@@ -1,0 +1,99 @@
+{{!-- I Tratti (21/9, dal mock docs/mock_tre_pagine_21-9.html): a sinistra i
+     Vantaggi (Background, Pregi, Difetti) in un riquadro con tre occhielli e,
+     sotto, gli Elementi (in comune con altri giocatori e di storia); a destra
+     l'Inventario (Armatura, Armi, Equipaggiamento) e gli Altri oggetti.
+     Stessa grammatica della prima pagina: riquadri, occhielli, righe. --}}
+<section class="tab {{tab.cssClass}} m6-dotazione" data-tab="{{tab.id}}" data-group="{{tab.group}}">
+    <header class="m6-section-title">
+        <span>{{localize "M6.Tabs.Traits"}}</span>
+    </header>
+
+    <div class="m6-dotazione-layout">
+        <div class="m6-dotazione-left">
+            <section class="m6-riq m6-riq-pagina m6-riq-vantaggi">
+                <header class="m6-riq-title">
+                    {{#if creazioneReset}}{{> "systems/m6/templates/actor/parts/reset-tasto.hbs" resetsById.advantages}}{{/if}}
+                    <span>{{localize "M6.Tratti.Vantaggi"}}</span>
+                    <small class="m6-riq-conto">{{localize "M6.Tratti.VantaggiHint"}}</small>
+                </header>
+                <div class="m6-riq-body features-list item-list">
+                    {{> "systems/m6/templates/actor/parts/core-features.hbs"}}
+                </div>
+            </section>
+
+            {{!-- Le due tavole libere (in comune, di storia): tipo, nome, livello a pallini. --}}
+            <section class="m6-riq m6-riq-pagina m6-belongings">
+                <header class="m6-riq-title">
+                    <span>{{localize "M6.Tratti.Elementi"}}</span>
+                    <small class="m6-riq-conto">{{localize "M6.Tratti.ElementiHint"}}</small>
+                </header>
+                <div class="m6-riq-body">
+                    {{#each belongingTables as |table|}}
+                        <span class="m6-riq-occhiello m6-occhiello-tasti" title="{{localize table.hint}}">
+                            <span>{{localize table.label}}</span>
+                            <span class="m6-occhiello-tastini">
+                                {{!-- Il libro (10/9): la voce dall'archivio dei Background, Pregi o Difetti, senza scriverla a mano. --}}
+                                <button type="button" class="m6-riga-tastino m6-belonging-archivio" data-action="belongingArchivio" data-table="{{table.flag}}" title="{{localize 'M6.Belongings.Archivio'}}" aria-label="{{localize 'M6.Belongings.Archivio'}}" {{#if ../locked}}disabled{{/if}}><i class="fa-solid fa-book-open" aria-hidden="true"></i></button>
+                                <button type="button" class="m6-riga-tastino m6-belonging-add" data-action="belongingAdd" data-table="{{table.flag}}" title="{{localize 'M6.Belongings.Add'}}" aria-label="{{localize 'M6.Belongings.Add'}}" {{#if ../locked}}disabled{{/if}}><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+                            </span>
+                        </span>
+                        {{#each table.rows as |row|}}
+                            <div class="m6-riga m6-riga-elemento">
+                                {{!-- Il tipo: la tendina del sistema vestita da pastiglia. --}}
+                                <select class="m6-elemento-tipo" name="flags.m6.{{table.flag}}.{{row.id}}.kind" aria-label="{{localize 'M6.Belongings.Kind'}}" {{#if ../../locked}}disabled{{/if}}>
+                                    <option value="">{{localize "M6.Belongings.KindNone"}}</option>
+                                    {{#each row.kinds as |kind|}}
+                                        <option value="{{kind.id}}" {{#if kind.selected}}selected{{/if}}>{{kind.label}}</option>
+                                    {{/each}}
+                                </select>
+                                <input type="text" class="m6-elemento-nome" name="flags.m6.{{table.flag}}.{{row.id}}.name" value="{{row.name}}" placeholder="{{localize 'M6.Belongings.Name'}}" aria-label="{{localize 'M6.Belongings.Name'}}" {{#if ../../locked}}disabled{{/if}}>
+                                {{!-- Il livello a pallini, come ogni altro tratto della scheda. --}}
+                                <div class="resource-value m6-belonging-dots m6-oggetto-pallini" data-value="{{row.value}}" data-name="flags.m6.{{table.flag}}.{{row.id}}.value">
+                                    <span class="resource-value-empty" data-action="dotCounterEmpty"></span>
+                                    {{#numLoop 5}}
+                                        <span class="resource-value-step" data-action="dotCounterChange" data-index="{{this}}"></span>
+                                    {{/numLoop}}
+                                </div>
+                                <div class="m6-riga-tastini">
+                                    <button type="button" class="m6-riga-tastino" data-action="belongingDelete" data-table="{{table.flag}}" data-row="{{row.id}}" title="{{localize 'M6.Belongings.Remove'}}" aria-label="{{localize 'M6.Belongings.Remove'}}" {{#if ../../locked}}disabled{{/if}}><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+                                </div>
+                            </div>
+                        {{/each}}
+                    {{/each}}
+                </div>
+            </section>
+        </div>
+
+        <div class="m6-dotazione-right">
+            {{!-- L'inventario: Armatura, Arma ed Equipaggiamento in un riquadro solo. --}}
+            <section class="m6-riq m6-riq-pagina m6-inventario">
+                <header class="m6-riq-title">
+                    <span>{{localize "M6.Dotazione.Inventory"}}</span>
+                </header>
+                <div class="m6-riq-body equipment-list item-list">
+                    {{> "systems/m6/templates/actor/parts/equipment-list.hbs"}}
+                </div>
+            </section>
+
+            {{!-- Gli Altri oggetti: righe libere, nome e nota. --}}
+            <section class="m6-riq m6-riq-pagina m6-altri-oggetti">
+                <header class="m6-riq-title">
+                    <span>{{localize "M6.Belongings.ItemsLabel"}}</span>
+                    <button type="button" class="m6-riq-tasto-piccolo m6-belonging-add" data-action="belongingAdd" data-table="altriOggetti" title="{{localize 'M6.Belongings.Add'}}" aria-label="{{localize 'M6.Belongings.Add'}}" {{#if locked}}disabled{{/if}}><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+                </header>
+                <div class="m6-riq-body">
+                    {{#each altriOggetti as |row|}}
+                        <div class="m6-riga m6-riga-altro-oggetto">
+                            <i class="fa-solid fa-circle m6-riga-icona m6-puntino" aria-hidden="true"></i>
+                            <input type="text" class="m6-oggetto-nome" name="flags.m6.altriOggetti.{{row.id}}.name" value="{{row.name}}" placeholder="{{localize 'M6.Belongings.ItemName'}}" aria-label="{{localize 'M6.Belongings.ItemName'}}" {{#if ../locked}}disabled{{/if}}>
+                            <input type="text" class="m6-oggetto-nota" name="flags.m6.altriOggetti.{{row.id}}.note" value="{{row.note}}" placeholder="{{localize 'M6.Belongings.ItemNote'}}" aria-label="{{localize 'M6.Belongings.ItemNote'}}" {{#if ../locked}}disabled{{/if}}>
+                            <div class="m6-riga-tastini">
+                                <button type="button" class="m6-riga-tastino" data-action="belongingDelete" data-table="altriOggetti" data-row="{{row.id}}" title="{{localize 'M6.Belongings.Remove'}}" aria-label="{{localize 'M6.Belongings.Remove'}}" {{#if ../locked}}disabled{{/if}}><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+                            </div>
+                        </div>
+                    {{/each}}
+                </div>
+            </section>
+        </div>
+    </div>
+</section>

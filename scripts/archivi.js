@@ -1,0 +1,506 @@
+import { activeCondizioni, findCondizioneByName, toggleCondizione } from "./condizioni.js";
+import { MODULE_ID } from "./constants.js";
+
+/**
+ * Gli archivi del Mago: i Cataloghi del manuale in compendi (Pregi, Difetti,
+ * Background e l'Equipaggiamento come oggetti; Credi, Concetti, Ambizioni,
+ * Desideri, Ancore e Convinzioni come voci di diario). Dalla scheda un'icona del libro apre
+ * l'archivio della voce; il «+» accanto a una voce la mette sulla scheda.
+ * Le funzioni pure stanno in cima: si provano fuori da Foundry.
+ */
+
+export const ARCHIVIO_FLAG = "archivio";
+
+export const ARCHIVI = Object.freeze({
+  pregio: { pack: "mage-pregi", type: "Item", add: "item", label: "M6.Archivi.Kinds.pregio" },
+  difetto: { pack: "mage-difetti", type: "Item", add: "item", label: "M6.Archivi.Kinds.difetto" },
+  background: { pack: "mage-background", type: "Item", add: "item", label: "M6.Archivi.Kinds.background" },
+  credo: { pack: "mage-credi", type: "JournalEntry", add: "credo", label: "M6.Archivi.Kinds.credo" },
+  concetto: { pack: "mage-concetti", type: "JournalEntry", add: "header", field: "concept", label: "M6.Archivi.Kinds.concetto" },
+  ambizione: { pack: "mage-ambizioni", type: "JournalEntry", add: "header", field: "ambition", label: "M6.Archivi.Kinds.ambizione" },
+  desiderio: { pack: "mage-desideri", type: "JournalEntry", add: "header", field: "desire", label: "M6.Archivi.Kinds.desiderio" },
+  ancora: { pack: "mage-ancore", type: "JournalEntry", add: "row", table: "ancore", label: "M6.Archivi.Kinds.ancora" },
+  convinzione: { pack: "mage-convinzioni", type: "JournalEntry", add: "row", table: "convinzioni", label: "M6.Archivi.Kinds.convinzione" },
+  condizione: { pack: "mage-condizioni", type: "Item", add: "item", label: "M6.Archivi.Kinds.condizione" },
+  // L'Equipaggiamento (Blue, 25/9): un compendio solo, tre archivi per tipo
+  // d'oggetto del sistema, aperti dal libro di ogni occhiello dell'Inventario.
+  "equip-weapon": { pack: "mage-equipaggiamento", type: "Item", add: "item", itemTypes: ["weapon"], label: "M6.Archivi.Kinds.equip-weapon" },
+  "equip-armor": { pack: "mage-equipaggiamento", type: "Item", add: "item", itemTypes: ["armor"], label: "M6.Archivi.Kinds.equip-armor" },
+  "equip-gear": { pack: "mage-equipaggiamento", type: "Item", add: "item", itemTypes: ["gear"], label: "M6.Archivi.Kinds.equip-gear" }
+});
+
+/** I tre archivi dell'Equipaggiamento, nell'ordine delle linguette. */
+export const EQUIP_ARCHIVI = Object.freeze(["equip-weapon", "equip-armor", "equip-gear"]);
+
+/** I documenti di un compendio che valgono per l'archivio: tutti, o solo quelli dei tipi indicati. */
+export function filterByItemTypes(docs, itemTypes) {
+  const list = [...(docs ?? [])];
+  if (!Array.isArray(itemTypes) || !itemTypes.length) return list;
+  return list.filter((doc) => itemTypes.includes(doc?.type));
+}
+
+/** Le linguette chieste dal tasto (data-kinds="a,b,c"): solo gli archivi che esistono. */
+export function kindsFromDataset(value) {
+  return String(value ?? "").split(",").map((id) => id.trim()).filter((id) => archivioKind(id));
+}
+
+/** Il «+» dei Pregi, Difetti e Background del sistema parla per sottotipo. */
+export const FEATURE_KINDS = Object.freeze({ merit: "pregio", flaw: "difetto", background: "background" });
+
+export function archivioKind(kind) {
+  return Object.hasOwn(ARCHIVI, kind) ? kind : null;
+}
+
+/** Accodare: il testo nuovo dopo quello che c'è, col punto mediano in mezzo. */
+export function appendText(existing, text) {
+  const before = String(existing ?? "").trim();
+  const after = String(text ?? "").trim();
+  if (!after) return before;
+  if (!before) return after;
+  if (before.includes(after)) return before;
+  return `${before} · ${after}`;
+}
+
+/** La riga della scheda che nasce da una voce d'archivio. */
+export function rowFromEntry(kind, entry) {
+  if (kind === "ancora") {
+    // Le dodici montate (25/9): ruolo, cosa ti dà, cosa non sa, dove morde; il nome,
+    // il mestiere e l'età li tira il generatore. Una voce vecchia (nome più glossa) resta com'era.
+    if (entry.role || entry.gives || entry.unknown || entry.bites) {
+      return {
+        name: "",
+        role: String(entry.role ?? ""),
+        job: "",
+        age: "",
+        gives: String(entry.gives ?? ""),
+        conviction: "",
+        unknown: String(entry.unknown ?? ""),
+        bites: String(entry.bites ?? ""),
+        description: ""
+      };
+    }
+    return { name: String(entry.text ?? entry.name ?? ""), role: "", job: "", age: "", gives: "", conviction: "", unknown: "", bites: "", description: String(entry.description ?? "") };
+  }
+  if (kind === "convinzione") {
+    return {
+      group: convictionGroupId(entry),
+      text: String(entry.text ?? entry.name ?? ""),
+      serve: String(entry.gloss ?? ""),
+      cross: String(entry.cross ?? "")
+    };
+  }
+  return null;
+}
+
+/**
+ * Gli Elementi in comune e di Storia (10/9): dal libro accanto al + si sceglie
+ * dall'archivio dei Background, dei Pregi o dei Difetti, e la voce diventa una
+ * riga tipo · nome · livello, senza scriverla a mano. Il livello è quello del
+ * filtro se la voce lo ha, altrimenti il più basso del suo costo.
+ */
+export const BELONGING_ARCHIVI = Object.freeze(["background", "pregio", "difetto"]);
+export const BELONGING_KIND_BY_ARCHIVIO = Object.freeze({ background: "background", pregio: "advantage", difetto: "flaw" });
+
+export function belongingRowFromEntry(kind, entry, { name = "", level = 0 } = {}) {
+  const levels = costLevels(entry?.cost, entry?.points);
+  const wanted = Math.trunc(Number(level) || 0);
+  const value = wanted > 0 && levels.includes(wanted) ? wanted : (levels[0] ?? 1);
+  return {
+    kind: BELONGING_KIND_BY_ARCHIVIO[kind] ?? "",
+    name: String(name || entry?.name || ""),
+    value: Math.min(Math.max(Math.trunc(Number(value) || 0), 0), 5)
+  };
+}
+
+/** Il gruppo dell'archivio («Morte», «Tutto è Arte») nella chiave della tendina. */
+export function convictionGroupId(entry) {
+  if (entry.credo) return String(entry.credo);
+  const label = String(entry.group ?? "").trim().toLowerCase();
+  const plain = label.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const known = ["morte", "verita", "lealta", "liberta", "giustizia", "ordine", "natura"];
+  return known.includes(plain) ? plain : "";
+}
+
+/**
+ * Il Background sulla scheda: appunti veloci, non il papiro. Il nome porta
+ * chi hai scelto, la descrizione il cappello, chi e il tipo.
+ */
+export function backgroundItemData(entry, { who = "", type = "" } = {}) {
+  const base = String(entry.name ?? "").trim();
+  const chi = String(who ?? "").trim();
+  const tipo = String(type ?? "").trim();
+  const name = chi ? `${base}: ${chi}` : base;
+  const lines = [];
+  if (entry.lead) lines.push(`<p><em>${escapeHtml(entry.lead)}</em></p>`);
+  if (chi) lines.push(`<p><strong>Chi:</strong> ${escapeHtml(chi)}</p>`);
+  if (tipo) lines.push(`<p><strong>Tipo:</strong> ${escapeHtml(tipo)}</p>`);
+  return { name, description: lines.join("") };
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/** Le voci raggruppate, nell'ordine dell'archivio. */
+export function groupEntries(entries) {
+  const groups = [];
+  for (const entry of entries) {
+    const name = String(entry.group ?? "");
+    let group = groups.find((candidate) => candidate.name === name);
+    if (!group) {
+      group = { name, entries: [] };
+      groups.push(group);
+    }
+    group.entries.push(entry);
+  }
+  return groups;
+}
+
+/**
+ * I livelli che un Pregio o Difetto può avere, dal suo costo a pallini (9/9):
+ * «••» vale 2; «•–•••» da 1 a 3; «•• / ••••» 2 oppure 4. Senza pallini vale
+ * il numero dei punti. Torna la lista dei livelli, in ordine.
+ */
+export function costLevels(cost, points = 1) {
+  const text = String(cost ?? "");
+  const levels = new Set();
+  for (const part of text.split("/")) {
+    const runs = part.split(/[–\-]/).map((run) => (run.match(/•/g) ?? []).length).filter((run) => run > 0);
+    if (!runs.length) continue;
+    if (runs.length >= 2) {
+      const [low, high] = [Math.min(runs[0], runs[1]), Math.max(runs[0], runs[1])];
+      for (let level = low; level <= high; level += 1) levels.add(level);
+    } else {
+      levels.add(runs[0]);
+    }
+  }
+  if (!levels.size) levels.add(Math.max(Math.trunc(Number(points) || 0), 1));
+  return [...levels].sort((left, right) => left - right);
+}
+
+/** Il filtro per livello (9/9): 0 vale tutti; altrimenti la voce deve poter valere quel livello. */
+export function matchesLevel(entry, level) {
+  const wanted = Math.max(Math.trunc(Number(level) || 0), 0);
+  if (!wanted) return true;
+  return costLevels(entry?.cost, entry?.points).includes(wanted);
+}
+
+/** L'archivio parla a livelli (Pregi, Difetti) se qualche voce ha il costo a pallini. */
+export function hasLevels(entries) {
+  return (entries ?? []).some((entry) => String(entry?.cost ?? "").includes("•"));
+}
+
+/** Il filtro della ricerca: nome, gruppo e testo, senza accenti e maiuscole. */
+export function matchesSearch(entry, query) {
+  const needle = normalize(query);
+  if (!needle) return true;
+  const hay = normalize([entry.name, entry.group, entry.text, entry.description, entry.gloss].filter(Boolean).join(" "));
+  return hay.includes(needle);
+}
+
+function normalize(value) {
+  return String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+}
+
+/** Una voce d'archivio letta da un documento del compendio. */
+export function entryFromDocument(doc) {
+  const flag = doc?.flags?.[MODULE_ID]?.[ARCHIVIO_FLAG] ?? doc?.getFlag?.(MODULE_ID, ARCHIVIO_FLAG) ?? {};
+  const page = doc?.pages?.contents?.[0] ?? doc?.pages?.[0];
+  const content = doc?.system?.description ?? page?.text?.content ?? "";
+  return {
+    uuid: String(doc?.uuid ?? ""),
+    id: String(doc?._id ?? doc?.id ?? ""),
+    name: String(doc?.name ?? flag.name ?? ""),
+    group: String(flag.group ?? ""),
+    text: flag.text,
+    description: flag.description,
+    gloss: flag.gloss,
+    cross: flag.cross,
+    role: flag.role,
+    gives: flag.gives,
+    unknown: flag.unknown,
+    bites: flag.bites,
+    cost: flag.cost,
+    points: flag.points,
+    credo: flag.credo,
+    lead: flag.lead,
+    types: Array.isArray(flag.types) ? flag.types.map(String) : [],
+    // Le domande della finestra «metti sulla scheda», scritte per ogni Background (6/9).
+    prompts: flag.prompts && typeof flag.prompts === "object" ? flag.prompts : {},
+    sort: Number(doc?.sort) || 0,
+    content: String(content ?? "")
+  };
+}
+
+// ------------------------------------------------------------------ Foundry
+
+function canEdit(actor) {
+  return Boolean(actor?.isOwner) && !actor?.system?.locked;
+}
+
+export async function loadArchivio(kind) {
+  const config = ARCHIVI[archivioKind(kind)];
+  if (!config) return [];
+  const pack = game.packs.get(`${MODULE_ID}.${config.pack}`);
+  if (!pack) return [];
+  const docs = await pack.getDocuments();
+  return filterByItemTypes(docs, config.itemTypes)
+    .map((doc) => entryFromDocument(doc))
+    .sort((a, b) => a.sort - b.sort);
+}
+
+/** Mette la voce sulla scheda: oggetto, Credo, testo accodato o riga nuova. */
+export async function addFromArchivio(actor, kind, entry, { table = "", level = 0 } = {}) {
+  const config = ARCHIVI[archivioKind(kind)];
+  if (!config || !canEdit(actor)) return false;
+
+  if (table) {
+    // Gli Elementi in comune e di Storia (10/9): una riga tipo · nome · livello.
+    if (!BELONGING_ARCHIVI.includes(kind)) return false;
+    let name = entry.name;
+    if (kind === "background") {
+      const notes = await askBackgroundNotes(entry);
+      if (!notes) return false;
+      name = backgroundItemData(entry, notes).name;
+    }
+    const rows = { ...(actor.getFlag(MODULE_ID, table) ?? {}) };
+    let rowId = foundry.utils.randomID();
+    while (rows[rowId]) rowId = foundry.utils.randomID();
+    rows[rowId] = belongingRowFromEntry(kind, entry, { name, level });
+    await actor.setFlag(MODULE_ID, table, rows);
+    return true;
+  }
+
+  if (config.add === "item" && kind === "condizione") {
+    // La Condizione nasce dai dati del modulo, sempre aggiornati, non dal compendio;
+    // già addosso non si raddoppia, e su una scala prende il posto dell'altro grado (29/9).
+    const definition = findCondizioneByName(entry.name);
+    if (!definition) return false;
+    if (!activeCondizioni(actor.items).has(definition.id)) await toggleCondizione(actor, definition);
+    return true;
+  }
+  if (config.add === "item") {
+    const doc = await fromUuid(entry.uuid);
+    if (!doc) return false;
+    const data = doc.toObject();
+    delete data._id;
+    // Le Condizioni non hanno punti: il livello è dei Pregi, dei Difetti e dei Background.
+    if (data.type === "feature") data.system.points = Math.max(Number(entry.points) || 1, 1);
+    if (kind === "background") {
+      // Chi e che tipo: sulla scheda restano gli appunti, il papiro sta in archivio.
+      const notes = await askBackgroundNotes(entry);
+      if (!notes) return false;
+      const short = backgroundItemData(entry, notes);
+      data.name = short.name;
+      data.system.description = short.description;
+    }
+    await actor.createEmbeddedDocuments("Item", [data]);
+    return true;
+  }
+  if (config.add === "credo") {
+    if (!entry.credo) return false;
+    await actor.update({ [`flags.${MODULE_ID}.focus.credo`]: entry.credo });
+    return true;
+  }
+  if (config.add === "header") {
+    const current = actor.system?.headers?.[config.field] ?? "";
+    await actor.update({ [`system.headers.${config.field}`]: appendText(current, entry.text ?? entry.name) });
+    return true;
+  }
+  if (config.add === "row") {
+    const rows = { ...(actor.getFlag(MODULE_ID, config.table) ?? {}) };
+    let rowId = foundry.utils.randomID();
+    while (rows[rowId]) rowId = foundry.utils.randomID();
+    rows[rowId] = rowFromEntry(kind, entry);
+    await actor.setFlag(MODULE_ID, config.table, rows);
+    return true;
+  }
+  return false;
+}
+
+/** Per un Background: chi hai scelto e di che tipo, prima di metterlo sulla scheda. */
+async function askBackgroundNotes(entry) {
+  const content = await foundry.applications.handlebars.renderTemplate(
+    `systems/${MODULE_ID}/templates/dialogs/archivio-background.hbs`,
+    { entry, types: entry.types ?? [], prompts: entry.prompts ?? {} }
+  );
+  const result = await foundry.applications.api.DialogV2.input({
+    window: { title: entry.name },
+    position: { width: 420, height: "auto" },
+    content,
+    ok: { icon: "fas fa-plus", label: game.i18n.localize("M6.Archivi.Add") },
+    classes: ["m6w", "m6", "mage", "m6-archivio-notes"]
+  });
+  if (!result || result === "cancel") return null;
+  const picked = String(result.typeChoice ?? "").trim();
+  return { who: result.who ?? "", type: picked || result.type || "" };
+}
+
+/** Il contesto della finestra: le voci a gruppi, le linguette degli archivi e dei livelli. */
+export function contestoArchivio(kind, entries, { kinds = [], canAdd = false, localize = (key) => key } = {}) {
+  const config = ARCHIVI[archivioKind(kind)];
+  return {
+    kind,
+    title: config ? localize(config.label) : "",
+    // Le linguette degli archivi (10/9): per gli Elementi, Background, Pregi e Difetti in una finestra.
+    kinds: kinds.filter((id) => archivioKind(id)).map((id) => ({ id, label: localize(ARCHIVI[id].label), active: id === kind })),
+    groups: groupEntries(entries).map((group) => ({ ...group, count: group.entries.length })),
+    count: entries.length,
+    canAdd,
+    // Le linguette dei livelli (9/9), solo dove il costo è a pallini.
+    levels: hasLevels(entries) ? [1, 2, 3, 4, 5] : []
+  };
+}
+
+/** La finestra dell'archivio: cerca, apri la voce, «+» per metterla sulla scheda. */
+export async function openArchivio(actor, kind, { table = "", kinds = [] } = {}) {
+  const config = ARCHIVI[archivioKind(kind)];
+  if (!config) return;
+  const entries = await loadArchivio(kind);
+  const localize = game.i18n.localize.bind(game.i18n);
+  const title = localize(config.label);
+  const content = await foundry.applications.handlebars.renderTemplate(
+    `systems/${MODULE_ID}/templates/dialogs/archivio.hbs`,
+    contestoArchivio(kind, entries, { kinds, canAdd: canEdit(actor), localize })
+  );
+
+  return foundry.applications.api.DialogV2.wait({
+    window: { title: game.i18n.format("M6.Archivi.WindowTitle", { title }) },
+    position: { width: 640, height: 700 },
+    content,
+    classes: ["m6w", "m6", "mage", "m6-archivio-dialog"],
+    buttons: [{ action: "close", icon: "fas fa-times", label: localize("M6.Comuni.Close"), default: true }],
+    render: (_event, dialog) => wireArchivio(dialog, actor, kind, entries, { table, kinds })
+  });
+}
+
+/**
+ * Le linguette (Blue, 27/9: «mi ricarica la finestra da capo»): l'altro
+ * archivio prende il posto di questo nella stessa finestra, senza chiuderla e
+ * riaprirla; la cerca resta com'era e il titolo cambia.
+ */
+async function cambiaArchivio(dialog, actor, kind, { table = "", kinds = [], query = "" } = {}) {
+  const root = dialog?.element;
+  const vecchio = root?.querySelector?.(".m6-archivio");
+  if (!vecchio) return;
+  const entries = await loadArchivio(kind);
+  const localize = game.i18n.localize.bind(game.i18n);
+  const html = await foundry.applications.handlebars.renderTemplate(
+    `systems/${MODULE_ID}/templates/dialogs/archivio.hbs`,
+    contestoArchivio(kind, entries, { kinds, canAdd: canEdit(actor), localize })
+  );
+  const stampo = document.createElement("template");
+  stampo.innerHTML = html.trim();
+  const nuovo = stampo.content.firstElementChild;
+  if (!nuovo) return;
+  vecchio.replaceWith(nuovo);
+  const titolo = root.querySelector(".window-title");
+  if (titolo) titolo.textContent = game.i18n.format("M6.Archivi.WindowTitle", { title: localize(ARCHIVI[kind].label) });
+  wireArchivio(dialog, actor, kind, entries, { table, kinds, query });
+}
+
+function wireArchivio(dialog, actor, kind, entries, { table = "", kinds = [], query = "" } = {}) {
+  const root = dialog?.element;
+  if (!root) return;
+  const search = root.querySelector("[data-role=archivioSearch]");
+  // Le linguette degli archivi: un altro archivio nella stessa finestra, sul posto (27/9).
+  root.querySelectorAll("[data-role=archivioKind]").forEach((button) => {
+    button.addEventListener("click", async (event) => {
+      event.preventDefault();
+      const other = archivioKind(button.dataset.kind);
+      if (!other || other === kind) return;
+      await cambiaArchivio(dialog, actor, other, { table, kinds, query: search?.value ?? "" });
+    });
+  });
+  const rows = [...root.querySelectorAll("[data-role=archivioEntry]")];
+  const groups = [...root.querySelectorAll("[data-role=archivioGroup]")];
+  const levelButtons = [...root.querySelectorAll("[data-role=archivioLevel]")];
+  const fold = root.querySelector("[data-role=archivioFold]");
+  let level = 0;
+
+  // Cerca e livello insieme (9/9): con un filtro attivo i gruppi con voci si aprono.
+  const filter = () => {
+    const query = search?.value ?? "";
+    for (const row of rows) {
+      const entry = entries.find((candidate) => candidate.uuid === row.dataset.uuid);
+      row.hidden = !(matchesSearch(entry ?? {}, query) && matchesLevel(entry ?? {}, level));
+    }
+    const active = Boolean(query.trim()) || level > 0;
+    for (const group of groups) {
+      const any = [...group.querySelectorAll("[data-role=archivioEntry]")].some((row) => !row.hidden);
+      group.hidden = !any;
+      if (active && any && "open" in group) group.open = true;
+    }
+  };
+  search?.addEventListener("input", filter);
+  // La cerca scritta prima di cambiare linguetta vale anche sull'archivio nuovo.
+  if (search && query) {
+    search.value = query;
+    filter();
+  }
+
+  levelButtons.forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      level = Math.max(Math.trunc(Number(button.dataset.level) || 0), 0);
+      levelButtons.forEach((other) => other.classList.toggle("active", other === button));
+      filter();
+    });
+  });
+
+  // Apri tutte / Chiudi tutte: i gruppi a tendina, a scelta di chi legge.
+  const paintFold = () => {
+    if (!fold) return;
+    const details = groups.filter((group) => "open" in group);
+    const allOpen = details.length > 0 && details.every((group) => group.open);
+    fold.dataset.state = allOpen ? "open" : "closed";
+    fold.querySelector("span").textContent = game.i18n.localize(allOpen ? "M6.Archivi.FoldAll" : "M6.Archivi.UnfoldAll");
+    fold.querySelector("i").className = allOpen ? "fa-solid fa-compress" : "fa-solid fa-expand";
+  };
+  fold?.addEventListener("click", (event) => {
+    event.preventDefault();
+    const details = groups.filter((group) => "open" in group);
+    const allOpen = details.length > 0 && details.every((group) => group.open);
+    details.forEach((group) => { group.open = !allOpen; });
+    paintFold();
+  });
+  groups.forEach((group) => group.addEventListener("toggle", paintFold));
+  paintFold();
+
+  root.querySelectorAll("[data-role=archivioToggle]").forEach((toggle) => {
+    toggle.addEventListener("click", (event) => {
+      event.preventDefault();
+      toggle.closest("[data-role=archivioEntry]")?.classList.toggle("open");
+    });
+  });
+
+  root.querySelectorAll("[data-role=archivioAdd]").forEach((button) => {
+    button.addEventListener("click", async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const row = button.closest("[data-role=archivioEntry]");
+      const entry = entries.find((candidate) => candidate.uuid === row?.dataset.uuid);
+      if (!entry) return;
+      button.disabled = true;
+      const done = await addFromArchivio(actor, kind, entry, { table, level });
+      button.disabled = false;
+      if (done) {
+        row.classList.add("added");
+        ui.notifications.info(game.i18n.format("M6.Archivi.Added", { name: entry.name }));
+      }
+    });
+  });
+}
+
+/** L'azione della scheda: l'icona del libro accanto a una voce. */
+export async function onArchivioOpen(event, target) {
+  event.preventDefault();
+  const kind = archivioKind(target.dataset.kind) ?? FEATURE_KINDS[target.dataset.subtype];
+  if (!kind) return;
+  // Le linguette (25/9): dall'Inventario, Armi, Protezioni e Oggetti in una finestra.
+  await openArchivio(this.actor, kind, { kinds: kindsFromDataset(target.dataset.kinds) });
+}

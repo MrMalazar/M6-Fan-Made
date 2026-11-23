@@ -1,0 +1,10 @@
+{{!-- Il corpo del passo: a sinistra COSA scegli, a destra PERCHÉ e COSA CI
+     GUADAGNI. Ogni passo ha il suo partial (templates/guidata/passi). --}}
+<div class="m6-guidata-corpo passo-{{passo.id}}">
+    {{#unless canEdit}}
+        <p class="m6-guidata-avviso"><i class="fa-solid fa-lock" aria-hidden="true"></i> {{#if bloccato}}{{localize "M6.Guidata.Bloccato"}}{{else}}{{localize "M6.Guidata.SoloLettura"}}{{/if}}</p>
+    {{/unless}}
+    <div class="m6-guidata-colonne">
+        {{> (lookup passo "partial")}}
+    </div>
+</div>

@@ -1,0 +1,79 @@
+{{!-- Il catalogo dei poteri (24/9 sera; 25/9; 27/9). La finestra «Aggiungi»: le pastiglie
+     delle Sfere conosciute (col conto dei poteri che si hanno), la cerca, il conto;
+     tutti i poteri che la Sfera apre, in ordine di grado e poi di nome, in due
+     gruppi (della Sfera, di qualsiasi Sfera); una riga per potere a colonne fisse
+     (grado, nome, matrice, tipo, Aggiungi: niente prezzi qui, Blue 27/9, «mi basta
+     vedere il grado») che si apre sulle quattro parti (Grado, Prerequisiti, Effetto
+     attivo, Effetto passivo); una riga coi prerequisiti che mancano sta col lucchetto
+     e dice cosa serve; «Aggiungi» mette il potere sul personaggio e la riga prende la
+     spunta. Il Narratore ha la matita «Per tutti» sul testo di base. Il Catalogo
+     completo (`tutto`): tutti i poteri, Sfera per Sfera, senza tasti. --}}
+<div class="m6-grimorio-body m6-catalogo-body">
+    {{#if pastiglie}}
+        <div class="m6-catalogo-sfere" role="tablist" aria-label="{{localize 'M6.Tabs.Spheres'}}">
+            {{#each pastiglie as |s|}}
+                <button type="button" class="m6-catalogo-sfera{{#if s.attiva}} attiva{{/if}}" role="tab" aria-selected="{{s.attiva}}" data-role="catalogoSfera" data-sphere="{{s.id}}" title="{{localize 'M6.Poteri.CatalogoConosciuti' known=s.conto}}"><img src="{{s.icon}}" alt=""><span>{{s.label}}</span><small>{{s.conto}}</small></button>
+            {{/each}}
+        </div>
+    {{/if}}
+    <div class="m6-grimorio-top m6-catalogo-top">
+        {{#if icon}}<img class="m6-catalogo-sigillo" src="{{icon}}" alt="">{{/if}}
+        <input type="search" class="m6-grimorio-search" data-role="catalogoSearch" placeholder="{{localize 'M6.Poteri.CatalogoCerca'}}" aria-label="{{localize 'M6.Poteri.CatalogoCerca'}}">
+        <span class="m6-catalogo-conto" data-role="catalogoConto">{{#if aggiungi}}{{localize "M6.Nemico.CatalogoConto" total=totale known=conosciuti}}{{else}}{{localize "M6.Poteri.CatalogoConto" total=totale known=conosciuti}}{{/if}}</span>
+    </div>
+    {{#unless tutto}}
+        {{!-- Il Dominio è di famiglia o esterno, e quanto costa ogni grado (25/9 sera: «nell'elenco non è capibile»). --}}
+        <p class="m6-catalogo-avviso m6-catalogo-dominio"><i class="fa-solid {{#if family}}fa-house{{else}}fa-globe{{/if}}" aria-hidden="true"></i> {{dominioLabel}}</p>
+        {{#if creazione}}<p class="m6-catalogo-avviso m6-catalogo-creazione"><i class="fa-solid fa-wand-sparkles" aria-hidden="true"></i> {{localize "M6.Poteri.CreazioneRegola"}}</p>{{/if}}
+        {{#if chiusi}}<p class="m6-catalogo-avviso"><i class="fa-solid fa-lock" aria-hidden="true"></i> {{localize "M6.Poteri.CatalogoChiusi" n=chiusi}}</p>{{/if}}
+    {{/unless}}
+
+    {{#each gruppi as |gruppo|}}
+        <section class="m6-catalogo-gruppo" data-catalogo-gruppo="{{gruppo.id}}">
+            <h3 class="m6-catalogo-titolo"><span>{{gruppo.label}}</span><small>{{gruppo.righe.length}}</small></h3>
+            {{#if gruppo.nota}}{{#unless @root.tutto}}<p class="m6-catalogo-avviso m6-catalogo-qualsiasi"><i class="fa-solid fa-thumbtack" aria-hidden="true"></i> {{gruppo.nota}}</p>{{/unless}}{{/if}}
+            {{#each gruppo.righe as |voce|}}
+            <details class="m6-grimorio-row m6-catalogo-row{{#if voce.known}} known{{/if}}{{#if voce.locked}} chiusa{{/if}}" data-catalogo="{{voce.id}}" data-search="{{voce.search}}">
+                <summary>
+                    <b class="m6-potere-pallino{{#unless voce.dot}} vuoto{{/unless}}" title="{{localize 'M6.Poteri.Grado'}}">{{#if voce.dot}}{{voce.dot}}{{else}}·{{/if}}</b>
+                    <span class="m6-catalogo-nome">{{voce.name}}{{#if voce.proposal}} <i class="m6-catalogo-proposta" title="{{localize 'M6.Grimorio.Proposal'}}">◇</i>{{/if}}{{#if voce.locked}} <i class="fa-solid fa-lock m6-catalogo-lucchetto" title="{{voce.lockedHint}}" aria-hidden="true"></i>{{/if}}{{#if voce.parti.modificato.mondo}} <i class="fa-solid fa-globe m6-catalogo-segno" title="{{localize 'M6.Poteri.ModificatoMondo'}}" aria-hidden="true"></i>{{/if}}{{#if voce.knownAltrove}}<small class="m6-catalogo-segnato" title="{{voce.knownHint}}"><i class="fa-solid fa-thumbtack" aria-hidden="true"></i> {{voce.knownHint}}</small>{{/if}}</span>
+                    <em class="m6-grimorio-formula">{{voce.formulaName}}</em>
+                    <span class="m6-catalogo-tipi">{{#if voce.tipi.attivo}}<small class="attivo">{{localize "M6.Poteri.Tipo.attivo"}}</small>{{/if}}{{#if voce.tipi.passivo}}<small class="passivo">{{localize "M6.Poteri.Tipo.passivo"}}</small>{{/if}}</span>
+                    <span class="m6-catalogo-azione">
+                        {{#if @root.aggiungi}}
+                            {{!-- Il catalogo per un PNG (1/10): «Aggiungi» su ogni riga, senza prerequisiti; lo decide il Narratore. --}}
+                            <button type="button" class="m6-catalogo-aggiungi" data-role="catalogoAggiungi" data-catalogo="{{voce.id}}" {{#if voce.known}}disabled{{/if}}>{{#if voce.known}}<i class="fa-solid fa-check" aria-hidden="true"></i> {{localize "M6.Nemico.PotereGia"}}{{else}}<i class="fa-solid fa-plus" aria-hidden="true"></i> {{localize "M6.Poteri.Aggiungi"}}{{/if}}</button>
+                        {{else if @root.tutto}}
+                            {{#if voce.known}}<span class="m6-catalogo-spunta" title="{{localize 'M6.Poteri.Conosciuto'}}"><i class="fa-solid fa-check" aria-hidden="true"></i></span>{{/if}}
+                        {{else}}
+                            <button type="button" class="m6-catalogo-aggiungi" data-role="catalogoAggiungi" data-catalogo="{{voce.id}}" {{#if voce.known}}disabled title="{{voce.knownHint}}"{{else if voce.locked}}disabled title="{{voce.lockedHint}}"{{/if}}>{{#if voce.known}}<i class="fa-solid fa-check" aria-hidden="true"></i> {{localize "M6.Poteri.Conosciuto"}}{{else}}<i class="fa-solid fa-plus" aria-hidden="true"></i> {{localize "M6.Poteri.Aggiungi"}}{{/if}}</button>
+                        {{/if}}
+                    </span>
+                    <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+                </summary>
+                <div class="m6-catalogo-testo">
+                    {{!-- Le quattro parti (Blue, 27/9): Grado, Prerequisiti (una condizione per riga: la spunta se c'è, il lucchetto
+                         se manca, il punto se la giudica il tavolo; o il testo scritto dal Narratore), Effetto attivo, Effetto passivo. --}}
+                    <p class="m6-catalogo-blocco m6-catalogo-grado"><b>{{localize "M6.Poteri.Grado"}}</b><span>{{voce.gradoLabel}}</span></p>
+                    <div class="m6-catalogo-blocco m6-catalogo-serve{{#if voce.serveOk}} ok{{/if}}{{#if voce.parti.prerequisiti.vuota}} vuoto{{/if}}"><b>{{localize "M6.Poteri.Prerequisiti"}}</b>
+                        {{#if voce.condizioni.length}}
+                            <ul class="m6-catalogo-condizioni">
+                                {{#each voce.condizioni as |c|}}<li class="{{c.stato}}"><i class="fa-solid {{c.icona}}" aria-hidden="true"></i> {{c.testo}}</li>{{/each}}
+                            </ul>
+                        {{else}}
+                            {{#each voce.parti.prerequisiti.righe as |r|}}<span>{{r}}</span>{{else}}<span><em>{{localize "M6.Poteri.PrerequisitiNessuno"}}</em></span>{{/each}}
+                        {{/if}}
+                    </div>
+                    <p class="m6-catalogo-blocco attivo{{#if voce.parti.attivo.vuota}} vuoto{{/if}}"><b>{{localize "M6.Poteri.EffettoAttivo"}}{{#if voce.parti.attivo.misura}} <small class="m6-potere-misura">{{voce.parti.attivo.misura}}</small>{{/if}}</b>{{#each voce.parti.attivo.voci as |v|}}<span>{{#if v.accesso}}<strong class="m6-accesso">{{#if v.con}}{{localize "M6.Poteri.ConSfera"}}{{else}}{{localize "M6.Grimorio.Access"}}{{/if}} {{#each v.sfere as |sfera|}}<img class="m6-sfera-inline" src="systems/m6/assets/icons/sheet/{{sfera}}.png" alt="{{localize (concat 'M6.Spheres.' sfera)}}" title="{{localize (concat 'M6.Spheres.' sfera)}}">{{/each}}:</strong> {{else if v.chiave}}<strong>{{v.chiave}}:</strong> {{/if}}{{v.testo}}</span>{{else}}<span><em>{{localize "M6.Poteri.EffettoNessuno"}}</em></span>{{/each}}</p>
+                    <p class="m6-catalogo-blocco passivo{{#if voce.parti.passivo.vuota}} vuoto{{/if}}"><b>{{localize "M6.Poteri.EffettoPassivo"}}{{#if voce.parti.passivo.misura}} <small class="m6-potere-misura">{{voce.parti.passivo.misura}}</small>{{/if}}</b>{{#each voce.parti.passivo.voci as |v|}}<span>{{#if v.accesso}}<strong class="m6-accesso">{{#if v.con}}{{localize "M6.Poteri.ConSfera"}}{{else}}{{localize "M6.Grimorio.Access"}}{{/if}} {{#each v.sfere as |sfera|}}<img class="m6-sfera-inline" src="systems/m6/assets/icons/sheet/{{sfera}}.png" alt="{{localize (concat 'M6.Spheres.' sfera)}}" title="{{localize (concat 'M6.Spheres.' sfera)}}">{{/each}}:</strong> {{else if v.chiave}}<strong>{{v.chiave}}:</strong> {{/if}}{{v.testo}}</span>{{else}}<span><em>{{localize "M6.Poteri.EffettoNessuno"}}</em></span>{{/each}}</p>
+                    {{#if voce.paradox}}<p class="m6-catalogo-blocco m6-catalogo-paradosso"><b>{{localize "M6.Poteri.Carta.Paradosso"}}</b><span>{{voce.paradox}}</span></p>{{/if}}
+                    {{#if voce.flavor}}<p class="m6-catalogo-flavor"><em>{{voce.flavor}}</em></p>{{/if}}
+                    {{#if @root.gm}}<p class="m6-catalogo-modifica"><button type="button" data-role="catalogoModifica" data-catalogo="{{voce.id}}" title="{{localize 'M6.Poteri.ModificaBaseHint'}}"><i class="fa-solid fa-globe" aria-hidden="true"></i> {{localize "M6.Poteri.ModificaBase"}}</button>{{#if voce.parti.modificato.mondo}}<small>{{localize "M6.Poteri.ModificatoMondo"}}</small>{{/if}}</p>{{/if}}
+                </div>
+            </details>
+            {{else}}
+                <p class="m6-grimorio-empty">{{localize "M6.Poteri.CatalogoVuotoSfera"}}</p>
+            {{/each}}
+        </section>
+    {{/each}}
+</div>

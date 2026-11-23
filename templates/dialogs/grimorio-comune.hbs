@@ -1,0 +1,32 @@
+{{!-- Il Grimorio comune: gli incantesimi di tutto il tavolo, per Credo.
+     Copia nel tuo, oppure lancia subito. --}}
+<div class="m6-grimorio-body">
+    <input type="search" class="m6-grimorio-search" data-role="grimorioSearch" placeholder="{{localize 'M6.GrimorioComune.Search'}}" aria-label="{{localize 'M6.GrimorioComune.Search'}}">
+    {{#each groups as |group|}}
+        <details class="m6-grimorio-sphere" open>
+            <summary><h3>{{group.credo}} <small>{{group.spells.length}}</small></h3></summary>
+            {{#each group.spells as |spell|}}
+                <article class="m6-shared-spell" data-spell="{{spell.id}}">
+                    <header>
+                        <span class="m6-incantesimo-spheres">{{#each spell.spheres as |s|}}<span class="m6-incantesimo-sphere" title="{{s.label}} {{s.level}}"><img src="{{s.icon}}" alt="">{{s.level}}</span>{{/each}}</span>
+                        <strong>{{spell.name}}</strong>
+                        {{#if spell.author}}<em>{{spell.author}}</em>{{/if}}
+                        <span class="m6-incantesimo-type {{spell.magickTypeId}}">{{spell.magickType}}</span>
+                        <span class="m6-incantesimo-controls">
+                            <button type="button" data-shared-action="roll" title="{{localize 'M6.Incantesimi.Roll'}}"><i class="fa-solid fa-dice-d10"></i></button>
+                            <button type="button" data-shared-action="copy" title="{{localize 'M6.GrimorioComune.Copy'}}"><i class="fa-solid fa-download"></i></button>
+                        </span>
+                    </header>
+                    <small>
+                        {{#if spell.practiceForm}}{{spell.practiceForm}} · {{/if}}{{#if spell.instruments}}{{spell.instruments}} · {{/if}}{{#if spell.traits}}{{spell.traits}}{{/if}}
+                        {{#if spell.scopes.length}} · {{#each spell.scopes as |s|}}{{s.label}} {{s.level}}{{#unless @last}}, {{/unless}}{{/each}}{{/if}}
+                    </small>
+                    {{#if spell.goal}}<p>{{spell.goal}}</p>{{/if}}
+                    {{#if spell.narrative}}<details><summary>{{localize "M6.Incantesimi.Narrative"}}</summary><p>{{spell.narrative}}</p></details>{{/if}}
+                </article>
+            {{/each}}
+        </details>
+    {{else}}
+        <p class="m6-grimorio-empty">{{localize "M6.GrimorioComune.Empty"}}</p>
+    {{/each}}
+</div>

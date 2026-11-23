@@ -1,0 +1,276 @@
+import { MODULE_ID } from "./constants.js";
+import { effectEpic, testoDellaFormula } from "./grimorio.js";
+import { FORMULE_M6 } from "./data/formule.js";
+import { EPIC_SCOPE, normalizeScopeLevels, SCOPES, SCOPE_ICONS } from "./scopes.js";
+import { SPHERES } from "./spheres.js";
+
+/**
+ * Il Grimorio del personaggio (richiesta di Blue, 6/9/2026): la pagina dove
+ * il giocatore scrive i suoi incantesimi. Il + apre la stessa finestra del
+ * tiro di Areté, ma invece di tirare salva: nome, riserva, tipo, Sfere,
+ * Ambiti, Obiettivo, Effetto e la narrativa del lancio; la scheda ci
+ * aggiunge da sé il Credo, il Tipo di Magick e gli Strumenti delle Sfere
+ * usate, com'erano al momento di scrivere. Da ogni incantesimo si lancia
+ * (la finestra si apre già riempita), si modifica, si manda in chat.
+ */
+
+export const INCANTESIMI_FLAG = "grimorio";
+
+const MAGICK_TYPE_LABELS = Object.freeze({
+  "": "M6.Incantesimi.NoType",
+  coincidental: "M6.Arete.Coincidental",
+  vulgar: "M6.Arete.Vulgar",
+  witnesses: "M6.Arete.VulgarWithWitnesses"
+});
+
+function level(value) {
+  return Math.max(Math.trunc(Number(value) || 0), 0);
+}
+
+/** Una riga del Grimorio, con le etichette pronte per la pagina. */
+export function prepareIncantesimo(id, spell, localize = (key) => key) {
+  const spheres = SPHERES
+    .filter((sphere) => level(spell?.spheres?.[sphere]) > 0)
+    .map((sphere) => ({
+      id: sphere,
+      label: localize(`M6.Spheres.${sphere}`),
+      level: level(spell.spheres[sphere]),
+      icon: `systems/${MODULE_ID}/assets/icons/sheet/${sphere}.png`
+    }));
+  // Gli Ambiti coi nomi di oggi: l'Area di un incantesimo di ieri si legge nei Bersagli (23/9).
+  const scopeLevels = normalizeScopeLevels(spell?.scopes ?? {});
+  const scopes = SCOPES
+    .filter((scope) => level(scopeLevels[scope]) > 0)
+    .map((scope) => ({ id: scope, label: localize(`M6.Scopes.${scope}`), level: level(scopeLevels[scope]), faIcon: SCOPE_ICONS[scope] ?? "" }));
+  const magickType = String(spell?.magickType ?? "");
+  return {
+    id,
+    name: String(spell?.name ?? "").trim() || localize("M6.Incantesimi.Unnamed"),
+    goal: String(spell?.goal ?? ""),
+    narrative: String(spell?.narrative ?? ""),
+    credo: spell?.credo ? localize(`M6.Focus.Credos.${spell.credo}`) : "",
+    practiceForm: spell?.practiceForm ? localize(`M6.Focus.Forms.${spell.practiceForm}`) : "",
+    instruments: Array.isArray(spell?.instruments) ? spell.instruments.join(", ") : "",
+    traits: (spell?.traits ?? []).map((trait) => trait.label).join(" + "),
+    magickType: localize(MAGICK_TYPE_LABELS[magickType] ?? MAGICK_TYPE_LABELS[""]),
+    magickTypeId: magickType,
+    effectKind: spell?.effectKind ? localize(`M6.Arete.EffectKinds.${spell.effectKind}`) : "",
+    prize: Boolean(spell?.prize),
+    maintained: Boolean(spell?.maintained),
+    spheres,
+    // Le Sfere in una parola, per il filtro per Sfera della pagina Formule (26/9 sera).
+    kinds: spheres.map((sphere) => sphere.id).join(" "),
+    scopes,
+    // La matrice da cui nasce (24/9): l'id e il nome, per la scheda e la carta.
+    formula: String(spell?.formula ?? ""),
+    formulaName: formulaNameOf(spell?.formula),
+    sort: Number(spell?.sort) || 0
+  };
+}
+
+function formulaNameOf(id) {
+  if (!id) return "";
+  return FORMULE_M6.find((formula) => formula.id === id)?.name ?? "";
+}
+
+export function prepareIncantesimi(actor, localize = (key) => key) {
+  const stored = actor.getFlag(MODULE_ID, INCANTESIMI_FLAG) ?? {};
+  return Object.entries(stored)
+    .map(([id, spell]) => prepareIncantesimo(id, spell, localize))
+    .sort((a, b) => a.sort - b.sort || a.name.localeCompare(b.name));
+}
+
+/**
+ * La pagina per Sfere (verdetto di Blue, 6/9): ogni incantesimo sta sotto la
+ * Sfera più alta che usa; se due Sfere sono pari e le più alte, compare in
+ * tutte e due. Chi non ha Sfere finisce in coda, «Senza Sfera».
+ */
+export function topSpheres(row) {
+  const spheres = row?.spheres ?? [];
+  const top = Math.max(0, ...spheres.map((sphere) => sphere.level));
+  return spheres.filter((sphere) => sphere.level === top && top > 0).map((sphere) => sphere.id);
+}
+
+export function groupIncantesimiBySphere(rows, localize = (key) => key) {
+  const groups = SPHERES.map((sphere) => ({
+    sphere,
+    label: localize(`M6.Spheres.${sphere}`),
+    icon: `systems/${MODULE_ID}/assets/icons/sheet/${sphere}.png`,
+    spells: rows.filter((row) => topSpheres(row).includes(sphere))
+  })).filter((group) => group.spells.length);
+  const loose = rows.filter((row) => topSpheres(row).length === 0);
+  if (loose.length) groups.push({ sphere: "", label: localize("M6.Incantesimi.NoSphere"), icon: "", spells: loose });
+  return groups;
+}
+
+/**
+ * Un effetto del manuale diventa un incantesimo della scheda: nome e Obiettivo
+ * dal Grimorio, le Sfere che chiede, Credo, Tipo e Strumenti dalla scheda;
+ * il resto lo scrive il giocatore, nell'ottica del suo Credo.
+ */
+export function spellFromEffetto(actor, entry, sphereLevels, localize = (key) => key) {
+  const focus = actor.getFlag(MODULE_ID, "focus") ?? {};
+  const instruments = Object.keys(sphereLevels)
+    .map((id) => {
+      const row = focus.sphereInstruments?.[id] ?? {};
+      const tool = row.tool ? localize(`M6.Focus.Tools.${row.tool}`) : "";
+      const name = String(row.name ?? "").trim();
+      if (tool && name) return `${tool} (${name})`;
+      return tool || name;
+    })
+    .filter((item, index, all) => item && all.indexOf(item) === index);
+  return {
+    name: entry.name,
+    goal: entry.text,
+    narrative: "",
+    effectKind: "",
+    magickType: "",
+    prize: false,
+    maintained: false,
+    traits: [],
+    spheres: { ...sphereLevels },
+    // L'Epicità parte dal livello dell'effetto (2/10); una matrice non ce l'ha.
+    scopes: entry.level ? { [EPIC_SCOPE]: effectEpic(entry) } : {},
+    credo: String(focus.credo ?? ""),
+    practiceForm: String(focus.practiceForm ?? ""),
+    instruments,
+    effetto: entry.id
+  };
+}
+
+/**
+ * Una matrice scelta nel Grimorio diventa un incantesimo del personaggio
+ * (24/9): il nome della Formula, «In genere» come Obiettivo, la Sfera
+ * d'Accesso e le Amalgame scelte, gli Ambiti ai livelli della soglia base,
+ * Credo, Tipo e Strumenti dalla scheda. Da lì il giocatore lo personalizza
+ * con la matita o lo lancia col dado.
+ */
+export function spellFromFormula(actor, pick, localize = (key) => key) {
+  // L'Obiettivo è l'effetto delle Sfere scelte (27/9), non la glossa «In genere».
+  const goal = testoDellaFormula(pick.formula, { access: pick.access, amalgams: pick.amalgams });
+  const base = spellFromEffetto(actor, { name: pick.formula.name, text: goal, id: "" }, pick.spheres, localize);
+  return {
+    ...base,
+    goal,
+    spheres: { ...pick.spheres },
+    scopes: { ...pick.scopes },
+    effetto: "",
+    formula: pick.formula.id,
+    access: pick.access,
+    amalgams: [...pick.amalgams]
+  };
+}
+
+function canEdit(actor) {
+  if (!actor.isOwner) {
+    ui.notifications.warn(game.i18n.format("M6.Comuni.Notifications.NoSufficientPermission", { string: actor.name }));
+    return false;
+  }
+  return true;
+}
+
+function storedSpell(actor, id) {
+  const stored = actor.getFlag(MODULE_ID, INCANTESIMI_FLAG) ?? {};
+  return Object.hasOwn(stored, id) ? stored[id] : null;
+}
+
+async function saveSpell(actor, id, spell) {
+  await actor.update({ [`flags.${MODULE_ID}.${INCANTESIMI_FLAG}.${id}`]: spell });
+}
+
+/** Il +: la finestra del tiro in modo «salva». */
+export async function onIncantesimoAdd(event) {
+  event.preventDefault();
+  const actor = this.actor;
+  if (!canEdit(actor)) return;
+  const { launchArete } = await import("./arete.js");
+  const spell = await launchArete(actor, { mode: "save" });
+  if (!spell) return;
+  const stored = actor.getFlag(MODULE_ID, INCANTESIMI_FLAG) ?? {};
+  let id = foundry.utils.randomID();
+  while (stored[id]) id = foundry.utils.randomID();
+  await saveSpell(actor, id, { ...spell, sort: Object.keys(stored).length });
+  ui.notifications.info(game.i18n.format("M6.Incantesimi.Saved", { name: spell.name }));
+}
+
+/** La matita: la stessa finestra, già riempita; salva sopra. */
+export async function onIncantesimoEdit(event, target) {
+  event.preventDefault();
+  const actor = this.actor;
+  if (!canEdit(actor)) return;
+  const id = target.dataset.row;
+  const current = storedSpell(actor, id);
+  if (!current) return;
+  const { launchArete } = await import("./arete.js");
+  const spell = await launchArete(actor, { mode: "save", preset: current });
+  if (!spell) return;
+  await saveSpell(actor, id, { ...spell, sort: current.sort ?? 0 });
+}
+
+export async function onIncantesimoDelete(event, target) {
+  event.preventDefault();
+  const actor = this.actor;
+  if (!canEdit(actor)) return;
+  const id = target.dataset.row;
+  if (!storedSpell(actor, id)) return;
+  await actor.update({ [`flags.${MODULE_ID}.${INCANTESIMI_FLAG}.-=${id}`]: null });
+}
+
+/**
+ * Il dado (Blue, 26/9: «lanciabile come lancio attivo fatto dalla scheda»):
+ * l'effetto entra nel Tiro della prima pagina coi suoi valori, e si tira da
+ * lì coi tre tasti; niente più finestra.
+ */
+export async function onIncantesimoRoll(event, target) {
+  event.preventDefault();
+  const id = String(target.dataset.row ?? "");
+  const current = storedSpell(this.actor, id);
+  if (!current) return;
+  const { caricaNelTiro } = await import("./tiro-scheda.js");
+  return caricaNelTiro(this, id, current);
+}
+
+/** Il libro degli effetti: liste di effetti del manuale aggiunte alla scheda, da ritoccare poi. */
+export async function onIncantesimoFromEffetti(event) {
+  event.preventDefault();
+  const actor = this.actor;
+  if (!canEdit(actor)) return;
+  const { openGrimorio, effectSphereLevels } = await import("./grimorio.js");
+  const { prepareSpheres } = await import("./spheres.js");
+  const localize = game.i18n.localize.bind(game.i18n);
+  // I Domini a cui si ha accesso (25/9): le Sfere conosciute, anche a livello 0.
+  const owned = Object.fromEntries(prepareSpheres(actor).selected.map((sphere) => [sphere.id, sphere.value]));
+  const salva = async (spell) => {
+    const stored = actor.getFlag(MODULE_ID, INCANTESIMI_FLAG) ?? {};
+    let id = foundry.utils.randomID();
+    while (stored[id]) id = foundry.utils.randomID();
+    await saveSpell(actor, id, { ...spell, sort: Object.keys(stored).length });
+    ui.notifications.info(game.i18n.format("M6.Incantesimi.Saved", { name: spell.name }));
+  };
+  const { getArete } = await import("./arete.js");
+  await openGrimorio(owned, {
+    // La soglia delle Formule si conta con l'Areté del personaggio (il Sistema).
+    arete: getArete(actor).value,
+    onPick: async (entry) => salva(spellFromEffetto(actor, entry, effectSphereLevels(entry), localize)),
+    // La matrice (24/9): «Scrivi nel Grimorio» la salva, «Lancia» apre il tiro già riempito.
+    onFormula: async (pick) => salva(spellFromFormula(actor, pick, localize)),
+    onFormulaRoll: async (pick) => {
+      const { launchArete } = await import("./arete.js");
+      return launchArete(actor, { mode: "roll", preset: spellFromFormula(actor, pick, localize) });
+    }
+  });
+}
+
+/** Il fumetto: l'incantesimo in chat, per il tavolo. */
+export async function onIncantesimoChat(event, target) {
+  event.preventDefault();
+  const actor = this.actor;
+  const current = storedSpell(actor, target.dataset.row);
+  if (!current) return;
+  const row = prepareIncantesimo(target.dataset.row, current, game.i18n.localize.bind(game.i18n));
+  const content = await foundry.applications.handlebars.renderTemplate(
+    `systems/${MODULE_ID}/templates/chat/incantesimo.hbs`,
+    { spell: row }
+  );
+  return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content });
+}

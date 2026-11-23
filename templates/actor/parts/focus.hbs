@@ -1,0 +1,81 @@
+{{!-- La pagina del Credo (21/9, dal mock docs/mock_tre_pagine_21-9.html): il
+     Tipo di Magick a pastiglie, gli Strumenti per la Magick una riga per Sfera
+     (più Percepire) con la pastiglia dello Strumento che apre la tendina dei
+     ventidue per famiglia, e a destra «Le Sfere per te», una riga per Sfera
+     sbloccata col testo che si apre col clic e si scrive con la matita. Il
+     Credo si sceglie in prima pagina, sotto il nome (Appartenenza, 6/9). --}}
+<section class="tab {{tab.cssClass}} m6-focus" data-tab="{{tab.id}}" data-group="{{tab.group}}">
+    <header class="m6-section-title">
+        {{#if creazioneReset}}{{> "systems/m6/templates/actor/parts/reset-tasto.hbs" resetsById.credo}}{{/if}}
+        <span>{{localize "M6.Tabs.Focus"}}</span>
+    </header>
+
+    <div class="m6-focus-layout">
+        <div class="m6-focus-sinistra">
+            {{!-- Magick, Tecnomagick, Magick Ibrida: il Tipo decide le famiglie di
+                 Strumenti ammesse (Macchina solo Tecnomagick, Parola e Corpo solo
+                 Magick, l'Ibrida tutto). La stessa pastiglia cliccata di nuovo lo toglie. --}}
+            <section class="m6-riq m6-riq-pagina m6-focus-definition">
+                <header class="m6-riq-title">
+                    <span>{{localize "M6.Focus.Type"}}</span>
+                    <small class="m6-riq-conto">{{localize "M6.Focus.TypeHint"}}</small>
+                </header>
+                <div class="m6-riq-body">
+                    <div class="m6-pastiglie-fila" role="group" aria-label="{{localize 'M6.Focus.Type'}}" title="{{localize 'M6.Focus.TypePick'}}">
+                        {{#each focus.forms as |form|}}
+                            <button type="button" class="m6-pastiglia m6-pastiglia-modo{{#if form.selected}} scelta{{/if}}" data-action="focusForm" data-form="{{form.id}}" aria-pressed="{{form.selected}}" {{#if ../locked}}disabled{{/if}}>{{form.label}}</button>
+                        {{/each}}
+                    </div>
+                </div>
+            </section>
+
+            {{!-- Uno Strumento per Sfera (più Percepire, 9/9): la Sfera, la pastiglia
+                 dello Strumento fra i ventidue a famiglie, il mestiere quando serve,
+                 il tuo di preciso. --}}
+            <section class="m6-riq m6-riq-pagina m6-focus-instruments">
+                <header class="m6-riq-title">
+                    <span>{{localize "M6.Focus.Instruments"}}</span>
+                    <small class="m6-riq-conto">{{localize "M6.Focus.UnoPerSfera"}}</small>
+                </header>
+                <div class="m6-riq-body m6-focus-instrument-list">
+                    {{#each focus.instruments as |row|}}
+                        {{> "systems/m6/templates/actor/parts/strumento-riga.hbs" row=row locked=../locked}}
+                    {{/each}}
+                    {{#if focus.perceiveInstrument}}
+                        {{> "systems/m6/templates/actor/parts/strumento-riga.hbs" row=focus.perceiveInstrument locked=locked}}
+                    {{/if}}
+                </div>
+            </section>
+        </div>
+
+        {{!-- Le Sfere per te: solo le Sfere sbloccate; il testo si apre col clic sul nome, la matita apre l'editor. --}}
+        <section class="m6-riq m6-riq-pagina m6-focus-spheres">
+            <header class="m6-riq-title">
+                <span>{{localize "M6.Focus.SferePerTe"}}</span>
+                <small class="m6-riq-conto">{{localize "M6.Focus.SferePerTeHint"}}</small>
+            </header>
+            <div class="m6-riq-body">
+                {{#each focus.spheres as |sphere|}}
+                    <div class="m6-riga m6-riga-apribile m6-riga-credo-sfera{{#if sphere.editing}} aperta modifica{{/if}}" data-sphere="{{sphere.id}}">
+                        <div class="m6-riga-testa">
+                            <img class="m6-riga-icona m6-sfera-sigillo" src="{{sphere.icon}}" alt="">
+                            <button type="button" class="m6-riga-nome m6-riga-nome-apri" data-action="rigaApri" title="{{localize 'M6.Focus.Apri'}}" aria-expanded="{{sphere.editing}}"><span>{{localize "M6.Focus.WhatIs"}} {{localize sphere.label}}</span><i class="fa-solid fa-chevron-down" aria-hidden="true"></i></button>
+                            <div class="m6-riga-tastini">
+                                <button type="button" class="m6-riga-tastino" data-action="credoModifica" data-sphere="{{sphere.id}}" title="{{#if sphere.editing}}{{localize 'M6.Focus.Fatto'}}{{else}}{{localize 'M6.Focus.Modifica'}}{{/if}}" aria-label="{{localize 'M6.Focus.Modifica'}}" {{#if ../locked}}disabled{{/if}}><i class="fa-solid {{#if sphere.editing}}fa-check{{else}}fa-pen{{/if}}" aria-hidden="true"></i></button>
+                            </div>
+                        </div>
+                        <div class="m6-riga-spiega">
+                            {{#if sphere.editing}}
+                                <prose-mirror name="flags.m6.focus.sphereNotes.{{sphere.id}}" value="{{sphere.notes}}" toggled="true" compact="true">
+                                    {{{sphere.enrichedNotes}}}
+                                </prose-mirror>
+                            {{else if sphere.notes}}
+                                <div class="m6-credo-testo">{{{sphere.enrichedNotes}}}</div>
+                            {{/if}}
+                        </div>
+                    </div>
+                {{/each}}
+            </div>
+        </section>
+    </div>
+</section>

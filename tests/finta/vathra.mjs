@@ -1,0 +1,317 @@
+// Il Vathrâ nella finta Foundry (Blue, 25/9): i caratteri delle due mani, il
+// tasto nella barra dei token, il comando «/vathra», la finestra (contesto e
+// template), le azioni (gettoni, chi capisce, frase dal frasario, invio) e
+// la carta in chat vista dal Narratore, da chi scrive, da chi è acceso e da
+// chi no. Con VATHRA_PAGINA=<cartella> scrive la finestra e le carte in HTML,
+// da guardare col CSS del modulo.
+// Uso: node tests/finta/vathra.mjs
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import Handlebars from "handlebars";
+
+const MODULE = "m6";
+const ROOT = new URL("../../", import.meta.url);
+const lingua = [JSON.parse(readFileSync(new URL("lang/it.json", ROOT), "utf8")), JSON.parse(readFileSync(new URL("lang/it-vathra.json", ROOT), "utf8"))];
+const leggi = (chiave) => {
+  for (const radice of [...lingua].reverse()) {
+    const v = chiave.split(".").reduce((nodo, parte) => (nodo && typeof nodo === "object" ? nodo[parte] : undefined), radice);
+    if (typeof v === "string") return v;
+  }
+  return undefined;
+};
+const localize = (key) => leggi(key) ?? key;
+const format = (key, data = {}) => Object.entries(data).reduce((t, [a, b]) => t.replaceAll(`{${a}}`, String(b)), localize(key));
+
+Handlebars.registerHelper("localize", (key, options) => format(key, options?.hash ?? {}));
+Handlebars.registerHelper("eq", (a, b) => a === b);
+const compilati = new Map();
+async function renderTemplate(path, context) {
+  const file = path.replace(`systems/${MODULE}/`, "");
+  if (!compilati.has(file)) compilati.set(file, Handlebars.compile(readFileSync(new URL(file, ROOT), "utf8"), { strict: false }));
+  return compilati.get(file)(context);
+}
+
+// Un DOM minimo, quanto basta alla carta: elementi con classi, figli, testo, attributi, clic.
+class Elemento {
+  constructor(tag, doc) { this.tagName = tag; this.ownerDocument = doc; this.children = []; this.dataset = {}; this.attributes = {}; this.listeners = {}; this._text = ""; this.className = ""; this.disabled = false; }
+  get classList() { const el = this; return { contains: (c) => el.className.split(/\s+/).includes(c), toggle() {}, add(c) { el.className = `${el.className} ${c}`.trim(); } }; }
+  append(...figli) { this.children.push(...figli); }
+  addEventListener(tipo, fn) { (this.listeners[tipo] ??= []).push(fn); }
+  async click() { for (const fn of this.listeners.click ?? []) await fn({ preventDefault() {}, stopPropagation() {} }); }
+  setAttribute(k, v) { this.attributes[k] = String(v); }
+  set textContent(v) { this._text = String(v); }
+  get textContent() { return this._text + this.children.map((c) => c.textContent).join(""); }
+  set innerHTML(v) { this._html = String(v); this._text = String(v).replace(/<[^>]+>/g, ""); }
+  get innerHTML() { return this._html ?? ""; }
+  *tutti() { for (const c of this.children) { yield c; yield* c.tutti(); } }
+  querySelector(sel) { const classe = sel.replace(/^\./, ""); for (const el of this.tutti()) if (el.classList.contains(classe)) return el; return null; }
+  querySelectorAll(sel) { const classe = sel.replace(/^\./, ""); return [...this.tutti()].filter((el) => el.classList.contains(classe)); }
+}
+class Documento { createElement(tag) { return new Elemento(tag, this); } }
+
+// La finta Foundry.
+const hooks = {};
+const sim = { messaggi: [], notifiche: [], aperture: 0 };
+class ApplicationV2 {
+  constructor(options = {}) { this.options = options; this.rendered = false; this.element = null; }
+  async render() { this.rendered = true; sim.aperture += 1; return this; }
+  async _prepareContext() { return {}; }
+  _onRender() {}
+  _onClose() {}
+}
+const HandlebarsApplicationMixin = (Base) => class extends Base {};
+globalThis.foundry = {
+  applications: { api: { ApplicationV2, HandlebarsApplicationMixin }, handlebars: { renderTemplate } },
+  utils: { deepClone: (v) => structuredClone(v) }
+};
+globalThis.CONFIG = { fontDefinitions: { Signika: { editor: true, fonts: [] } } };
+globalThis.Hooks = {
+  on(name, fn) { (hooks[name] ??= []).push(fn); },
+  once(name, fn) { (hooks[name] ??= []).push(fn); },
+  call(name, ...args) { for (const fn of hooks[name] ?? []) if (fn(...args) === false) return false; return true; },
+  callAll(name, ...args) { for (const fn of hooks[name] ?? []) fn(...args); }
+};
+globalThis.ui = { notifications: { info: (m) => sim.notifiche.push(m), warn: (m) => sim.notifiche.push(`!${m}`) } };
+const users = [
+  { id: "gm", name: "Blue", isGM: true, active: true, character: null },
+  { id: "u1", name: "Sara", isGM: false, active: true, character: { name: "Guendalina" } },
+  { id: "u2", name: "Marco", isGM: false, active: false, character: { name: "Luca" } },
+  { id: "u3", name: "Olivio", isGM: false, active: true, character: null }
+];
+let parla = "Blue";
+globalThis.ChatMessage = {
+  getSpeaker: () => ({ alias: parla }),
+  create: async (data) => {
+    const flags = structuredClone(data.flags ?? {});
+    const m = {
+      id: `m${sim.messaggi.length + 1}`, ...data, flags,
+      author: game.user,
+      getFlag: (scope, key) => flags[scope]?.[key],
+      update: async (changes) => {
+        for (const [path, value] of Object.entries(changes)) {
+          const parti = path.split(".");
+          let nodo = flags;
+          for (const p of parti.slice(1, -1)) nodo = nodo[p] ??= {};
+          nodo[parti.at(-1)] = value;
+        }
+        return m;
+      }
+    };
+    sim.messaggi.push(m);
+    return m;
+  }
+};
+globalThis.game = {
+  user: users[0],
+  users,
+  i18n: { lang: "it", localize, format },
+  settings: { get: (scope, key) => (scope === MODULE && key === "sheetTheme" ? "scuro" : 0.5) },
+  clipboard: { copyPlainText: async (t) => { sim.appunti = t; } }
+};
+
+const { registraVathra, VathraTraduttore, apriVathra, decoraCartaVathra, giocatoriDaAccendere, radiceHtml } = await import(new URL("scripts/vathra/traduttore.js", ROOT).href);
+const { radice } = await import(new URL("scripts/vathra/vathra.js", ROOT).href);
+registraVathra();
+
+// 1. Le due mani fra i caratteri di Foundry, accanto a quelli che c'erano.
+assert.ok(CONFIG.fontDefinitions.Signika, "i caratteri di prima restano");
+for (const nome of ["Vathra Filata", "Vathra Sciolta"]) {
+  const def = CONFIG.fontDefinitions[nome];
+  assert.equal(def.editor, true, `${nome} nei diari`);
+  assert.match(def.fonts[0].urls[0], /^systems\/m6\/assets\/vathra\/Vathra(Filata|Sciolta)-Regular\.ttf$/);
+}
+
+// 2. Il tasto nella barra dei token, per tutti.
+{
+  const controls = { tokens: { name: "tokens", tools: { select: {}, target: {}, ruler: {} } } };
+  Hooks.callAll("getSceneControlButtons", controls);
+  const tasto = controls.tokens.tools.vathra;
+  assert.ok(tasto, "il tasto del traduttore c'è");
+  assert.equal(tasto.button, true);
+  assert.equal(tasto.visible, true, "lo vedono tutti");
+  assert.equal(tasto.order, 4);
+  await tasto.onChange();
+  assert.ok(VathraTraduttore.aperto?.rendered, "il tasto apre il traduttore");
+  const primo = VathraTraduttore.aperto;
+  await apriVathra();
+  assert.equal(VathraTraduttore.aperto, primo, "una finestra sola");
+  Hooks.callAll("getSceneControlButtons", {});
+}
+
+// 3. Il comando in chat.
+{
+  assert.equal(Hooks.call("chatMessage", {}, "ciao a tutti", {}), true, "i messaggi normali passano");
+  assert.equal(Hooks.call("chatMessage", {}, "/vathra Chiamo il mio Avatar.", {}), false, "/vathra non va in chat");
+  assert.equal(VathraTraduttore.aperto.testo, "Chiamo il mio Avatar.");
+  assert.equal(VathraTraduttore.aperto.pagina, "traduttore");
+}
+
+const app = VathraTraduttore.aperto;
+const azioni = VathraTraduttore.DEFAULT_OPTIONS.actions;
+const evento = { preventDefault() {}, stopPropagation() {} };
+const bottone = (dataset = {}) => ({ dataset, disabled: false, classList: { toggle() {} }, setAttribute() {} });
+
+// 4. Il contesto e il template della finestra.
+async function finestra() {
+  const ctx = await app._prepareContext({});
+  return { ctx, html: await renderTemplate(`systems/${MODULE}/templates/vathra/finestra.hbs`, ctx) };
+}
+{
+  const { ctx, html } = await finestra();
+  assert.deepEqual(ctx.pagine.map((p) => p.id), ["traduttore", "frasario", "radice", "alfabeto"], "il Frasario accanto al Traduttore");
+  assert.equal(ctx.uscita.romanizzazione, "vakharilmi î'shi'âr i mi.");
+  assert.equal(ctx.uscita.legge, "va-ca-RIL-mi ìʼ-sci-ʼÀR i mi.");
+  assert.equal(ctx.uscita.leggeTitolo, "Come si legge: va-ca-RIL-mi ìʼ-sci-ʼÀR i mi.");
+  assert.deepEqual(ctx.giocatori.map((g) => g.id), ["u1", "u2", "u3"], "il Narratore non sta fra i giocatori da accendere");
+  assert.equal(ctx.parlaLabel, "Manda come Blue");
+  assert.equal(ctx.frasario.length, 11);
+  assert.equal(ctx.frasario[0].aperto, true);
+  assert.deepEqual(ctx.manopole.map((m) => m.k), ["modo", "risvegliato", "nomiPropri"], "le tendine rimaste: le altre manopole sono i gettoni");
+  const conSuono = ctx.alfabeto.flatMap((g) => g.lettere).filter((l) => l.suono);
+  assert.deepEqual(conSuono.map((l) => l.roman), ["sh", "th", "kh", "r", "y", "z", "\u02BC", "â"], "gli otto suoni stanno sulle loro lettere");
+  assert.equal(conSuono.find((l) => l.roman === "kh").suono.indice, 0);
+  for (const marker of [
+    'data-action="pagina" data-pagina="radice"', 'data-ruolo="glifi" title="', '>vaxarilmi îʼciʼâr i mi<', 'data-ruolo="roman" title="Come si legge: va-ca-RIL-mi',
+    'data-action="ascolta"', 'data-action="mano" data-ruolo="mano"', 'data-action="copia" data-cosa="glifi"',
+    'data-action="gettone" data-k="consenso" data-v="volgare"', 'data-action="capisce" data-user="u1" aria-pressed="false" title="Guendalina">Sara</button>',
+    'm6-vathra-chip assente" data-action="capisce" data-user="u2"', 'data-action="manda"', '<span data-ruolo="parla">Manda come Blue</span>',
+    'select name="modo" data-manopola="modo"', '<details class="m6-vathra-particelle">',
+    'data-action="frase" data-gruppo="scena" data-indice="0"', 'data-action="fraseAscolta" data-gruppo="scena" data-indice="0"',
+    "m6-vathra-icona registrata", 'data-action="suono" data-indice="7"', "Le sette regole", "m6-vathra-tavola"
+  ]) {
+    assert.ok(html.includes(marker), `manca ${marker}`);
+  }
+  // La forma semplificata (Blue, 25/9): niente etichette e spiegazioni a schermo.
+  for (const tolto of ['data-ruolo="legge"', 'data-ruolo="glossa"', "Da leggere ad alta voce", "Se serve", 'select name="testimone"', "Copia la lettura", "m6-vathra-suoni"]) {
+    assert.ok(!html.includes(tolto), `c'è ancora ${tolto}`);
+  }
+  assert.ok(!html.includes('data-action="manda" disabled'), "con una frase si può mandare");
+  assert.ok(html.includes('class="m6-vathra-pagina attiva" data-pagina="traduttore"'));
+  assert.equal((html.match(/m6-vathra-frase"/g) ?? []).length, 114);
+}
+
+// 5. Le azioni: la mano, un gettone, chi capisce, una frase dal frasario, la copia.
+{
+  await azioni.mano.call(app, evento, bottone());
+  assert.equal(app.mano, "sciolta");
+  await azioni.gettone.call(app, evento, bottone({ k: "consenso", v: "volgare" }));
+  assert.equal(app.opzioni.consenso, "volgare");
+  await azioni.capisce.call(app, evento, bottone({ user: "u1" }));
+  await azioni.capisce.call(app, evento, bottone({ user: "u3" }));
+  await azioni.capisce.call(app, evento, bottone({ user: "u3" }));
+  assert.deepEqual(app.capiscono, ["u1"], "Sara accesa, Olivio acceso e spento");
+  const { ctx } = await finestra();
+  assert.ok(ctx.sciolta);
+  assert.equal(ctx.uscita.romanizzazione, "vakharilmi î'shi'âr i mi thak.");
+  assert.ok(ctx.giocatori.find((g) => g.id === "u1").scelto);
+
+  await azioni.frase.call(app, evento, bottone({ gruppo: "scena", indice: "1" }));
+  assert.equal(app.testo, "Apro la porta con la mia volontà.");
+  assert.equal(app.opzioni.testimone, "occhi");
+  assert.equal(app.opzioni.consenso, "volgare");
+  await azioni.copia.call(app, evento, bottone({ cosa: "glifi" }));
+  assert.equal(sim.appunti, "ʼafarilmi eʼofur eʼvalnâum i mi ne qak");
+  await azioni.pagina.call(app, evento, bottone({ pagina: "frasario" }));
+  assert.equal(app.pagina, "frasario");
+}
+
+// 6. L'invio: la carta con glifi e lettura; il senso nella bandiera.
+let carta;
+{
+  await azioni.manda.call(app, evento, bottone());
+  assert.equal(sim.messaggi.length, 1);
+  carta = sim.messaggi[0];
+  const dati = carta.flags[MODULE].vathra;
+  assert.equal(dati.italiano, "Apro la porta con la mia volontà.");
+  assert.equal(dati.romanizzazione, "'afarilmi e'ofur e'valnâum i mi ne thak.");
+  assert.equal(dati.mano, "sciolta");
+  assert.deepEqual(dati.capiscono, ["u1"]);
+  assert.match(dati.glossa, /porta/);
+  assert.ok(carta.content.includes('m6-vathra-carta-glifi mano-sciolta">ʼafarilmi eʼofur eʼvalnâum i mi ne qak<'));
+  assert.ok(carta.content.includes('title="Come si legge: ʼa-fa-RIL-mi e-ʼO-fur eʼ-val-NÀUM i mi ne tak."'), "come si legge nel suggerimento");
+  assert.ok(carta.content.includes('m6-vathra-carta-lettura'));
+  assert.ok(!carta.content.includes("Apro la porta"), "il senso non sta nel testo della carta");
+  assert.ok(sim.notifiche.includes("Frase mandata in chat."));
+  // Una frase vuota non parte.
+  app.caricaTesto("   ");
+  await azioni.manda.call(app, evento, bottone());
+  assert.equal(sim.messaggi.length, 1);
+  assert.ok(sim.notifiche.includes("!Scrivi una frase prima di mandarla."));
+}
+
+// 7. La carta vista da ciascuno.
+function cartaPer(user) {
+  game.user = user;
+  const doc = new Documento();
+  const html = doc.createElement("li");
+  const box = doc.createElement("div");
+  box.className = "m6-vathra-carta";
+  html.append(box);
+  assert.equal(decoraCartaVathra(carta, html), true);
+  assert.equal(decoraCartaVathra(carta, html), false, "una volta sola");
+  return box;
+}
+{
+  const [gm, sara, marco, olivio] = users;
+  const vistaGM = cartaPer(gm);
+  assert.ok(vistaGM.querySelector(".m6-vathra-carta-play"), "il ▶ per tutti");
+  assert.ok(vistaGM.querySelector(".m6-vathra-senso")?.textContent.includes("Apro la porta con la mia volontà."), "il Narratore vede il senso");
+  const tasto = vistaGM.querySelector(".m6-vathra-carta-chi-tasto");
+  assert.ok(tasto, "il tasto di chi capisce, per il Narratore");
+  assert.match(tasto.innerHTML, /<span>1<\/span>/, "col numero di chi capisce");
+  const rigaChi = vistaGM.querySelector(".m6-vathra-carta-chi");
+  assert.equal(rigaChi.hidden, true, "i giocatori stanno chiusi finché non si preme il tasto");
+  await tasto.click();
+  assert.equal(rigaChi.hidden, false);
+  const chips = vistaGM.querySelectorAll(".m6-vathra-chip");
+  assert.deepEqual(chips.map((c) => c.dataset.user), ["u1", "u2", "u3"], "il Narratore può accendere i giocatori");
+  assert.equal(chips[0].attributes["aria-pressed"], "true");
+
+  const vistaSara = cartaPer(sara);
+  assert.ok(vistaSara.querySelector(".m6-vathra-senso"), "Sara è accesa: vede il senso");
+  assert.equal(vistaSara.querySelector(".m6-vathra-carta-chi"), null, "Sara non cambia chi capisce");
+
+  const vistaOlivio = cartaPer(olivio);
+  assert.equal(vistaOlivio.querySelector(".m6-vathra-senso"), null, "Olivio vede solo i glifi");
+  assert.ok(vistaOlivio.querySelector(".m6-vathra-carta-play"));
+  assert.equal(vistaOlivio.querySelector(".m6-vathra-carta-chi-tasto"), null, "Olivio non tocca chi capisce");
+
+  // Il Narratore accende Olivio dalla carta (un tiro riuscito, per esempio).
+  game.user = gm;
+  const chipOlivio = cartaPer(gm).querySelectorAll(".m6-vathra-chip").find((c) => c.dataset.user === "u3");
+  await chipOlivio.click();
+  assert.deepEqual(carta.flags[MODULE].vathra.capiscono, ["u1", "u3"]);
+  assert.ok(cartaPer(olivio).querySelector(".m6-vathra-senso"), "adesso Olivio capisce");
+  assert.equal(cartaPer(marco).querySelector(".m6-vathra-senso"), null, "Marco ancora no");
+  game.user = gm;
+
+  // Un messaggio qualsiasi non si tocca.
+  const altro = { getFlag: () => undefined };
+  assert.equal(decoraCartaVathra(altro, new Documento().createElement("li")), false);
+}
+
+// 8. Un giocatore che scrive: il Narratore non sta fra quelli da accendere, e nemmeno lui.
+{
+  game.user = users[1];
+  assert.deepEqual(giocatoriDaAccendere(new Set()).map((g) => g.id), ["u2", "u3"]);
+  game.user = users[0];
+  assert.match(radiceHtml(radice("fuoco")), /<table class="m6-vathra-modi">/);
+  assert.equal(radiceHtml(null), "");
+}
+
+if (process.env.VATHRA_PAGINA) {
+  const { mkdirSync, writeFileSync } = await import("node:fs");
+  const dir = process.env.VATHRA_PAGINA;
+  mkdirSync(dir, { recursive: true });
+  app.caricaTesto("Ho visto che il Velo si assottiglia.");
+  await azioni.mano.call(app, evento, bottone());
+  for (const pagina of ["traduttore", "radice", "alfabeto", "frasario"]) {
+    await azioni.pagina.call(app, evento, bottone({ pagina }));
+    const { html } = await finestra();
+    writeFileSync(`${dir}/${pagina}.html`, html);
+  }
+  writeFileSync(`${dir}/carta.html`, carta.content);
+  console.log(`pagine scritte in ${dir}`);
+}
+
+console.log("Vathra finta Foundry passed.");

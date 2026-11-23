@@ -1,0 +1,139 @@
+import assert from "node:assert/strict";
+import {
+  applyMageDiceClass,
+  getMageDieImage,
+  isMageActor
+} from "../scripts/mage-dice.js";
+import {
+  getParadoxDieImage,
+  getParadoxDieResult
+} from "../scripts/dice-faces.js";
+
+// Chi è un Mago lo dice il tipo della scheda.
+assert.equal(isMageActor({ type: "mago" }), true);
+assert.equal(isMageActor({ type: "png" }), false);
+assert.equal(isMageActor({}), false);
+assert.equal(isMageActor(null), false);
+
+const classes = new Set(["roll-img", "mortal-dice"]);
+const die = {
+  src: "native-mortal.png",
+  classList: {
+    add: (...names) => names.forEach((name) => classes.add(name)),
+    remove: (...names) => names.forEach((name) => classes.delete(name))
+  }
+};
+const changed = applyMageDiceClass(
+  {
+    speakerActor: { type: "mago", getFlag: () => undefined },
+    rolls: [{ basicDice: { results: [{ result: 10 }] } }]
+  },
+  {
+    // I dadi di ogni splat del sistema (mortale, vampiro…) vestono la stella (4/9 notte).
+    querySelectorAll: (selector) => selector.startsWith(".roll-img.mortal-dice")
+      ? [die]
+      : []
+  }
+);
+
+assert.equal(changed, 1);
+assert.equal(classes.has("mortal-dice"), false);
+assert.equal(classes.has("mage-dice"), true);
+assert.equal(die.src, "systems/m6/assets/icons/dice/chat/magick-stellina.svg");
+
+assert.equal(getMageDieImage(1).endsWith("dado-vuoto.svg"), true);
+assert.equal(getMageDieImage(5).endsWith("dado-vuoto.svg"), true);
+// Il ramo C (11/9): la riuscita è l'8; il 6 e il 7 sono facce vuote.
+assert.equal(getMageDieImage(6).endsWith("dado-vuoto.svg"), true);
+assert.equal(getMageDieImage(7).endsWith("dado-vuoto.svg"), true);
+assert.equal(getMageDieImage(8).endsWith("magick-scintilla.svg"), true);
+assert.equal(getMageDieImage(9).endsWith("magick-scintilla.svg"), true);
+assert.equal(getMageDieImage(10).endsWith("magick-stellina.svg"), true);
+
+assert.equal(getParadoxDieImage(1).endsWith("paradosso-occhio-vuoto.svg"), true);
+assert.equal(getParadoxDieImage(2).endsWith("dado-vuoto.svg"), true);
+assert.equal(getParadoxDieImage(5).endsWith("dado-vuoto.svg"), true);
+assert.equal(getParadoxDieImage(6).endsWith("dado-vuoto.svg"), true);
+assert.equal(getParadoxDieImage(7).endsWith("dado-vuoto.svg"), true);
+// I rossi a parte (29/9) non contano per la riuscita; dal 30/9 la scintilla torna: il successo paradossale.
+assert.equal(getParadoxDieImage(8).endsWith("paradosso-scintilla.svg"), true);
+assert.equal(getParadoxDieImage(9).endsWith("paradosso-scintilla.svg"), true);
+assert.equal(getParadoxDieImage(10).endsWith("paradosso-occhio-completo.svg"), true);
+assert.equal(getParadoxDieResult(1), "bestial");
+assert.equal(getParadoxDieResult(5), "failure");
+assert.equal(getParadoxDieResult(7), "failure");
+assert.equal(getParadoxDieResult(9), "success");
+assert.equal(getParadoxDieResult(10), "paradoxTen");
+// Le carte di prima (senza rossi a parte) tengono la scintilla dalla riuscita in su.
+assert.equal(getParadoxDieImage(8, { rossiAParte: false }).endsWith("paradosso-scintilla.svg"), true);
+assert.equal(getParadoxDieImage(9, { rossiAParte: false }).endsWith("paradosso-scintilla.svg"), true);
+assert.equal(getParadoxDieResult(9, { rossiAParte: false }), "success");
+
+// La scelta nel dialog cambia sia il conteggio sia le facce mostrate in chat.
+assert.equal(getMageDieImage(6, { successFrom: 6 }).endsWith("magick-scintilla.svg"), true);
+assert.equal(getMageDieImage(7, { successFrom: 6 }).endsWith("magick-scintilla.svg"), true);
+assert.equal(getParadoxDieImage(6, { successFrom: 6, rossiAParte: false }).endsWith("paradosso-scintilla.svg"), true);
+assert.equal(getParadoxDieResult(6, { successFrom: 6, rossiAParte: false }), "success");
+assert.equal(getParadoxDieResult(6, { successFrom: 6 }), "success", "dal 30/9 il rosso che fa successo mostra la scintilla");
+assert.equal(getParadoxDieResult(5, { successFrom: 6 }), "failure");
+
+const emptyMageClasses = new Set(["roll-img", "mortal-dice"]);
+let emptyMageSourceRemoved = false;
+const emptyMageDie = {
+  src: "native-mortal.png",
+  classList: {
+    add: (...names) => names.forEach((name) => emptyMageClasses.add(name)),
+    remove: (...names) => names.forEach((name) => emptyMageClasses.delete(name))
+  },
+  removeAttribute(name) {
+    if (name === "src") emptyMageSourceRemoved = true;
+  }
+};
+
+applyMageDiceClass(
+  {
+    speakerActor: { type: "mago", getFlag: () => undefined },
+    rolls: [{ basicDice: { results: [{ result: 4 }] } }]
+  },
+  {
+    querySelectorAll: (selector) => selector.startsWith(".roll-img.mortal-dice")
+      ? [emptyMageDie]
+      : []
+  }
+);
+
+assert.equal(emptyMageClasses.has("mage-dice-empty"), true);
+assert.equal(emptyMageSourceRemoved, false);
+assert.equal(emptyMageDie.src.endsWith("dado-vuoto.svg"), true);
+
+const emptyParadoxClasses = new Set(["roll-img", "paradox-dice"]);
+let emptyParadoxSourceRemoved = false;
+const emptyParadoxDie = {
+  src: "",
+  classList: {
+    add: (name) => emptyParadoxClasses.add(name),
+    remove: (name) => emptyParadoxClasses.delete(name)
+  },
+  removeAttribute(name) {
+    if (name === "src") emptyParadoxSourceRemoved = true;
+  }
+};
+
+const paradoxChanged = applyMageDiceClass(
+  {
+    speakerActor: { type: "mago", getFlag: () => undefined },
+    rolls: [{ advancedDice: { results: [{ result: 3 }] } }]
+  },
+  {
+    querySelectorAll: (selector) => selector === ".roll-img.paradox-dice"
+      ? [emptyParadoxDie]
+      : []
+  }
+);
+
+assert.equal(paradoxChanged, 1);
+assert.equal(emptyParadoxClasses.has("paradox-dice-empty"), true);
+assert.equal(emptyParadoxSourceRemoved, false);
+assert.equal(emptyParadoxDie.src.endsWith("dado-vuoto.svg"), true);
+
+console.log("Mage dice tests passed.");

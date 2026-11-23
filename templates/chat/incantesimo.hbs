@@ -1,0 +1,13 @@
+<div class="m6-roll-card m6-incantesimo-chat">
+    <p class="m6-incantesimo-chat-name">{{spell.name}}</p>
+    {{#if spell.credo}}<p><b>{{localize "M6.Focus.Credo"}}</b> {{spell.credo}}</p>{{/if}}
+    {{#if spell.practiceForm}}<p><b>{{localize "M6.Focus.Type"}}</b> {{spell.practiceForm}}</p>{{/if}}
+    {{#if spell.instruments}}<p><b>{{localize "M6.Incantesimi.Instrument"}}</b> {{spell.instruments}}</p>{{/if}}
+    {{#if spell.traits}}<p><b>{{localize "M6.Arete.Pool"}}</b> {{spell.traits}}</p>{{/if}}
+    {{#if spell.spheres.length}}<p><b>{{localize "M6.Arete.Spheres"}}</b> {{#each spell.spheres as |s|}}{{s.label}}{{#unless @last}}, {{/unless}}{{/each}}</p>{{/if}}
+    {{#if spell.scopes.length}}<p><b>{{localize "M6.Scopes.Label"}}</b> {{#each spell.scopes as |s|}}{{s.label}} {{s.level}}{{#unless @last}}, {{/unless}}{{/each}}</p>{{/if}}
+    <p><b>{{localize "M6.Arete.MagickType"}}</b> {{spell.magickType}}</p>
+    {{#if spell.effectKind}}<p><b>{{localize "M6.Arete.EffectKind"}}</b> {{spell.effectKind}}</p>{{/if}}
+    {{#if spell.goal}}<p><b>{{localize "M6.Arete.Goal"}}</b> {{spell.goal}}</p>{{/if}}
+    {{#if spell.narrative}}<p><b>{{localize "M6.Incantesimi.Narrative"}}</b> {{spell.narrative}}</p>{{/if}}
+</div>

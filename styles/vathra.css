@@ -1,0 +1,693 @@
+/* ==========================================================================
+   IL VATHRÂ (Blue, 25/9): il traduttore della lingua dei Risvegliati e la
+   sua carta in chat, nella forma semplificata («riduci il bombardamento
+   informativo»): a schermo solo la frase, i glifi, la lettura, chi capisce;
+   il resto nei suggerimenti o nei cassetti chiusi. Le due mani vengono da
+   03_FABBRICA/vathra: la filata per leggere, la sciolta per firmare.
+   ========================================================================== */
+
+@font-face {
+  font-display: block;
+  font-family: "Vathra Filata";
+  src: url("../assets/vathra/VathraFilata-Regular.ttf") format("truetype");
+}
+
+@font-face {
+  font-display: block;
+  font-family: "Vathra Sciolta";
+  src: url("../assets/vathra/VathraSciolta-Regular.ttf") format("truetype");
+}
+
+/* ---- la finestra ---- */
+.application.m6-vathra {
+  --vathra-fondo: #1b160f;
+  --vathra-campo: rgb(0 0 0 / 28%);
+  --vathra-bordo: rgb(201 162 39 / 26%);
+  --vathra-bordo-forte: rgb(201 162 39 / 50%);
+  --vathra-uscita: linear-gradient(180deg, #2a1f3b, #1a1226);
+  --vathra-glifi: #e9d08a;
+  --vathra-roman: #ffffff;
+  --vathra-testo: #e6dcc2;
+  --vathra-tenue: #b9ae98;
+  --vathra-oro: #c9a227;
+  --vathra-scelta: rgb(201 162 39 / 18%);
+  --vathra-sorvolo: rgb(201 162 39 / 12%);
+}
+
+.application.m6-vathra.m6-chiara {
+  /* come il Quadro e la guidata nel tema chiaro: la barra e i tasti pieni in viola */
+  --mortal-color-1: #282051;
+  --mage-viola: #282051;
+  --mage-viola-chiaro: #7a6fa0;
+  --vathra-fondo: #fbf8f0;
+  --vathra-campo: #fffdf8;
+  --vathra-bordo: #d9c28a;
+  --vathra-bordo-forte: #b3924a;
+  --vathra-uscita: linear-gradient(180deg, #f1ecf8, #ece7f4);
+  --vathra-glifi: #282051;
+  --vathra-roman: #1e1b2e;
+  --vathra-testo: #1e1b2e;
+  --vathra-tenue: #5c5c68;
+  --vathra-oro: #b3924a;
+  --vathra-scelta: #ece7f4;
+  --vathra-sorvolo: #f1ecf8;
+}
+
+.application.m6-vathra .window-header {
+  background: var(--mortal-color-1);
+  color: #fff;
+}
+
+.application.m6-vathra .window-content {
+  background: var(--vathra-fondo);
+  color: var(--vathra-testo);
+  display: flex;
+  flex-direction: column;
+  font-family: "Signika", sans-serif;
+  font-size: 15px;
+  line-height: 1.4;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0;
+}
+
+/* I bottoni solo dentro .window-content: i tasti della cornice restano di Foundry. */
+.application.m6-vathra .window-content button {
+  align-items: center;
+  background: transparent;
+  border: 1px solid var(--vathra-bordo-forte);
+  border-radius: 5px;
+  box-shadow: none;
+  color: var(--vathra-testo);
+  cursor: pointer;
+  display: inline-flex;
+  font-family: "Signika", sans-serif;
+  font-size: 13.5px;
+  gap: 6px;
+  height: auto;
+  justify-content: center;
+  line-height: 1.25;
+  min-height: 0;
+  padding: 5px 11px;
+  text-shadow: none;
+  width: auto;
+}
+
+.application.m6-vathra .window-content button:hover {
+  background: var(--vathra-sorvolo);
+  box-shadow: none;
+  text-shadow: none;
+}
+
+.application.m6-vathra .window-content button:focus-visible,
+.application.m6-vathra .window-content [role="button"]:focus-visible {
+  outline: 2px solid var(--mage-viola-chiaro, #b58ade);
+  outline-offset: 1px;
+}
+
+.application.m6-vathra .window-content button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.application.m6-vathra .window-content button.primo {
+  background: var(--mage-viola, #5a2b82);
+  border-color: var(--mage-viola-chiaro, #b58ade);
+  color: #fff;
+  font-weight: 600;
+  margin-left: auto;
+  padding: 7px 14px;
+}
+
+.application.m6-vathra .window-content button.primo:hover:not(:disabled) {
+  filter: brightness(1.15);
+}
+
+/* Il tasto a icona: niente cornice, il colore del commento, l'oro al passaggio. */
+.application.m6-vathra .window-content button.m6-vathra-icona {
+  border: 0;
+  color: var(--vathra-tenue);
+  flex: none;
+  font-size: 13px;
+  height: 28px;
+  padding: 0;
+  width: 28px;
+}
+
+.application.m6-vathra .window-content button.m6-vathra-icona:hover,
+.application.m6-vathra .window-content button.m6-vathra-icona.acceso {
+  color: var(--vathra-glifi);
+}
+
+.m6-vathra-corpo {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* ---- le linguette ---- */
+.application.m6-vathra .m6-vathra-linguette {
+  border-bottom: 1px solid var(--vathra-bordo);
+  display: flex;
+  flex: none;
+  gap: 2px;
+  padding: 6px 10px 0;
+}
+
+.application.m6-vathra .window-content button.m6-vathra-linguetta {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  color: var(--vathra-tenue);
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 6px 11px 7px;
+}
+
+.application.m6-vathra .window-content button.m6-vathra-linguetta.attiva {
+  border-bottom-color: var(--vathra-oro);
+  color: var(--vathra-testo);
+}
+
+/* ---- le pagine ---- */
+.m6-vathra-pagina {
+  display: none;
+  flex: 1;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px 14px 16px;
+}
+
+.m6-vathra-pagina.attiva {
+  display: flex;
+}
+
+.m6-vathra-etichetta {
+  color: var(--vathra-tenue);
+  cursor: help;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.m6-vathra-nota {
+  color: var(--vathra-tenue);
+  font-size: 13px;
+}
+
+.application.m6-vathra textarea,
+.application.m6-vathra input[type="text"],
+.application.m6-vathra input[type="search"],
+.application.m6-vathra select {
+  background: var(--vathra-campo);
+  border: 1px solid var(--vathra-bordo);
+  border-radius: 4px;
+  box-sizing: border-box;
+  color: var(--vathra-testo);
+  font-family: "Signika", sans-serif;
+  max-width: 100%;
+}
+
+.application.m6-vathra textarea {
+  flex: none;
+  font-size: 16px;
+  line-height: 1.4;
+  min-height: 62px;
+  padding: 8px 11px;
+  resize: vertical;
+  width: 100%;
+}
+
+.application.m6-vathra input[type="text"],
+.application.m6-vathra input[type="search"] {
+  flex: none;
+  font-size: 15px;
+  height: auto;
+  padding: 6px 10px;
+  width: 100%;
+}
+
+.application.m6-vathra textarea:focus,
+.application.m6-vathra input:focus,
+.application.m6-vathra select:focus {
+  border-color: var(--vathra-oro);
+  box-shadow: none;
+  outline: none;
+}
+
+/* ---- la traduzione: i glifi grandi e una riga di lettura ---- */
+.m6-vathra-uscita {
+  background: var(--vathra-uscita);
+  border: 1px solid var(--vathra-bordo-forte);
+  border-radius: 6px;
+  flex: none;
+  padding: 12px 14px 10px;
+  position: relative;
+}
+
+.m6-vathra-angolo {
+  display: flex;
+  gap: 2px;
+  position: absolute;
+  right: 6px;
+  top: 6px;
+}
+
+.m6-vathra-glifi {
+  color: var(--vathra-glifi);
+  font-family: "Vathra Filata", serif;
+  font-size: 38px;
+  line-height: 1.5;
+  min-height: 1.5em;
+  overflow-wrap: anywhere;
+  padding-right: 58px;
+}
+
+.m6-vathra-lettura {
+  align-items: center;
+  display: flex;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.m6-vathra-roman {
+  color: var(--vathra-roman);
+  cursor: help;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 18px;
+  line-height: 1.35;
+}
+
+.m6-vathra-uscita.vuota .m6-vathra-lettura,
+.m6-vathra-uscita.vuota .m6-vathra-angolo {
+  visibility: hidden;
+}
+
+/* La mano sciolta: gli stessi segni, di fretta. */
+.mano-sciolta .m6-vathra-glifi,
+.mano-sciolta .m6-vathra-modi td.glifi,
+.mano-sciolta .m6-vathra-cella .g {
+  font-family: "Vathra Sciolta", serif;
+}
+
+/* ---- chi capisce, e l'invio: una riga ---- */
+.m6-vathra-invio {
+  align-items: center;
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.m6-vathra-chi {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.application.m6-vathra .window-content button.m6-vathra-chip,
+.chat-message .m6-vathra-chip {
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 14px;
+  color: var(--vathra-tenue, #b9ae98);
+  font-size: 13px;
+  padding: 3px 10px;
+}
+
+.application.m6-vathra.m6-chiara .window-content button.m6-vathra-chip {
+  border-color: #cfc6dd;
+}
+
+.application.m6-vathra .window-content button.m6-vathra-chip.scelto {
+  background: var(--vathra-scelta);
+  border-color: var(--vathra-oro);
+  color: var(--vathra-roman);
+}
+
+.application.m6-vathra .window-content button.m6-vathra-chip.assente {
+  opacity: 0.6;
+}
+
+/* ---- particelle e manopole: chiuse ---- */
+.m6-vathra-particelle > summary {
+  color: var(--vathra-tenue);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  list-style: none;
+  padding: 2px 0;
+  text-transform: uppercase;
+}
+
+.m6-vathra-particelle > summary::-webkit-details-marker {
+  display: none;
+}
+
+.m6-vathra-particelle > summary::before {
+  color: var(--vathra-oro);
+  content: "+ ";
+}
+
+.m6-vathra-particelle[open] > summary::before {
+  content: "– ";
+}
+
+.m6-vathra-gettoni {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-top: 8px;
+}
+
+.m6-vathra-sep {
+  background: var(--vathra-bordo);
+  height: 16px;
+  margin: 0 2px;
+  width: 1px;
+}
+
+.application.m6-vathra .window-content button.m6-vathra-gettone {
+  border-color: rgb(255 255 255 / 16%);
+  border-radius: 14px;
+  color: var(--vathra-tenue);
+  font-size: 12.5px;
+  padding: 3px 10px;
+}
+
+.application.m6-vathra.m6-chiara .window-content button.m6-vathra-gettone {
+  border-color: #cfc6dd;
+}
+
+.application.m6-vathra .window-content button.m6-vathra-gettone.acceso {
+  background: var(--vathra-scelta);
+  border-color: var(--vathra-oro);
+  color: var(--vathra-roman);
+}
+
+.application.m6-vathra .window-content button.m6-vathra-gettone.eco {
+  border-color: var(--vathra-oro);
+  border-style: dashed;
+  color: var(--vathra-glifi);
+}
+
+.m6-vathra-griglia {
+  display: grid;
+  gap: 8px 12px;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  padding-top: 10px;
+}
+
+.m6-vathra-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.m6-vathra-campo > span {
+  color: var(--vathra-tenue);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.application.m6-vathra .m6-vathra-campo select {
+  font-size: 13.5px;
+  height: auto;
+  padding: 4px 6px;
+  width: 100%;
+}
+
+/* ---- il frasario: una riga per frase ---- */
+.m6-vathra-gruppo > summary {
+  color: var(--vathra-oro);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  padding: 5px 0;
+  text-transform: uppercase;
+}
+
+.m6-vathra-frase {
+  align-items: center;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  padding: 3px 4px 3px 10px;
+}
+
+.m6-vathra-frase:hover {
+  background: var(--vathra-sorvolo);
+}
+
+.m6-vathra-frase .it {
+  color: var(--vathra-testo);
+  font-size: 14.5px;
+}
+
+.application.m6-vathra .window-content button.m6-vathra-icona.registrata {
+  color: var(--vathra-oro);
+}
+
+/* ---- la radice ---- */
+.m6-vathra-radice {
+  color: var(--vathra-oro);
+  cursor: help;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  margin-bottom: 2px;
+}
+
+.m6-vathra-modi {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.m6-vathra-modi td {
+  border-bottom: 1px solid rgb(255 255 255 / 7%);
+  padding: 4px 6px;
+  vertical-align: middle;
+}
+
+.application.m6-vathra.m6-chiara .m6-vathra-modi td {
+  border-bottom-color: #ece5d3;
+}
+
+.m6-vathra-modi td.modo {
+  color: var(--vathra-tenue);
+  cursor: help;
+  font-size: 13.5px;
+  width: 26%;
+}
+
+.m6-vathra-modi td.vathra {
+  color: var(--vathra-roman);
+  cursor: help;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 16px;
+}
+
+.m6-vathra-modi td.glifi {
+  color: var(--vathra-glifi);
+  font-family: "Vathra Filata", serif;
+  font-size: 26px;
+  line-height: 1.3;
+}
+
+.m6-vathra-regole {
+  color: var(--vathra-tenue);
+  font-size: 13.5px;
+  line-height: 1.6;
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+}
+
+.m6-vathra-regole b {
+  color: var(--vathra-testo);
+}
+
+.m6-vathra-regole code {
+  background: var(--vathra-campo);
+  border-radius: 3px;
+  color: var(--vathra-glifi);
+  padding: 0 5px;
+}
+
+/* ---- l'alfabeto: il segno e la lettera, il suono dove c'è ---- */
+.m6-vathra-tavola-gruppo {
+  color: var(--vathra-oro);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.m6-vathra-tavola {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(auto-fill, minmax(62px, 1fr));
+}
+
+.m6-vathra-cella,
+.application.m6-vathra .window-content button.m6-vathra-cella {
+  align-items: center;
+  background: rgb(255 255 255 / 3%);
+  border: 1px solid var(--vathra-bordo);
+  border-radius: 4px;
+  cursor: help;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 5px 4px 4px;
+  position: relative;
+}
+
+.application.m6-vathra .window-content button.m6-vathra-cella.con-suono {
+  cursor: pointer;
+}
+
+.m6-vathra-cella .g {
+  color: var(--vathra-glifi);
+  font-family: "Vathra Filata", serif;
+  font-size: 28px;
+  line-height: 1.15;
+}
+
+.m6-vathra-cella .r {
+  color: var(--vathra-roman);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 14px;
+}
+
+.m6-vathra-cella > i {
+  color: var(--vathra-oro);
+  font-size: 8px;
+  position: absolute;
+  right: 5px;
+  top: 5px;
+}
+
+/* ---- la carta in chat: l'inchiostro del traduttore, su ogni tema ---- */
+.chat-message .m6-vathra-carta {
+  background: linear-gradient(180deg, #2a1f3b, #1a1226);
+  border: 1px solid rgb(201 162 39 / 38%);
+  border-radius: 6px;
+  color: #e6dcc2;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+}
+
+.chat-message .m6-vathra-carta-glifi {
+  color: #e9d08a;
+  font-family: "Vathra Filata", serif;
+  font-size: 28px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.chat-message .m6-vathra-carta-glifi.mano-sciolta {
+  font-family: "Vathra Sciolta", serif;
+}
+
+.chat-message .m6-vathra-carta-lettura {
+  align-items: center;
+  display: flex;
+  gap: 4px;
+}
+
+.chat-message .m6-vathra-carta-roman {
+  color: #fff;
+  cursor: help;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 15px;
+  line-height: 1.3;
+}
+
+/* Le carte della 1.26.0 avevano «come si legge» in chiaro: ora sta nel suggerimento. */
+.chat-message .m6-vathra-carta-legge {
+  display: none;
+}
+
+.chat-message .m6-vathra-carta-play,
+.chat-message .m6-vathra-carta-chi-tasto {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: #c9a227;
+  cursor: pointer;
+  display: inline-flex;
+  flex: none;
+  font-size: 11px;
+  gap: 4px;
+  height: 22px;
+  justify-content: center;
+  line-height: 1;
+  min-height: 0;
+  padding: 0 4px;
+  width: auto;
+}
+
+.chat-message .m6-vathra-carta-chi-tasto {
+  color: #9c90ae;
+  margin-left: auto;
+}
+
+.chat-message .m6-vathra-carta-play:hover,
+.chat-message .m6-vathra-carta-chi-tasto:hover,
+.chat-message .m6-vathra-carta-chi-tasto[aria-expanded="true"] {
+  color: #e9d08a;
+}
+
+.chat-message .m6-vathra-senso {
+  border-top: 1px dashed rgb(201 162 39 / 35%);
+  color: #e9d08a;
+  font-size: 13.5px;
+  font-style: italic;
+  margin-top: 4px;
+  padding-top: 5px;
+}
+
+.chat-message .m6-vathra-senso > i {
+  font-size: 11px;
+  margin-right: 3px;
+  opacity: 0.8;
+}
+
+.chat-message .m6-vathra-carta-chi {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 5px;
+}
+
+.chat-message .m6-vathra-carta-chi[hidden] {
+  display: none;
+}
+
+.chat-message .m6-vathra-chip {
+  background: transparent;
+  cursor: pointer;
+  flex: none;
+  font-size: 11.5px;
+  height: auto;
+  line-height: 1.2;
+  min-height: 0;
+  padding: 3px 9px;
+  width: auto;
+}
+
+.chat-message .m6-vathra-chip.scelto {
+  background: rgb(201 162 39 / 18%);
+  border-color: #c9a227;
+  color: #fff;
+}

@@ -1,0 +1,49 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { classeRuota, passoRuota, posizioneRuota } from "../scripts/ventaglio.js";
+
+// Sei comandi ogni 60°, tre ogni 120°.
+assert.equal(passoRuota(6), 60);
+assert.equal(passoRuota(3), 120);
+assert.equal(classeRuota(6), "sei");
+assert.equal(classeRuota(3), "tre");
+assert.equal(classeRuota(4), "quattro", "la Saggezza (3/10): Atto, Risplende, Ancora, Reset");
+assert.equal(passoRuota(4), 90);
+
+// Il centro del tastino nello spazio del contenuto, senza zoom.
+const senza = posizioneRuota({ left: 300, top: 400, width: 20, height: 20 }, { left: 100, top: 50, width: 1340 }, 1340);
+assert.deepEqual(senza, { x: 210, y: 360, zoom: 1 });
+// Con la misura grande (zoom 1.12) il rettangolo sullo schermo è scalato: si divide.
+const grande = posizioneRuota({ left: 100 + 224, top: 50 + 336, width: 22.4, height: 22.4 }, { left: 100, top: 50, width: 1340 * 1.12 }, 1340);
+assert.ok(Math.abs(grande.x - 210) < 0.01 && Math.abs(grande.y - 310) < 0.01 && Math.abs(grande.zoom - 1.12) < 0.001);
+// Senza larghezza di layout (il contenuto non è ancora misurato) niente divisione.
+assert.equal(posizioneRuota({ left: 10, top: 10, width: 0, height: 0 }, { left: 0, top: 0, width: 0 }, 0).zoom, 1);
+
+// La scheda: il tastino apre la ruota (ventaglioToggle), la ruota si appende
+// al contenuto della finestra, si chiude col tasto al centro, con un clic
+// altrove, con Esc e a ogni render.
+const sheet = readFileSync(new URL("../scripts/sheets/mage-actor-sheet.js", import.meta.url), "utf8");
+assert.match(sheet, /ventaglioToggle: onVentaglioToggle,\n\s+ventaglioChiudi: onVentaglioChiudi/);
+assert.match(sheet, /function onVentaglioToggle\(event, target\)[\s\S]*querySelector\("\.window-content"\)[\s\S]*posizioneRuota\(target\.getBoundingClientRect\(\), content\.getBoundingClientRect\(\), content\.offsetWidth\)[\s\S]*content\.appendChild\(ruota\)/);
+assert.match(sheet, /function chiudiRuote\(sheet\)/);
+assert.match(sheet, /_onRender\(context, options\) \{\n\s+super\._onRender\?\.\(context, options\);\n\s+chiudiRuote\(this\);/);
+assert.match(sheet, /event\.key === "Escape"[^\n]*chiudiRuote/);
+const salute = readFileSync(new URL("../templates/actor/parts/salute.hbs", import.meta.url), "utf8");
+assert.match(salute, /m6-ventaglio-tasto" data-action="ventaglioToggle"/);
+assert.match(salute, /m6-ventaglio m6-ventaglio-sei[\s\S]*Salute\.DanniBreve[\s\S]*Salute\.ExtraMenoBreve[\s\S]*Salute\.ExtraPiuBreve/);
+const risorse = readFileSync(new URL("../templates/actor/parts/stat-risorse.hbs", import.meta.url), "utf8");
+// Dal 3/10 la Saggezza ha la ruota a quattro (Atto, Risplende, Ancora, Reset): la bilancia non ha più caselle da aggiungere né macchie da curare.
+assert.match(risorse, /m6-riga-saggezza con-ventaglio[\s\S]*data-action="ventaglioToggle"[\s\S]*m6-ventaglio m6-ventaglio-quattro[\s\S]*Wisdom\.Tira[\s\S]*Wisdom\.Risplende[\s\S]*Wisdom\.Ancora[\s\S]*Wisdom\.Reset/);
+assert.doesNotMatch(risorse, /m6-ventaglio-tre|m6-ventaglio-sei|Wisdom\.Segna|Wisdom\.Cura|Wisdom\.Max/);
+// Il CSS: la sorgente nella riga non si vede mai; la ruota ha il disco di
+// fondo, i comandi da 48 px in cerchio, il tasto al centro.
+const css = readFileSync(new URL("../styles/m6.css", import.meta.url), "utf8");
+assert.match(css, /\.m6-ventaglio \{\s*display: none;/);
+assert.match(css, /\.m6-ruota-comandi::before \{[^}]*border-radius: 50%;/s);
+assert.match(css, /\.m6-ruota-comandi > \.m6-ventaglio-voce \{[^}]*height: 48px;[^}]*transform: rotate\(var\(--angolo\)\) translate\(var\(--raggio\)\) rotate\(calc\(-1 \* var\(--angolo\)\)\);[^}]*width: 48px;/s);
+assert.match(css, /\.m6-ruota-comandi\.tre > \.m6-ventaglio-voce \{\s*--passo: 120deg;/);
+assert.match(css, /\.m6-ruota-comandi\.quattro > \.m6-ventaglio-voce \{\s*--passo: 90deg;/);
+assert.match(css, /\.m6-ruota-chiudi \{/);
+assert.match(css, /\.window-content \{[^}]*position: relative;/s);
+
+console.log("Ruota dei comandi: test passati.");

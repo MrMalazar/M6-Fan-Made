@@ -1,0 +1,59 @@
+{{!-- La Salute (20/9): una riga come le altre della colonna. In testa il
+     cuore, il nome, lo stato se c'è, il conto delle caselle e il tastino col
+     cuore e la croce; sotto, il tracciato (1 + Costituzione + Fermezza, coi
+     danni fisici / e X e mentali o e ◎; la Volontà non c'è più). Il tastino
+     apre col clic la ruota dei sei comandi intorno a sé: Riposo, Relax,
+     Reset, Danni subiti, e il meno e il più delle caselle in più (Blue,
+     20/9: «metti anche quelli nel ventaglio»; la sera: «raddoppiare, a
+     ruota intorno al bottone, con un fondo»). La sorgente sta qui,
+     nascosta: la scheda la copia in una ruota appesa alla finestra. Un
+     secondo clic, sul comando, fa la cosa. Niente apertura al sorvolo. --}}
+<div class="m6-riga m6-riga-risorsa m6-riga-salute con-ventaglio">
+    <div class="m6-riga-testa">
+        <i class="fa-solid fa-heart m6-riga-icona" aria-hidden="true"></i>
+        <span class="m6-riga-nome m6-riga-nome-fermo" title="{{localize 'M6.Salute.Hint'}}"><span>{{localize "M6.Salute.Label"}}</span></span>
+        {{#if salute.status}}
+            <em class="m6-riga-stato">{{localize salute.status}}</em>
+        {{/if}}
+        <b class="m6-riga-valore" title="{{localize 'M6.Salute.Extra'}}">{{salute.max}}</b>
+        <div class="m6-riga-tastini">
+            <button type="button" class="m6-riga-tastino m6-ventaglio-tasto" data-action="ventaglioToggle" title="{{localize 'M6.Salute.VentaglioHint'}}" aria-label="{{localize 'M6.Salute.VentaglioHint'}}"><i class="fa-solid fa-heart-circle-plus" aria-hidden="true"></i></button>
+        </div>
+    </div>
+    <div class="m6-salute-track" role="group" aria-label="{{localize 'M6.Salute.Label'}}" title="{{localize 'M6.Salute.ClickHint'}}">
+        {{#each salute.cells as |cell|}}
+            {{!-- Le caselle del Sacrificio (29/9): bloccate finché non si salda il debito o finisce la sessione. --}}
+            <button type="button" class="m6-salute-cell{{#if cell.locked}} m6-salute-locked{{/if}}{{#if cell.debt}} m6-salute-debito{{/if}}" data-state="{{cell.state}}" {{#if cell.debt}}data-debt="true" title="{{localize 'M6.Debito.Cella'}}"{{else}}{{#if cell.locked}}data-locked="true" title="{{localize 'M6.Salute.LockedHint'}}"{{/if}}{{/if}} data-action="saluteCellChange" data-index="{{cell.index}}" aria-label="{{localize cell.label}}"></button>
+        {{/each}}
+    </div>
+    {{!-- Niente legenda: il menù di ogni casella dice il nome accanto al segno. --}}
+    {{!-- La sorgente della ruota: sei comandi, simbolo e nome breve. Riposo:
+         via i superficiali mentali e un superficiale fisico. Relax: Fermezza
+         + Autocontrollo, i successi curano la mente. Reset: vuoto. Danni
+         subiti (9/9): quanti e di che segno, in una finestra. Meno e più: le
+         caselle in più. I posti sulla ruota (Blue, 23/9): il meno a sinistra
+         e il più a destra, sopra Riposo e Relax, sotto Danni e Reset. Il
+         posto è --voce: 0 sinistra, poi in senso orario dal basso (1 in basso
+         a sinistra, 2 in basso a destra, 3 destra, 4 in alto a destra, 5 in
+         alto a sinistra). --}}
+    <div class="m6-ventaglio m6-ventaglio-sei" role="group" aria-label="{{localize 'M6.Salute.VentaglioHint'}}">
+        <button type="button" class="m6-ventaglio-voce" style="--voce: 5" data-action="saluteRiposo" title="{{localize 'M6.Salute.RiposoHint'}}" aria-label="{{localize 'M6.Salute.Riposo'}}">
+            <i class="fa-solid fa-bed" aria-hidden="true"></i><span>{{localize "M6.Salute.Riposo"}}</span>
+        </button>
+        <button type="button" class="m6-ventaglio-voce" style="--voce: 4" data-action="saluteRelax" title="{{localize 'M6.Salute.RelaxHint'}}" aria-label="{{localize 'M6.Salute.Relax'}}">
+            <i class="fa-solid fa-mug-hot" aria-hidden="true"></i><span>{{localize "M6.Salute.Relax"}}</span>
+        </button>
+        <button type="button" class="m6-ventaglio-voce" style="--voce: 2" data-action="saluteReset" title="{{localize 'M6.Salute.ResetHint'}}" aria-label="{{localize 'M6.Salute.Reset'}}">
+            <i class="fa-solid fa-eraser" aria-hidden="true"></i><span>{{localize "M6.Salute.Reset"}}</span>
+        </button>
+        <button type="button" class="m6-ventaglio-voce" style="--voce: 1" data-action="saluteDanni" title="{{localize 'M6.Salute.DanniHint'}}" aria-label="{{localize 'M6.Salute.Danni'}}">
+            <i class="fa-solid fa-heart-crack" aria-hidden="true"></i><span>{{localize "M6.Salute.DanniBreve"}}</span>
+        </button>
+        <button type="button" class="m6-ventaglio-voce" style="--voce: 0" data-action="saluteExtraChange" data-delta="-1" title="{{localize 'M6.Salute.Extra'}}" aria-label="{{localize 'M6.Salute.ExtraMeno'}}">
+            <i class="fa-solid fa-minus" aria-hidden="true"></i><span>{{localize "M6.Salute.ExtraMenoBreve"}}</span>
+        </button>
+        <button type="button" class="m6-ventaglio-voce" style="--voce: 3" data-action="saluteExtraChange" data-delta="1" title="{{localize 'M6.Salute.Extra'}}" aria-label="{{localize 'M6.Salute.ExtraPiu'}}">
+            <i class="fa-solid fa-plus" aria-hidden="true"></i><span>{{localize "M6.Salute.ExtraPiuBreve"}}</span>
+        </button>
+    </div>
+</div>

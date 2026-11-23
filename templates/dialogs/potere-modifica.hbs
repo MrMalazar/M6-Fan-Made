@@ -1,0 +1,11 @@
+{{!-- La modifica del potere (Blue, 27/9): il grado non si tocca; Prerequisiti, Effetto
+     attivo ed Effetto passivo già pieni del testo che vale adesso; in testa dove vale
+     (per tutti, dal Narratore; o solo su questa scheda). --}}
+<form class="dialog-contents m6-potere-modifica">
+    <p class="m6-potere-modifica-dove"><i class="fa-solid {{#if mondo}}fa-globe{{else}}fa-user{{/if}}" aria-hidden="true"></i> {{dove}}</p>
+    <p class="m6-potere-modifica-grado"><b>{{localize "M6.Poteri.Grado"}}</b><span>{{gradoLabel}}</span></p>
+    <label class="m6-potere-modifica-campo"><span>{{localize "M6.Poteri.Prerequisiti"}}</span><textarea name="prerequisiti" rows="2" placeholder="{{localize 'M6.Poteri.PrerequisitiNessuno'}}">{{parti.prerequisiti}}</textarea></label>
+    <label class="m6-potere-modifica-campo"><span>{{localize "M6.Poteri.EffettoAttivo"}}</span><textarea name="attivo" rows="4" placeholder="{{localize 'M6.Poteri.EffettoNessuno'}}">{{parti.attivo}}</textarea></label>
+    <label class="m6-potere-modifica-campo"><span>{{localize "M6.Poteri.EffettoPassivo"}}</span><textarea name="passivo" rows="4" placeholder="{{localize 'M6.Poteri.EffettoNessuno'}}">{{parti.passivo}}</textarea></label>
+    <p class="m6-potere-modifica-nota">{{localize "M6.Poteri.ModificaNota"}}</p>
+</form>

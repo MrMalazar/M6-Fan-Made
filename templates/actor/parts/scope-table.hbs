@@ -1,0 +1,63 @@
+{{!-- La tavola degli Ambiti (23/9, rifatta il 29/9 e il 2/10): in cima
+     l'Epicità, da 1 a 7, staccata da un filo; sotto sei Ambiti, una, due o
+     tre lenti l'uno, otto livelli dallo 0 al 7. Lo 0 è la base e non costa;
+     ogni livello vale il suo numero e la soglia è la somma. --}}
+<section class="m6-scope-table">
+    {{!-- Il titolo lo porta la tendina della pagina Magick (21/9). La lettura della tavola, dalla guida degli Ambiti (23/9). --}}
+
+    <div class="m6-scope-table-scroll">
+        <table>
+            <thead>
+                <tr>
+                    <th scope="col" class="m6-scope-col-name">{{localize "M6.Scopes.TableSuccesses"}}</th>
+                    <th scope="col" class="m6-scope-col-reading">{{localize "M6.Scopes.TableReading"}}</th>
+                    {{#each scopeTable.steps as |step|}}
+                        <th scope="col"{{#unless step}} class="m6-scope-zero"{{/unless}}>{{step}}</th>
+                    {{/each}}
+                </tr>
+            </thead>
+            <tbody>
+                {{!-- Gli Ambiti in ordine alfabetico (6/9). Due colonne di testa
+                     (verdetto di Blue, 7/9): il nome dell'Ambito, che occupa le
+                     sue righe e nel sorvolo dice cosa misura, e la lente. --}}
+                {{#each scopeTable.groups as |group|}}
+                    {{#each group.rows as |row|}}
+                    <tr class="scope-{{row.id}}{{#if row.small}} m6-scope-row-small{{/if}}{{#if group.header}} m6-scope-sub{{/if}}{{#if group.base}} m6-scope-base{{/if}}">
+                        {{#if @first}}
+                            <th scope="rowgroup" class="m6-scope-group" rowspan="{{group.span}}" title="{{localize group.desc}}">{{localize group.label}}</th>
+                        {{/if}}
+                        <th scope="row" class="m6-scope-reading">{{#if row.title}}{{localize row.title}}{{/if}}</th>
+                        {{!-- Ogni cella ha le stesse colonne invisibili della sua riga:
+                             simbolo | numero | testo (o casella). Così, dentro una colonna
+                             della tavola, simboli, numeri e testi stanno in fila. La
+                             colonna dello 0 è in ombra: è la base, non si dichiara. --}}
+                        {{#each row.cells as |cell|}}
+                            <td{{#unless cell.step}} class="m6-scope-zero"{{/unless}}{{#if cell.tip}} title="{{cell.tip}}"{{/if}}>
+                                <span class="m6-scope-cell" data-layout="{{cell.layout}}">
+                                    {{#if cell.arete}}
+                                        <img class="m6-scope-cell-symbol m6-arete-sigillo-small" src="systems/m6/assets/icons/ui/arete.svg" alt="Areté" title="Areté">
+                                    {{else if cell.icon}}
+                                        <img class="m6-scope-cell-symbol m6-tempo-icon" src="{{cell.icon}}" alt="">
+                                    {{else if cell.faIcon}}
+                                        <i class="m6-scope-cell-symbol {{cell.faIcon}}" aria-hidden="true"></i>
+                                    {{/if}}
+                                    {{#if cell.number}}
+                                        <b class="m6-scope-cell-number">{{localize cell.label}}</b>
+                                    {{else if cell.hideLabel}}
+                                        <b class="m6-scope-cell-number" aria-hidden="true"></b>
+                                    {{/if}}
+                                    {{#if cell.text}}
+                                        <span class="m6-scope-cell-text">{{localize cell.label}}</span>
+                                    {{/if}}
+                                </span>
+                            </td>
+                        {{/each}}
+                    </tr>
+                    {{/each}}
+                    {{!-- Lo stacco sotto l'Epicità (2/10): «sopra con gli altri, però leggermente distaccato». --}}
+                    {{#if group.base}}<tr class="m6-scope-stacco" aria-hidden="true"><td colspan="{{@root.scopeTable.span}}"></td></tr>{{/if}}
+                {{/each}}
+            </tbody>
+        </table>
+    </div>
+</section>

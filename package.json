@@ -1,10 +1,11 @@
 {
   "name": "m6-fan-made",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "node tests/controlla.mjs"
+    "check": "node tests/controlla.mjs",
+    "check:templates": "node --import ./tests/finta/register.mjs tests/finta/templates.mjs"
   },
   "devDependencies": {
     "handlebars": "^4.7.10"

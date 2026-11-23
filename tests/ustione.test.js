@@ -1,0 +1,99 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import {
+  givenPoints,
+  renderUstioneButtons,
+  renderUstioneDone,
+  USTIONE_CHOICES,
+  ustioneState
+} from "../scripts/ustione.js";
+import { getSalute, locksAfterScene, normalizeParadoxLocks, paintParadoxLocks, balanceAfterSession, quintessenceGained } from "../scripts/salute.js";
+
+// L'Ustione a scelta (il Sistema): i due tasti finché il Narratore non sceglie, poi la riga.
+assert.deepEqual(USTIONE_CHOICES, ["brucia", "narratore"]);
+// I danni sono la soglia; i punti al Narratore la Sfera usata (Blue, 11/9 sera); senza Sfera, la soglia.
+assert.deepEqual(ustioneState({ threshold: 5, sphere: 3, choice: "" }), { show: true, chosen: "", threshold: 5, points: 5 });
+assert.deepEqual(ustioneState({ threshold: 3, choice: "brucia" }), { show: false, chosen: "brucia", threshold: 3, points: 3 });
+assert.deepEqual(ustioneState({ threshold: 0 }), { show: false, chosen: "", threshold: 0, points: 0 });
+assert.deepEqual(ustioneState(undefined), { show: false, chosen: "", threshold: 0, points: 0 });
+assert.deepEqual(ustioneState({ threshold: 2, choice: "boh" }), { show: true, chosen: "", threshold: 2, points: 2 });
+// I punti al Narratore sono la soglia del lancio (Blue, 25/9 sera): il livello della Sfera non conta più.
+assert.equal(givenPoints({ threshold: 6, sphere: 3 }), 6);
+assert.equal(givenPoints({ threshold: 6 }), 6);
+
+const it = JSON.parse(readFileSync(new URL("../lang/it.json", import.meta.url), "utf8"));
+const localize = (key) => key.split(".").reduce((o, k) => (o && typeof o === "object" ? o[k] : undefined), it) ?? key;
+const format = (key, data = {}) => String(localize(key)).replace(/\{(\w+)\}/g, (_, k) => String(data[k]));
+const buttons = renderUstioneButtons({ show: true, threshold: 6, points: 3 }, localize, format);
+assert.match(buttons, /data-ustione="brucia"[^>]*>Brucia <b>6<\/b><\/button>/);
+assert.match(buttons, /data-ustione="narratore"[^>]*>Prende per sé <b>3<\/b><\/button>/);
+assert.match(buttons, /title="Brucia: 6 danni superficiali sulla Salute del mago[^"]*ogni due 10 sui rossi uno diventa aggravato[^"]*"/);
+assert.match(buttons, /title="Prende per sé: 3 punti Paradosso \(pari alla soglia del lancio\) vanno alla riserva del Narratore[^"]*"/);
+assert.doesNotMatch(buttons, /Cedi|gettone|token/i);
+assert.match(renderUstioneDone({ choice: "narratore", threshold: 6, sphere: 3, given: 3, discharged: 2 }, format, localize), /3 punti Paradosso al Narratore \(pari alla soglia del lancio\)\. La Ruota scarica 2\./);
+assert.match(renderUstioneDone({ choice: "brucia", threshold: 3 }, format, localize), /3 danni segnati sulla Salute\./);
+assert.match(renderUstioneDone({ choice: "brucia", threshold: 3, applied: { applied: 3, pa: 1, ps: 2, ma: 0, ms: 0, discharged: 3 } }, format, localize), /Ustione 3 segnata sulla Salute: 3 fisici \(1 aggravato\)\. La Ruota scarica 3\./);
+assert.equal(renderUstioneDone({ choice: "" }, format, localize), "");
+// Coi tasti non c'è testo, né per chi tira né per chi guarda (Blue: «vede solo i bottoni»).
+// Sceglie il Narratore (il Sistema): i tasti li vede lui solo.
+const ustioneSource = readFileSync(new URL("../scripts/ustione.js", import.meta.url), "utf8");
+assert.doesNotMatch(ustioneSource, /renderUstioneWaiting|Ustione\.Pending|Ustione\.Waiting/);
+assert.match(ustioneSource, /if \(!isMageActor\(actor\) \|\| !game\.user\?\.isGM\) return false;/);
+assert.doesNotMatch(ustioneSource, /actor\.isOwner/, "la scelta non è più di chi ha il mago");
+const diceSource = readFileSync(new URL("../scripts/paradox-dice.js", import.meta.url), "utf8");
+assert.doesNotMatch(diceSource, /Ustione\.Pending/);
+assert.match(diceSource, /cardData\.ustione = \{ threshold: burnNow, sphere: /);
+// La raccolta non conta due volte lo stesso messaggio.
+assert.match(readFileSync(new URL("../scripts/paradosso-narratore.js", import.meta.url), "utf8"), /if \(collecting\.has\(message\.id\)\) return false;/);
+assert.doesNotMatch(ustioneSource, /collectGivenParadox/);
+
+// Le caselle bloccate dall'Ustione (11/9): rosse per la scena, mai più dei danni del loro lato.
+assert.deepEqual(normalizeParadoxLocks({ p: 3, m: 2 }, { pa: 1, ps: 1, ma: 0, ms: 1 }), { p: 2, m: 1 });
+assert.deepEqual(normalizeParadoxLocks(undefined, { pa: 1 }), { p: 0, m: 0 });
+assert.deepEqual(paintParadoxLocks(["pa", "ps", "ps", "", "ms", "ma"], { p: 2, m: 1 }), [true, true, false, false, false, true]);
+assert.deepEqual(locksAfterScene({ p: 2, m: 1 }), { p: 1, m: 1 });
+assert.deepEqual(locksAfterScene({ p: 0, m: 1 }), { p: 0, m: 0 });
+assert.deepEqual(locksAfterScene({ p: 0, m: 0 }), { p: 0, m: 0 });
+const actor = {
+  system: { attributes: { stamina: { value: 2 }, resolve: { value: 2 } } },
+  getFlag: (_m, key) => ({ salute: { pa: 0, ps: 2, ma: 0, ms: 1, paradosso: { p: 1, m: 5 } } })[key]
+};
+const salute = getSalute(actor);
+assert.deepEqual(salute.paradosso, { p: 1, m: 1 });
+assert.equal(salute.locked, 2);
+assert.deepEqual(salute.cells.map((cell) => cell.locked), [true, false, false, false, false, true]);
+
+// Nuova sessione (25/9 e 29/9): la Quintessenza resta; si aggiungono la generata e il
+// punto della scena nuova, nelle celle libere della Ruota.
+assert.equal(quintessenceGained(""), 0);
+assert.equal(quintessenceGained("2"), 2);
+assert.deepEqual(balanceAfterSession({ quintessence: 2, paradox: 3, floor: 1 }, "2"), { quintessence: 5, paradox: 3 });
+assert.deepEqual(balanceAfterSession({ quintessence: 5, paradox: 3, floor: 1 }, "2"), { quintessence: 6, paradox: 3 }, "dentro le celle libere");
+assert.deepEqual(balanceAfterSession({ quintessence: 0, paradox: 8, floor: 0 }, "4"), { quintessence: 1, paradox: 8 }, "dentro le celle libere");
+assert.deepEqual(balanceAfterSession({ quintessence: 5, paradox: 0, floor: 0 }, ""), { quintessence: 6, paradox: 0 }, "senza Background resta il punto della scena");
+assert.deepEqual(balanceAfterSession({ quintessence: 2, paradox: 1, floor: 4 }, "", { scena: 0 }), { quintessence: 2, paradox: 1 }, "il pavimento tiene le sue celle");
+
+// La macchina: i tasti registrati, il Cambio Scena in testata, le caselle bloccate nel template e nel CSS.
+assert.match(readFileSync(new URL("../scripts/main.js", import.meta.url), "utf8"), /registerUstione\(\);\s*registerParadossoNarratore\(\);/);
+const identita = readFileSync(new URL("../templates/actor/parts/stat-identita.hbs", import.meta.url), "utf8");
+assert.match(identita, /data-action="saluteNewSession"[\s\S]*data-action="saluteCambioScena"/);
+assert.match(readFileSync(new URL("../templates/actor/parts/salute.hbs", import.meta.url), "utf8"), /m6-salute-locked/);
+const css = readFileSync(new URL("../styles/m6.css", import.meta.url), "utf8");
+assert.match(css, /\.m6-salute-cell\.m6-salute-locked\s*\{/);
+assert.match(css, /\.m6-roll-actions > \.m6-ustione-brucia\s*\{/);
+assert.match(css, /\.m6-roll-actions > \.m6-ustione-narratore\s*\{/);
+const sheet = readFileSync(new URL("../scripts/sheets/mage-actor-sheet.js", import.meta.url), "utf8");
+assert.match(sheet, /saluteCambioScena: onSaluteCambioScena/);
+const source = readFileSync(new URL("../scripts/ustione.js", import.meta.url), "utf8");
+assert.match(source, /applyUstione\(actor, \{ threshold: state\.threshold, tens: card\.ustione\.tens, kind: card\.ustione\.kind, lock: true \}\)/);
+for (const lang of ["it", "en"]) {
+  const strings = JSON.parse(readFileSync(new URL(`../lang/${lang}.json`, import.meta.url), "utf8"));
+  for (const key of ["Label", "Burn", "Give", "BurnHint", "GiveHint", "BurnedShort", "Given", "BurnDone", "GiveDone"]) {
+    assert.equal(typeof strings.M6.Ustione[key], "string", `${lang} Ustione.${key}`);
+  }
+  for (const key of ["CambioScena", "CambioScenaHint", "CambioScenaDone", "CambioScenaNone", "LockedHint"]) {
+    assert.equal(typeof strings.M6.Salute[key], "string", `${lang} Salute.${key}`);
+  }
+}
+
+console.log("Ustione a scelta: test passati.");

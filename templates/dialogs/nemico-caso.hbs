@@ -1,0 +1,26 @@
+{{!-- Un caso nuovo su una carta del nemico: cosa, se vale come soglia o come
+     riserva, quanto, e un'Abilità facoltativa a cui agganciarlo. --}}
+<form class="dialog-contents m6-item-form m6-nemico-form">
+    <div class="form-group">
+        <label>{{localize "M6.Nemico.CasoNome"}}</label>
+        <input type="text" name="nome" placeholder="{{localize 'M6.Nemico.CasoNomeHint'}}" required autofocus>
+    </div>
+    <div class="form-group">
+        <label>{{localize "M6.Nemico.CasoTipo"}}</label>
+        <select name="tipo">
+            <option value="soglia">{{localize "M6.Nemico.CasoSoglia"}}</option>
+            <option value="dadi" selected>{{localize "M6.Nemico.CasoDadi"}}</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label>{{localize "M6.Nemico.CasoValore"}}</label>
+        <input type="number" name="valore" value="5" min="0" max="30">
+    </div>
+    <div class="form-group">
+        <label>{{localize "M6.Nemico.CasoSkill"}}</label>
+        <select name="skill">
+            <option value="">{{localize "M6.Nemico.CasoSkillNessuna"}}</option>
+            {{#each abilita as |s|}}<option value="{{s.id}}">{{s.label}}</option>{{/each}}
+        </select>
+    </div>
+</form>

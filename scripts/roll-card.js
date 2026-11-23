@@ -1,0 +1,345 @@
+import { MODULE_ID } from "./constants.js";
+import { SCOPE_ICONS } from "./scopes.js";
+import { traitIcon } from "./tratti-icone.js";
+import { RAMO, successoParadossale } from "./ramo-c.js";
+
+/**
+ * La carta del tiro in chat, riletta con Blue (10/9 notte): in testa «Tiro
+ * di» e i sigilli dell'Attributo e delle Abilità; i dadi; sotto le righe
+ * del conto allineate, nome a sinistra e valore a destra (Obiettivo, Sfere
+ * col glifo e il livello, Ambiti col simbolo e il livello, Soglia, Tipo,
+ * Effetto, Riserva), dall'11/9 dentro una tendina chiusa «Dettagli»; la
+ * fascia dice Successo o Fallimento; sotto i tre
+ * tasti (Ritira con Volontà, Tira Saggezza dell'Indulgere, Vittoria a un prezzo). La
+ * vittoria automatica si dichiara a caratteri grandi. Le funzioni di testo
+ * sono pure: si provano fuori da Foundry.
+ */
+
+const ARETE_SIGIL = `systems/${MODULE_ID}/assets/icons/ui/arete.svg`;
+
+export const ROLL_CARD_FLAG = "rollCard";
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/**
+ * I simboli del tiro: il premio dell'Areté, ogni Sfera col livello usato,
+ * ogni Ambito col livello dichiarato. Le etichette sono chiavi di lingua,
+ * tradotte al momento di disegnare. Dalla 0.86.0 stanno nelle righe della
+ * carta; la fila sopra i dadi resta per i messaggi vecchi.
+ */
+export function rollSymbols({ spheres = [], scopes = [], prize = 0 } = {}) {
+  const symbols = [];
+  if (prize > 0) {
+    symbols.push({
+      kind: "arete",
+      id: "arete",
+      label: "M6.Arete.Prize",
+      value: `+${prize}`,
+      icon: ARETE_SIGIL
+    });
+  }
+  // Le Sfere senza numero (Blue, 25/9 sera: niente livelli): il sigillo e il nome al sorvolo.
+  for (const sphere of spheres) {
+    symbols.push({
+      kind: "sphere",
+      id: sphere.id,
+      label: `M6.Spheres.${sphere.id}`,
+      value: "",
+      icon: `systems/${MODULE_ID}/assets/icons/sheet/${sphere.id}.png`
+    });
+  }
+  for (const scope of scopes) {
+    symbols.push({
+      kind: "scope",
+      id: scope.id,
+      label: `M6.Scopes.${scope.id}`,
+      value: String(scope.level),
+      faIcon: SCOPE_ICONS[scope.id] ?? ""
+    });
+  }
+  return symbols;
+}
+
+/** Un simbolo col suo numero: glifo (o icona) e livello, il nome al passaggio del mouse. */
+function renderSymbol(symbol, localize) {
+  const name = escapeHtml(localize(symbol.label));
+  const title = symbol.value ? `${name} ${escapeHtml(symbol.value)}` : name;
+  const picture = symbol.icon
+    ? `<img src="${escapeHtml(symbol.icon)}" alt="${name}">`
+    : `<i class="${escapeHtml(symbol.faIcon)}" aria-hidden="true"></i>`;
+  return `<span class="m6-roll-symbol m6-roll-symbol-${symbol.kind}" title="${title}">${picture}${symbol.value ? `<b>${escapeHtml(symbol.value)}</b>` : ""}</span>`;
+}
+
+/** La fila dei simboli, da mettere sopra i dadi (messaggi vecchi). Vuota se non c'è niente. */
+export function renderRollSymbols(symbols, localize = (key) => key) {
+  if (!symbols?.length) return "";
+  return `<div class="m6-roll-symbols">${symbols.map((symbol) => renderSymbol(symbol, localize)).join("")}</div>`;
+}
+
+/**
+ * La testata della carta (10/9 notte): «Tiro di», a capo, il sigillo di
+ * ogni tratto della riserva col nome sotto, separati dal più.
+ */
+export function renderRollTitle(traits = [], localize = (key) => key) {
+  const parts = traits.map((trait) => {
+    const label = escapeHtml(trait.label);
+    const icon = trait.type === "attribute" || trait.type === "skill" ? traitIcon(trait.id) : "";
+    const picture = icon
+      ? `<img src="${escapeHtml(icon)}" alt="">`
+      : `<i class="fa-solid fa-circle-dot" aria-hidden="true"></i>`;
+    const title = Number.isFinite(Number(trait.value)) ? `${label} ${escapeHtml(trait.value)}` : label;
+    return `<span class="m6-roll-trait" title="${title}">${picture}<small>${label}</small></span>`;
+  });
+  return `<span class="m6-roll-of">${escapeHtml(localize("M6.RollCard.Of"))}</span><span class="m6-roll-traits">${parts.join('<span class="m6-roll-plus">+</span>')}</span>`;
+}
+
+/** La scritta grande: la vittoria automatica, o un'altra riuscita senza dadi (la riuscita comprata del ramo C). */
+export function renderAutoVictoryBanner(localize = (key) => key, text = "") {
+  return `<p class="m6-roll-victory">${escapeHtml(text || localize("M6.Arete.AutoVictoryBanner"))}</p>`;
+}
+
+/** Una nota sotto il conto: tetto, vittoria automatica. */
+export function renderRollNote(text, kind = "") {
+  const extra = kind ? ` m6-roll-note-${kind}` : "";
+  return `<p class="m6-roll-note${extra}">${escapeHtml(text)}</p>`;
+}
+
+/**
+ * La nota del Contraccolpo (o dello Scoppio), leggibile (10/9 sera): il nome
+ * in rosso, il testo in chiaro, una riga sola.
+ */
+export function renderBacklashNote(label, text) {
+  return `<p class="m6-roll-note m6-roll-note-backlash"><b class="m6-roll-backlash-label">${escapeHtml(label)}</b> <span class="m6-roll-backlash-text">${escapeHtml(text)}</span></p>`;
+}
+
+/** Una riga della carta: nome a sinistra, valore a destra (già HTML). */
+function renderRow(key, label, body) {
+  return `<div class="m6-roll-row m6-roll-row-${key}"><b class="m6-roll-key">${escapeHtml(label)}</b><span class="m6-roll-value">${body}</span></div>`;
+}
+
+/**
+ * Le righe del conto, nell'ordine di Blue (10/9 notte): Obiettivo, Sfere
+ * (glifo e livello), Ambiti (simbolo e livello), Soglia, Tipo, Effetto,
+ * Riserva. Nome a sinistra e valore a destra, allineati.
+ */
+export function renderRollCard({
+  traits = [],
+  bonusParts = [],
+  threshold = 0,
+  prize = 0,
+  magickType = "",
+  goal = "",
+  effectKind = "",
+  spheres = [],
+  scopes = []
+} = {}, localize = (key) => key) {
+  const pool = [
+    ...traits.map((trait) => `${escapeHtml(trait.label)} ${escapeHtml(trait.value)}`),
+    ...bonusParts.map((part) => escapeHtml(part))
+  ].join(" + ");
+  const rows = [];
+  if (goal) rows.push(renderRow("goal", localize("M6.RollCard.Goal"), escapeHtml(goal)));
+  if (spheres.length) {
+    const symbols = rollSymbols({ spheres: spheres.map((sphere) => ({ id: sphere.id, level: sphere.level })) });
+    rows.push(renderRow("spheres", localize("M6.RollCard.Spheres"), symbols.map((symbol) => renderSymbol(symbol, localize)).join("")));
+  }
+  if (scopes.length) {
+    const symbols = rollSymbols({ scopes: scopes.map((scope) => ({ id: scope.id, level: scope.level })) });
+    rows.push(renderRow("scopes", localize("M6.RollCard.Scopes"), symbols.map((symbol) => renderSymbol(symbol, localize)).join("")));
+  }
+  // Un tiro di Abilità (ramo C) non ha né soglia fissa né Tipo: le righe si saltano.
+  if (threshold !== null) rows.push(renderRow("threshold", localize("M6.RollCard.Threshold"), escapeHtml(threshold)));
+  if (prize > 0) rows.push(renderRow("prize", localize("M6.Arete.Prize"), `+${escapeHtml(prize)}`));
+  if (magickType) rows.push(renderRow("type", localize("M6.RollCard.Type"), escapeHtml(magickType)));
+  if (effectKind) rows.push(renderRow("effect", localize("M6.RollCard.Effect"), escapeHtml(localize(effectKind))));
+  rows.push(renderRow("pool", localize("M6.RollCard.Pool"), pool));
+  // Le righe stanno in una tendina chiusa (Blue, 11/9): «sono dati che non
+  // servono a primo impatto». Un clic su «Dettagli» le apre.
+  return `<details class="m6-roll-card-details"><summary>${escapeHtml(localize("M6.RollCard.Details"))}</summary><div class="m6-roll-card">${rows.join("")}</div></details>`;
+}
+
+/**
+ * Il messaggio della vittoria automatica senza dadi: scritta grande, conto
+ * (coi glifi nelle righe), note.
+ */
+export function renderAutoVictoryContent({ card, notes = [] }, localize = (key) => key) {
+  return [
+    renderAutoVictoryBanner(localize),
+    card,
+    ...notes
+  ].join("");
+}
+
+/**
+ * Il conto del Mago in chat (4/9 notte): il sistema somma i dadi a modo
+ * suo; il tiro di Areté conta le coppie di dieci solo fra i dadi Mage e
+ * aggiunge i successi automatici delle Specialità. La carta porta il totale
+ * vero e la soglia, e qui si riscrivono numero ed esito. La fascia dice una
+ * parola (10/9 notte): Successo o Fallimento; indulgendo (3/10) o con la
+ * vittoria a un prezzo, Successo con la sua ragione.
+ */
+/** I successi che mancano: zero se il tiro è riuscito o senza soglia. */
+export function missingSuccesses(total, difficulty) {
+  const successes = Math.max(Math.trunc(Number(total) || 0), 0);
+  const goal = Math.max(Math.trunc(Number(difficulty) || 0), 0);
+  return goal > 0 ? Math.max(goal - successes, 0) : 0;
+}
+
+export function rollOutcome(total, difficulty, localize = (key) => key, { forced = false, priced = false, bought = false, boughtText = "" } = {}) {
+  const successes = Math.max(Math.trunc(Number(total) || 0), 0);
+  const goal = Math.max(Math.trunc(Number(difficulty) || 0), 0);
+  if (goal <= 0) return { total: successes, cssClass: "", text: "", missing: 0 };
+  // La riuscita comprata con la Quintessenza (ramo C): riuscito senza tirare.
+  if (bought) return { total: successes, cssClass: "success", text: boughtText || localize("M6.RollCard.Bought"), missing: 0 };
+  if (forced) return { total: successes, cssClass: "success", text: localize("M6.RollCard.Forced"), missing: 0 };
+  if (priced) return { total: successes, cssClass: "success", text: localize("M6.RollCard.Priced"), missing: 0 };
+  if (successes >= goal) return { total: successes, cssClass: "success", text: localize("M6.RollCard.Success"), missing: 0 };
+  return { total: successes, cssClass: "failure", text: localize("M6.RollCard.Failure"), missing: goal - successes };
+}
+
+function applyMageTotal(html, data) {
+  if (!Number.isFinite(Number(data.total))) return;
+  const outcome = rollOutcome(data.total, data.difficulty, game.i18n.localize.bind(game.i18n), { forced: Boolean(data.forced), priced: Boolean(data.priced), bought: Boolean(data.bought), boughtText: String(data.banner ?? "") });
+  const totalOut = html.querySelector(".total-contents");
+  if (totalOut) {
+    totalOut.textContent = String(outcome.total);
+    // Il margine: i successi oltre la soglia (nello scontro il danno è quello dell'arma più
+    // il margine). Col Sistema lo porta ogni tiro; le carte di prima solo quelli di Abilità,
+    // dove la soglia scritta è 1 e il margine sono i successi oltre il primo.
+    const margin = Math.max(outcome.total - Math.max(Math.trunc(Number(data.difficulty) || 0), 1), 0);
+    const conMargine = data.sistema ? !data.burst && !data.burstResult : data.ramo === RAMO && data.skill;
+    if (conMargine && margin > 0) {
+      totalOut.insertAdjacentHTML("beforeend", `<small class="m6-roll-margin" title="${escapeHtml(game.i18n.localize("M6.RamoC.MarginHint"))}">+${margin}</small>`);
+    }
+  }
+  // Il numero sotto Soglia è la soglia del tiro (sulle carte di prima la fascia leggeva «un successo basta»).
+  const difficultyOut = html.querySelector(".difficulty-contents");
+  if (difficultyOut && data.ramo === RAMO && Number.isFinite(Number(data.threshold))) difficultyOut.textContent = String(data.threshold);
+  // I titoli del conto in parole del Mago: Successi e Soglia, non Totale e Difficoltà.
+  const totalTitle = html.querySelector(".total-title");
+  if (totalTitle) totalTitle.textContent = game.i18n.localize("M6.RollCard.Successes");
+  const difficultyTitle = html.querySelector(".difficulty-title");
+  if (difficultyTitle) difficultyTitle.textContent = game.i18n.localize("M6.RollCard.Threshold");
+  const label = html.querySelector(".roll-result-label");
+  if (label && outcome.text) {
+    label.classList.remove("success", "failure");
+    label.classList.add(outcome.cssClass, "m6-roll-result");
+    label.textContent = outcome.text;
+  }
+}
+
+/** La testata: «Tiro di» e i sigilli dei tratti al posto del titolo del sistema. */
+function applyMageTitle(html, data) {
+  if (!data.traits?.length) return;
+  const title = html.querySelector(".roll-label");
+  if (!title || title.classList.contains("m6-roll-title")) return;
+  title.classList.add("m6-roll-title");
+  title.innerHTML = renderRollTitle(data.traits, game.i18n.localize.bind(game.i18n));
+}
+
+/**
+ * Il posto dei tasti sotto la fascia (10/9 notte): Ritira con Volontà,
+ * Tira Saggezza (l'Indulgere), Vittoria a un prezzo, nell'ordine in cui i moduli si
+ * registrano. Lo crea il primo che ne ha bisogno.
+ */
+export function rollActionsBox(target) {
+  let box = target.querySelector(".m6-roll-actions");
+  if (!box) {
+    box = target.ownerDocument.createElement("div");
+    box.className = "m6-roll-actions";
+    target.append(box);
+  }
+  return box;
+}
+
+/**
+ * La fascia in giallo (10/9 notte): il tiro è fallito ma si può ancora
+ * ritirare con la Volontà o riuscire a un prezzo. La chiama chi mette il
+ * tasto acceso.
+ */
+export function markRollOpen(html) {
+  const label = html?.querySelector?.(".roll-result-label");
+  if (label?.classList.contains("failure")) label.classList.add("m6-roll-open");
+}
+
+/** Le tendine «Dettagli» aperte, per messaggio: sopravvivono ai render della chat. */
+const openDetails = new Set();
+
+/**
+ * La tendina «Dettagli» si apre a mano (Blue, 11/9: «se clicco su dettagli
+ * non si apre nulla»): il clic sul riassunto lo gestiamo noi, perché la chat
+ * di Foundry lo intercetta e il <details> non cambia stato da solo.
+ */
+export function wireRollDetails(html, messageId) {
+  const details = html?.querySelector?.("details.m6-roll-card-details");
+  const summary = details?.querySelector("summary");
+  if (!details || !summary || summary.dataset.wired) return false;
+  summary.dataset.wired = "1";
+  details.open = openDetails.has(messageId);
+  summary.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    details.open = !details.open;
+    if (details.open) openDetails.add(messageId); else openDetails.delete(messageId);
+  });
+  return true;
+}
+
+/**
+ * Il tiro paradossale sulla carta. Col Sistema lo è il tiro che ha preso i
+ * successi dei rossi, per scelta del giocatore o per forza col 10, che
+ * riesca o che fallisca: lo dice il segno `paradossale` della carta, e il
+ * Narratore distorce l'effetto col suo menù. Sulle carte di prima (Blue,
+ * 30/9) lo era il lancio riuscito con almeno un rosso a successo. Si legge
+ * a ogni render, così vale anche dopo il ritiro con la Volontà.
+ */
+export function notaParadossale(data = {}, reds = []) {
+  if (data?.sistema) {
+    if (!data.paradossale) return "";
+    return data.rossiPresi === "obbligo" ? "M6.RamoC.ParadossaleObbligo" : "M6.RamoC.Paradossale";
+  }
+  return successoParadossale(data, reds) ? "M6.RamoC.SuccessoParadossale" : "";
+}
+
+export function applySuccessoParadossale(message, html, data) {
+  const target = html?.querySelector?.(".dice-result");
+  if (!target || target.querySelector(".m6-roll-note-paradossale")) return false;
+  const reds = message?.rolls?.[0]?.advancedDice?.results ?? [];
+  const nota = notaParadossale(data, reds);
+  if (!nota) return false;
+  target.insertAdjacentHTML("beforeend", renderRollNote(game.i18n.localize(nota), "paradossale"));
+  return true;
+}
+
+export function decorateRollCard(message, html) {
+  const data = message?.getFlag?.(MODULE_ID, ROLL_CARD_FLAG);
+  if (!data || !html?.querySelector) return false;
+  applyMageTotal(html, data);
+  applyMageTitle(html, data);
+  wireRollDetails(html, message.id);
+  applySuccessoParadossale(message, html, data);
+  const icons = html.querySelector(".dice-result .dice-icons");
+  if (!icons || icons.parentElement.querySelector(".m6-roll-top")) return false;
+
+  const localize = game.i18n.localize.bind(game.i18n);
+  const top = document.createElement("div");
+  top.className = "m6-roll-top";
+  top.innerHTML = [
+    data.automatic ? renderAutoVictoryBanner(localize, data.bought ? (data.banner || localize("M6.RamoC.BoughtBanner")) : "") : "",
+    // I messaggi di prima della 0.86.0 non hanno i glifi nelle righe: la fila resta a loro.
+    data.traits ? "" : renderRollSymbols(data.symbols ?? [], localize)
+  ].join("");
+  if (!top.innerHTML) return false;
+  icons.before(top);
+  return true;
+}
+
+export function registerRollCardRendering() {
+  Hooks.on("renderChatMessageHTML", decorateRollCard);
+}

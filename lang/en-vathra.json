@@ -1,0 +1,79 @@
+{
+  "M6": {
+    "Vathra": {
+      "Titolo": "Vathrâ",
+      "Controllo": "Vathrâ translator",
+      "Pagine": {
+        "traduttore": "Translator",
+        "radice": "Root",
+        "alfabeto": "Alphabet",
+        "frasario": "Phrasebook"
+      },
+      "ScriviItaliano": "Write in Italian…",
+      "Mano": {
+        "PassaSciolta": "Switch to the loose hand",
+        "PassaFilata": "Back to the spun hand"
+      },
+      "ComeSiLegge": "How to read it",
+      "Gettoni": {
+        "testimone": {
+          "occhi": "I saw it",
+          "tessitura": "in the Tapestry",
+          "riferito": "I was told",
+          "avatar": "the Avatar said so"
+        },
+        "consenso": {
+          "coincidente": "the world consented",
+          "volgare": "torn from the world"
+        },
+        "registro": {
+          "reale": "what truly happened"
+        },
+        "Eco": "your sentence already says it"
+      },
+      "Ascolta": "Listen",
+      "CopiaGlifi": "Copy the glyphs",
+      "Copiato": "Copied to the clipboard.",
+      "CopiaNo": "Could not copy to the clipboard.",
+      "SenzaVoce": "This browser has no voice to read the sentence.",
+      "ChiCapisce": "Understood by",
+      "ChiCapisceNota": "Everyone sees the glyphs and the reading. The Italian meaning is shown to the Storyteller, to the writer and to the players switched on here.",
+      "NessunGiocatore": "No other players in the world.",
+      "Mandato": "Sentence sent to chat.",
+      "Vuoto": "Write a sentence before sending it.",
+      "Manopole": {
+        "modo": {
+          "Nome": "Mood",
+          "auto": "automatic",
+          "imperativo": "command",
+          "racconto": "narration"
+        },
+        "risvegliato": {
+          "Nome": "Who acts",
+          "auto": "the lexicon decides",
+          "si": "awakened: î' and -ên",
+          "no": "sleeping: e' and -en"
+        },
+        "nomiPropri": {
+          "Nome": "Proper names",
+          "lascia": "leave them as they are",
+          "muta": "run them through the Mutation"
+        }
+      },
+      "Carta": {
+        "Capiscono": "Who understands"
+      },
+      "Radice": {
+        "Parola": "An Italian word",
+        "DalLessico": "from the lexicon",
+        "DallaMutazione": "from the First Mutation",
+        "Regole": "The seven rules"
+      },
+      "Frasario": {
+        "Cerca": "Search a sentence"
+      },
+      "MandaCome": "Send as {nome}",
+      "Particelle": "Particles and dials"
+    }
+  }
+}

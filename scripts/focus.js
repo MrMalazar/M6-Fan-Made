@@ -1,0 +1,306 @@
+import { MODULE_ID } from "./constants.js";
+import { prepareSpheres } from "./spheres.js";
+import { alphabetical } from "./famiglie.js";
+
+// Le cinque famiglie degli Strumenti (ramo A, 4/9/2026): il Mondo è cancellato.
+export const FOCUS_INSTRUMENT_FAMILIES = Object.freeze([
+  "object",
+  "word",
+  "machine",
+  "substance",
+  "body"
+]);
+
+// I ventidue Strumenti per la Magick, famiglia per famiglia. Ognuno regge
+// un'immagine con tutte e nove le Sfere; i due «da [Professione]» chiedono
+// anche il mestiere, che deve corrispondere a un'Abilità del personaggio.
+export const FOCUS_TOOLS = Object.freeze([
+  { id: "weapons", family: "object" },
+  { id: "tradeTools", family: "object", profession: true },
+  { id: "symbols", family: "object" },
+  { id: "writings", family: "object" },
+  { id: "musicalInstruments", family: "object" },
+  { id: "prayers", family: "word" },
+  { id: "commands", family: "word" },
+  { id: "formulas", family: "word" },
+  { id: "songs", family: "word" },
+  { id: "tales", family: "word" },
+  { id: "devices", family: "machine" },
+  { id: "tradeApparatus", family: "machine", profession: true },
+  { id: "implants", family: "machine" },
+  { id: "contraptions", family: "machine" },
+  { id: "herbs", family: "substance" },
+  { id: "preparations", family: "substance" },
+  { id: "fluids", family: "substance" },
+  { id: "minerals", family: "substance" },
+  { id: "gestures", family: "body" },
+  { id: "movements", family: "body" },
+  { id: "breath", family: "body" },
+  { id: "trance", family: "body" }
+]);
+
+export const FOCUS_TOOL_IDS = Object.freeze(FOCUS_TOOLS.map((tool) => tool.id));
+
+// I dodici Credi del manuale, in tendina; il testo libero resta accanto.
+export const FOCUS_CREDOS = Object.freeze([
+  "arte",
+  "caos",
+  "dati",
+  "fede",
+  "illusione",
+  "legge",
+  "macchina",
+  "polvere",
+  "potere",
+  "sacro",
+  "scienza",
+  "suono",
+  "vivo"
+]);
+
+// I tre Tipi di Magick. Il Tipo decide le famiglie di Strumenti che il Mago
+// può usare (tavola dei Tipi, ramo A): Oggetto e Sostanza per tutti, Parola e
+// Corpo solo alla Magick, Macchina solo alla Tecnomagick, l'Ibrida tutto.
+export const FOCUS_FORMS = Object.freeze(["magick", "tecnomagick", "ibrida"]);
+
+const FAMILIES_BY_FORM = Object.freeze({
+  magick: Object.freeze(["object", "substance", "word", "body"]),
+  tecnomagick: Object.freeze(["object", "substance", "machine"]),
+  ibrida: FOCUS_INSTRUMENT_FAMILIES,
+  "": FOCUS_INSTRUMENT_FAMILIES
+});
+
+/** Le famiglie ammesse dal Tipo dichiarato (tutte, se il Tipo manca). */
+export function familiesForForm(form) {
+  return FAMILIES_BY_FORM[form] ?? FOCUS_INSTRUMENT_FAMILIES;
+}
+
+function getTextEnricher(enrichHTML) {
+  return enrichHTML
+    ?? globalThis.foundry?.applications?.ux?.TextEditor?.implementation?.enrichHTML
+    ?? ((value) => value);
+}
+
+/**
+ * I sei slot della scheda vecchia (uno per famiglia) si riversano nelle
+ * righe di Sfera, in ordine, finché il giocatore non salva la prima volta:
+ * il vecchio nome finisce nel «tuo di preciso» con la famiglia davanti, così
+ * si vede da dove viene e si sistema a mano.
+ */
+export function legacyInstrumentNames(legacyInstruments, localize) {
+  return Object.keys(legacyInstruments ?? {})
+    .filter((key) => /^slot\d+$/.test(key))
+    .sort((left, right) => Number(left.slice(4)) - Number(right.slice(4)))
+    .map((key) => legacyInstruments[key] ?? {})
+    .filter((slot) => String(slot.name ?? "").trim() || String(slot.kind ?? "").trim())
+    .map((slot) => {
+      const name = String(slot.name ?? "").trim();
+      const kind = String(slot.kind ?? "").trim();
+      const family = kind ? localize(`M6.Focus.Families.${kind}`) : "";
+      if (family && name) return `${family} · ${name}`;
+      return family || name;
+    });
+}
+
+/**
+ * Lo Strumento degli effetti percettivi (ordine di Blue, 9/9): per usare le
+ * Sfere al primo pallino c'è uno Strumento apposta, scelto come gli altri,
+ * uguale a quello di un'altra Sfera o diverso. Sta nel flag `focus.sphereInstruments`
+ * con questa chiave, accanto alle Sfere.
+ */
+export const PERCEIVE_TOOL_ID = "percepire";
+
+function instrumentRow({ id, label, icon = "", faIcon = "", value = 0, perceive = false }, { stored, hasRows, legacyName, allowedFamilies }) {
+  const row = hasRows ? (stored[id] ?? {}) : {};
+  const tool = FOCUS_TOOL_IDS.includes(row.tool) ? row.tool : "";
+  const definition = FOCUS_TOOLS.find((entry) => entry.id === tool);
+  return {
+    id,
+    label,
+    icon,
+    faIcon,
+    perceive,
+    value,
+    tool,
+    family: definition?.family ?? "",
+    needsProfession: Boolean(definition?.profession),
+    profession: String(row.profession ?? ""),
+    name: hasRows ? String(row.name ?? "") : String(legacyName ?? ""),
+    outsideForm: Boolean(definition) && !allowedFamilies.includes(definition.family),
+    sharedWith: [],
+    sharedList: ""
+  };
+}
+
+/** Tutte le righe insieme (le Sfere e Percepire): così il «regge anche» le vede tutte. */
+function allInstrumentRows(actor, { localize, spheres, form } = {}) {
+  const stored = actor.getFlag(MODULE_ID, "focus") ?? {};
+  const rowsStored = stored.sphereInstruments;
+  const hasRows = rowsStored && typeof rowsStored === "object";
+  const legacyNames = hasRows ? [] : legacyInstrumentNames(stored.instruments, localize);
+  const allowedFamilies = familiesForForm(form);
+  const context = { stored: hasRows ? rowsStored : {}, hasRows, allowedFamilies };
+
+  const rows = spheres.map((sphere, index) => instrumentRow(
+    { id: sphere.id, label: sphere.label, icon: sphere.icon, value: sphere.value },
+    { ...context, legacyName: legacyNames[index] }
+  ));
+  if (spheres.length) {
+    rows.push(instrumentRow(
+      { id: PERCEIVE_TOOL_ID, label: "M6.Focus.PerceiveTool", faIcon: "fa-solid fa-eye", value: 1, perceive: true },
+      { ...context, legacyName: "" }
+    ));
+  }
+
+  // Lo stesso Strumento su due Sfere è possibile e pericoloso: la riga lo dice.
+  rows.forEach((row) => {
+    if (!row.tool) return;
+    row.sharedWith = rows
+      .filter((other) => other !== row && other.tool === row.tool)
+      .map((other) => localize(other.label));
+    row.sharedList = row.sharedWith.join(", ");
+  });
+
+  const families = FOCUS_INSTRUMENT_FAMILIES.map((familyId) => ({
+    id: familyId,
+    label: localize(`M6.Focus.Families.${familyId}`),
+    allowed: allowedFamilies.includes(familyId),
+    tools: FOCUS_TOOLS
+      .filter((entry) => entry.family === familyId)
+      .map((entry) => ({
+        id: entry.id,
+        label: localize(`M6.Focus.Tools.${entry.id}`)
+      }))
+  }));
+
+  return rows.map((row) => ({
+    ...row,
+    // La pastiglia della riga (21/9): il nome dello Strumento scelto, con la famiglia.
+    toolLabel: row.tool ? localize(`M6.Focus.Tools.${row.tool}`) : "",
+    familyLabel: row.family ? localize(`M6.Focus.Families.${row.family}`) : "",
+    families: families.map((family) => ({
+      ...family,
+      tools: family.tools.map((entry) => ({ ...entry, selected: entry.id === row.tool }))
+    }))
+  }));
+}
+
+/**
+ * Le righe degli Strumenti: una per Sfera sbloccata, con lo Strumento scelto
+ * fra i ventidue, il mestiere quando serve e il tuo di preciso.
+ */
+export function prepareSphereInstruments(actor, options = {}) {
+  return allInstrumentRows(actor, options).filter((row) => !row.perceive);
+}
+
+/** La riga dello Strumento degli effetti percettivi, o null senza Sfere. */
+export function preparePerceiveInstrument(actor, options = {}) {
+  return allInstrumentRows(actor, options).find((row) => row.perceive) ?? null;
+}
+
+export async function prepareFocus(actor, enrichHTML, { editing = null } = {}) {
+  const stored = actor.getFlag(MODULE_ID, "focus") ?? {};
+  const sphereNotes = stored.sphereNotes ?? {};
+  const enrich = getTextEnricher(enrichHTML);
+  const localize = globalThis.game?.i18n?.localize?.bind(globalThis.game.i18n)
+    ?? ((key) => key);
+
+  // Nel Credo parlano solo le Sfere che il Mago ha sbloccato in Magick:
+  // di quelle che non ha, non c'è niente da scrivere. La riga si apre col
+  // clic sul nome e si scrive con la matita (21/9): `editing` dice quali
+  // Sfere hanno l'editor aperto.
+  const selectedSpheres = prepareSpheres(actor).selected;
+  const spheres = await Promise.all(
+    selectedSpheres.map(async (sphere) => {
+      const notes = String(sphereNotes[sphere.id] ?? "");
+      return {
+        ...sphere,
+        notes,
+        enrichedNotes: await enrich(notes),
+        editing: Boolean(editing?.has?.(sphere.id))
+      };
+    })
+  );
+
+  const practiceForm = FOCUS_FORMS.includes(stored.practiceForm) ? stored.practiceForm : "";
+  const credo = FOCUS_CREDOS.includes(stored.credo) ? stored.credo : "";
+
+  return {
+    credo,
+    credoLabel: FOCUS_CREDOS.includes(credo) ? localize(`M6.Focus.Credos.${credo}`) : "",
+    credos: alphabetical(FOCUS_CREDOS.map((id) => ({
+      id,
+      label: localize(`M6.Focus.Credos.${id}`),
+      selected: id === credo
+    })), globalThis.game?.i18n?.lang),
+    paradigm: String(stored.paradigm ?? ""),
+    practiceForm,
+    forms: FOCUS_FORMS.map((id) => ({
+      id,
+      label: localize(`M6.Focus.Forms.${id}`),
+      selected: id === practiceForm
+    })),
+    instruments: prepareSphereInstruments(actor, {
+      localize,
+      spheres: selectedSpheres,
+      form: practiceForm
+    }),
+    perceiveInstrument: preparePerceiveInstrument(actor, {
+      localize,
+      spheres: selectedSpheres,
+      form: practiceForm
+    }),
+    spheres
+  };
+}
+
+/* ---------------------------------------------------------------- */
+/* I clic della pagina del Credo (21/9): le pastiglie del Tipo e degli   */
+/* Strumenti, la matita delle Sfere.                                    */
+/* ---------------------------------------------------------------- */
+
+function canEditFocus(actor) {
+  if (!actor.isOwner) {
+    ui.notifications.warn(game.i18n.format("M6.Comuni.Notifications.NoSufficientPermission", { string: actor.name }));
+    return false;
+  }
+  if (actor.system.locked) {
+    ui.notifications.warn(game.i18n.format("M6.Comuni.Notifications.CannotModifyResourceString", { string: actor.name }));
+    return false;
+  }
+  return true;
+}
+
+/** Il Tipo di Magick a pastiglie: la stessa pastiglia cliccata di nuovo lo toglie. */
+export async function onFocusForm(event, target) {
+  event.preventDefault();
+  const actor = this.actor;
+  if (!canEditFocus(actor)) return;
+  const form = String(target.dataset.form ?? "");
+  if (!FOCUS_FORMS.includes(form)) return;
+  const current = String(actor.getFlag(MODULE_ID, "focus")?.practiceForm ?? "");
+  await actor.update({ [`flags.${MODULE_ID}.focus.practiceForm`]: current === form ? "" : form });
+}
+
+/** Lo Strumento di una Sfera (o di Percepire) dalla tendina: lo stesso cliccato di nuovo lo toglie. */
+export async function onStrumentoPick(event, target) {
+  event.preventDefault();
+  const actor = this.actor;
+  if (!canEditFocus(actor)) return;
+  const sphere = String(target.dataset.sphere ?? "");
+  const tool = String(target.dataset.tool ?? "");
+  if (!sphere || !FOCUS_TOOL_IDS.includes(tool)) return;
+  const current = String(actor.getFlag(MODULE_ID, "focus")?.sphereInstruments?.[sphere]?.tool ?? "");
+  await actor.update({ [`flags.${MODULE_ID}.focus.sphereInstruments.${sphere}.tool`]: current === tool ? "" : tool });
+}
+
+/** La matita di «Cos'è la Sfera»: apre e chiude l'editor della riga. */
+export async function onCredoModifica(event, target) {
+  event.preventDefault();
+  if (!this.actor.isOwner) return;
+  const sphere = String(target.dataset.sphere ?? "");
+  if (!(this._credoInModifica instanceof Set)) this._credoInModifica = new Set();
+  if (this._credoInModifica.has(sphere)) this._credoInModifica.delete(sphere);
+  else this._credoInModifica.add(sphere);
+  await this.render({ parts: ["focus"] });
+}

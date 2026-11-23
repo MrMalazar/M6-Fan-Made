@@ -1,0 +1,347 @@
+{{!-- In gioco, rifatta l'1/10 sul mock approvato (docs/mock_scheda_nemico_1-10.html):
+     due colonne. A sinistra com'è: soglie e riserve in due colonne allineate
+     (la soglia è un numero fermo, la riserva è il tasto viola che tira), i
+     casi sotto il loro campo, la Mano del Narratore, e gli Effetti a pastiglie.
+     A destra cosa fa: le Azioni, una riga per voce, e sotto il blocco della
+     Natura (Magick per il Risvegliato; Poteri, col punteggio della Natura, per
+     gli altri soprannaturali; niente per un PNG qualunque). Il testo di una
+     riga o di una pastiglia si apre al clic. In Scrivi i tiri lasciano il posto
+     ai campi di carta, e ogni lista finisce col suo posto vuoto a tratteggio. --}}
+<section class="tab {{tab.cssClass}} m6-nemico-corpo" data-tab="{{tab.id}}" data-group="{{tab.group}}">
+    <div class="m6-nemico-due">
+        <div class="m6-nemico-col">
+
+            {{!-- Soglie e riserve --}}
+            <div class="m6-nemico-riq m6-nemico-numeri{{#if scrivi}} scrivi{{/if}}">
+                <div class="m6-nemico-numeri-riga testa" aria-hidden="true">
+                    <span></span><span>{{localize "M6.Nemico.SogliaGrande"}}</span><span>{{localize "M6.Nemico.Riserva"}}</span>{{#if scrivi}}<span></span>{{/if}}
+                </div>
+                {{#each carte as |carta|}}
+                    <div class="m6-nemico-campo-blocco" data-campo="{{carta.id}}">
+                        <div class="m6-nemico-numeri-riga">
+                            <span class="m6-nemico-campo-nome"><i class="{{carta.icona}}" aria-hidden="true"></i>{{carta.label}}</span>
+                            {{#if @root.scrivi}}
+                                <input type="number" class="m6-nemico-num" name="flags.m6.nemico.soglie.{{carta.id}}" value="{{#if carta.soglia.base}}{{carta.soglia.base}}{{/if}}" placeholder="{{carta.soglia.value}}" min="0" max="20" title="{{localize 'M6.Nemico.SogliaScrivi'}}. {{localize 'M6.Nemico.SogliaFissa'}}" aria-label="{{carta.label}}: {{localize 'M6.Nemico.Soglia'}}">
+                                <input type="number" class="m6-nemico-num" name="system.standarddicepools.{{carta.id}}.value" value="{{carta.riserva.base}}" min="0" max="30" title="{{localize 'M6.Nemico.RiservaScrivi'}}" aria-label="{{carta.label}}: {{localize 'M6.Nemico.Riserva'}}">
+                                <span></span>
+                            {{else}}
+                                <span class="m6-nemico-soglia{{#if carta.soglia.mod}} mod{{/if}}{{#if carta.soglia.fissa}} fissa{{/if}}" title="{{carta.soglia.hint}}">{{carta.soglia.value}}</span>
+                                <button type="button" class="m6-nemico-tira" data-action="nemicoTira" data-riserva="{{carta.id}}" title="{{carta.riserva.hint}}" aria-label="{{carta.riserva.hint}}">{{#if carta.riserva.verso}}<i class="fa-solid fa-arrow-{{#if (eq carta.riserva.verso 'giu')}}down{{else}}up{{/if}}" aria-hidden="true"></i>{{/if}}<b>{{carta.riserva.totale}}</b></button>
+                            {{/if}}
+                        </div>
+                        {{#each carta.casi as |caso|}}
+                            <div class="m6-nemico-numeri-riga caso" data-caso="{{caso.id}}">
+                                {{#if @root.scrivi}}
+                                    {{#if caso.dalSistema}}
+                                        <span class="m6-nemico-caso-nome larga" title="{{localize 'M6.Nemico.CasoDalSistema'}}">{{caso.nome}}</span>
+                                        <input type="number" class="m6-nemico-num" name="system.exceptionaldicepools.{{caso.skill}}.value" value="{{caso.dadi}}" min="0" max="30" aria-label="{{caso.nome}}: {{localize 'M6.Nemico.Riserva'}}">
+                                        <button type="button" class="m6-nemico-togli" data-action="nemicoCasoTogli" data-caso="{{caso.id}}" title="{{localize 'M6.Nemico.CasoTogli'}}" aria-label="{{localize 'M6.Nemico.CasoTogli'}}: {{caso.nome}}"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+                                    {{else}}
+                                        <input type="text" class="m6-nemico-caso-campo{{#unless caso.aSoglia}} larga{{/unless}}" name="flags.m6.nemico.casi.{{caso.id}}.nome" value="{{caso.nome}}" placeholder="{{localize 'M6.Nemico.CasoNomeHint'}}" aria-label="{{localize 'M6.Nemico.CasoNome'}}">
+                                        {{#if caso.aSoglia}}
+                                            <input type="number" class="m6-nemico-num" name="flags.m6.nemico.casi.{{caso.id}}.soglia" value="{{caso.soglia}}" min="0" max="20" aria-label="{{caso.nome}}: {{localize 'M6.Nemico.Soglia'}}">
+                                            <span></span>
+                                        {{else}}
+                                            <input type="number" class="m6-nemico-num" name="flags.m6.nemico.casi.{{caso.id}}.dadi" value="{{caso.dadi}}" min="0" max="30" aria-label="{{caso.nome}}: {{localize 'M6.Nemico.Riserva'}}">
+                                        {{/if}}
+                                        <button type="button" class="m6-nemico-togli" data-action="nemicoCasoTogli" data-caso="{{caso.id}}" title="{{localize 'M6.Nemico.CasoTogli'}}" aria-label="{{localize 'M6.Nemico.CasoTogli'}}: {{caso.nome}}"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+                                    {{/if}}
+                                {{else}}
+                                    <span class="m6-nemico-caso-nome{{#unless caso.aSoglia}} larga{{/unless}}">{{caso.nome}}</span>
+                                    {{#if caso.aSoglia}}
+                                        <span class="m6-nemico-soglia piccola{{#if caso.mod}} mod{{/if}}" title="{{caso.hint}}">{{caso.value}}</span>
+                                        <span></span>
+                                    {{else}}
+                                        <button type="button" class="m6-nemico-tira piccolo" data-action="nemicoTira" data-riserva="{{#if caso.dalSistema}}{{caso.id}}{{else}}caso:{{caso.id}}{{/if}}" title="{{caso.hint}}" aria-label="{{caso.hint}}">{{#if caso.verso}}<i class="fa-solid fa-arrow-{{#if (eq caso.verso 'giu')}}down{{else}}up{{/if}}" aria-hidden="true"></i>{{/if}}<b>{{caso.value}}</b></button>
+                                    {{/if}}
+                                {{/if}}
+                            </div>
+                        {{/each}}
+                        {{#if @root.scrivi}}<button type="button" class="m6-nemico-piu" data-action="nemicoCasoNuovo" data-campo="{{carta.id}}" title="{{localize 'M6.Nemico.CasoAggiungi'}}"><i class="fa-solid fa-plus" aria-hidden="true"></i>{{localize "M6.Nemico.CasoPiu"}}{{#if @root.vuoto}}<small>{{localize (concat "M6.Nemico.CasoEsempi." carta.id)}}</small>{{/if}}</button>{{/if}}
+                    </div>
+                {{/each}}
+                {{!-- La mano del Narratore (27/9): l'unico ritocco ai dadi oltre alle Condizioni, ± su ogni tiro di questo nemico. Sta sotto le riserve, col meno e il più. --}}
+                {{#unless scrivi}}
+                    <div class="m6-nemico-mano" title="{{localize 'M6.Nemico.ManoNarratoreScrivi'}}">
+                        <span>{{localize "M6.Nemico.ManoNarratore"}}</span>
+                        <span class="m6-nemico-passi">
+                            <button type="button" data-action="nemicoMano" data-delta="-1" aria-label="{{localize 'M6.Nemico.ManoMeno'}}"><i class="fa-solid fa-minus" aria-hidden="true"></i></button>
+                            <b>{{manoNarratore.segno}}</b>
+                            <button type="button" data-action="nemicoMano" data-delta="1" aria-label="{{localize 'M6.Nemico.ManoPiu'}}"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+                        </span>
+                    </div>
+                {{/unless}}
+            </div>
+
+            {{!-- Effetti: quello che ha di suo senza tirare. Una pastiglia per effetto, il testo si apre al clic. --}}
+            <div class="m6-nemico-riq">
+                <h3 class="m6-nemico-titolo">{{localize "M6.Nemico.Effetti"}}</h3>
+                <div class="m6-nemico-pastiglie">
+                    {{#each effetti as |effetto|}}<button type="button" class="m6-nemico-pastiglia{{#if effetto.aperta}} on{{/if}}" data-action="nemicoEffettoApri" data-effetto="{{effetto.id}}" aria-expanded="{{effetto.aperta}}" title="{{effetto.tipoLabel}}">{{#if effetto.icona}}<i class="{{effetto.icona}}" aria-hidden="true"></i>{{/if}}{{effetto.nome}}</button>{{/each}}
+                    {{#if scrivi}}<button type="button" class="m6-nemico-pastiglia vuota" data-action="nemicoEffettoNuovo"><i class="fa-solid fa-plus" aria-hidden="true"></i>{{localize "M6.Nemico.EffettoAggiungi"}}</button>{{else}}{{#unless effetti.length}}<span class="m6-nemico-nessuna">{{localize "M6.Nemico.EffettiNessuno"}}</span>{{/unless}}{{/if}}
+                </div>
+                {{#each effetti as |effetto|}}{{#if effetto.aperta}}
+                    <div class="m6-nemico-cassettino" data-effetto="{{effetto.id}}">
+                        {{#if @root.scrivi}}
+                            <div class="m6-nemico-dettagli">
+                                <label class="larga"><span>{{localize "M6.Nemico.EffettoNome"}}</span><input type="text" name="flags.m6.nemico.effetti.{{effetto.id}}.nome" value="{{effetto.nome}}"></label>
+                                <label><span>{{localize "M6.Nemico.EffettoTipo"}}</span><select name="flags.m6.nemico.effetti.{{effetto.id}}.tipo">{{#each @root.tipiEffetto as |t|}}<option value="{{t.id}}" {{#if (eq t.id effetto.tipo)}}selected{{/if}}>{{t.label}}</option>{{/each}}</select></label>
+                                <label class="intera"><span>{{localize "M6.Nemico.EffettoTesto"}}</span><textarea name="flags.m6.nemico.effetti.{{effetto.id}}.testo" rows="2">{{effetto.testo}}</textarea></label>
+                                <button type="button" class="m6-nemico-via" data-action="nemicoEffettoTogli" data-effetto="{{effetto.id}}"><i class="fa-solid fa-trash" aria-hidden="true"></i>{{localize "M6.Nemico.EffettoTogli"}}</button>
+                            </div>
+                        {{else}}
+                            <p class="m6-nemico-tenue">{{effetto.tipoLabel}}</p>
+                            {{#if effetto.testo}}<p>{{effetto.testo}}</p>{{/if}}
+                        {{/if}}
+                    </div>
+                {{/if}}{{/each}}
+            </div>
+        </div>
+
+        <div class="m6-nemico-col">
+
+            {{!-- Azioni: nome, arma, danno e il tasto viola coi dadi; il resto nella riga aperta. --}}
+            <div class="m6-nemico-riq">
+                <h3 class="m6-nemico-titolo">{{localize "M6.Nemico.Azioni"}}</h3>
+                <div class="m6-nemico-righe">
+                    {{#each azioni as |azione|}}
+                        <div class="m6-nemico-riga{{#if azione.aperta}} aperta{{/if}}{{#if azione.attiva}} attiva{{/if}}" data-azione="{{azione.id}}">
+                            <div class="m6-nemico-riga-testa">
+                                <button type="button" class="m6-nemico-riga-nome" data-action="nemicoAzioneApri" data-azione="{{azione.id}}" aria-expanded="{{azione.aperta}}" title="{{localize 'M6.Nemico.AzioneApri'}}"><b>{{azione.nome}}</b>{{#if azione.armaNome}}<span title="{{localize 'M6.Nemico.AzioneDaArma' arma=azione.armaNome}}">{{azione.armaNome}}</span>{{/if}}</button>
+                                <span class="m6-nemico-riga-dx">
+                                    {{#if azione.danno}}<span class="m6-nemico-dato">{{localize "M6.Nemico.DannoParola"}} <b>{{azione.danno}}</b>{{#if azione.aggravato}} {{localize "M6.Nemico.Aggravato"}}{{/if}}</span>{{/if}}
+                                    {{#if azione.senzaTiro}}
+                                        {{#if @root.scrivi}}
+                                            <span class="m6-nemico-dato">{{localize "M6.Nemico.SenzaTiro"}}</span>
+                                        {{else}}
+                                            <button type="button" class="m6-nemico-usa{{#if azione.attiva}} on{{/if}}" data-action="nemicoAzioneUsa" data-azione="{{azione.id}}" title="{{localize 'M6.Nemico.UsaHint'}}" aria-pressed="{{azione.attiva}}">{{#if azione.attiva}}{{localize "M6.Nemico.Attivo"}}{{else}}{{localize "M6.Nemico.Usa"}}{{/if}}</button>
+                                        {{/if}}
+                                    {{else}}
+                                        {{#if @root.scrivi}}
+                                            <span class="m6-nemico-dato">{{localize "M6.Nemico.Dadi"}} <b>{{azione.riserva.base}}</b></span>
+                                        {{else}}
+                                            <button type="button" class="m6-nemico-tira stretto" data-action="nemicoAzioneTira" data-azione="{{azione.id}}" title="{{azione.riserva.hint}}" aria-label="{{localize 'M6.Nemico.Tira'}}: {{azione.nome}}. {{azione.riserva.hint}}">{{#if azione.riserva.verso}}<i class="fa-solid fa-arrow-{{#if (eq azione.riserva.verso 'giu')}}down{{else}}up{{/if}}" aria-hidden="true"></i>{{/if}}<b>{{azione.riserva.dadi}}</b></button>
+                                        {{/if}}
+                                    {{/if}}
+                                    {{#if @root.scrivi}}<button type="button" class="m6-nemico-matita" data-action="nemicoAzioneApri" data-azione="{{azione.id}}" title="{{localize 'M6.Nemico.Matita'}}" aria-label="{{localize 'M6.Nemico.Matita'}}: {{azione.nome}}"><i class="fa-solid fa-pen" aria-hidden="true"></i></button>{{/if}}
+                                </span>
+                            </div>
+                            {{#if azione.aperta}}
+                                {{#if @root.scrivi}}
+                                    {{!-- I campi dell'azione: quelli con `name` si salvano da soli al cambio. Per un'azione nata da un'arma, danno, Aggravato e portata restano dell'arma. --}}
+                                    <div class="m6-nemico-dettagli">
+                                        <label><span>{{localize "M6.Nemico.AzioneNome"}}</span><input type="text" name="flags.m6.nemico.azioni.{{azione.id}}.nome" value="{{azione.nome}}"></label>
+                                        <label class="spunta"><input type="checkbox" name="flags.m6.nemico.azioni.{{azione.id}}.senzaTiro" {{#if azione.senzaTiro}}checked{{/if}}><span>{{localize "M6.Nemico.SenzaTiro"}}</span></label>
+                                        <label class="intera"><span>{{localize "M6.Nemico.AzioneTesto"}}</span><textarea name="flags.m6.nemico.azioni.{{azione.id}}.testo" rows="1" placeholder="{{localize 'M6.Nemico.AzioneTestoHint'}}">{{azione.testo}}</textarea></label>
+                                        {{#unless azione.senzaTiro}}
+                                            <label><span>{{localize "M6.Nemico.RiservaCampo"}}</span><select name="flags.m6.nemico.azioni.{{azione.id}}.riserva">{{#each @root.riserve as |r|}}<option value="{{r.id}}" {{#if (eq r.id azione.riserva.id)}}selected{{/if}}>{{r.label}}</option>{{/each}}</select></label>
+                                            {{#if azione.daArma}}
+                                                <span class="fermo"><span>{{localize "M6.Nemico.Danno"}}</span><b>{{azione.danno}}{{#if azione.aggravato}} {{localize "M6.Nemico.Aggravato"}}{{/if}}</b></span>
+                                                <span class="fermo"><span>{{localize "M6.Nemico.Portata"}}</span><b>{{#if azione.portata}}{{azione.portata}}{{else}}{{localize "M6.Nemico.PortataNessuna"}}{{/if}}</b></span>
+                                            {{else}}
+                                                <label><span>{{localize "M6.Nemico.Danno"}}</span><input type="number" class="m6-nemico-num" name="flags.m6.nemico.azioni.{{azione.id}}.danno" value="{{azione.danno}}" min="0" max="20"></label>
+                                                <label class="spunta"><input type="checkbox" name="flags.m6.nemico.azioni.{{azione.id}}.aggravato" {{#if azione.aggravato}}checked{{/if}}><span>{{localize "M6.Nemico.Aggravato"}}</span></label>
+                                                <label><span>{{localize "M6.Nemico.Portata"}}</span><select name="flags.m6.nemico.azioni.{{azione.id}}.portata"><option value="">{{localize "M6.Nemico.PortataNessuna"}}</option>{{#each @root.portate as |p|}}<option value="{{p}}" {{#if (eq p azione.portata)}}selected{{/if}}>{{p}}</option>{{/each}}</select></label>
+                                            {{/if}}
+                                            <label><span>{{localize "M6.Nemico.Condizione"}}</span><select name="flags.m6.nemico.azioni.{{azione.id}}.condizione"><option value="">{{localize "M6.Nemico.CondizioneNessuna"}}</option>{{#if azione.condizioneFuori}}<option value="{{azione.condizione}}" selected>{{azione.condizione}}</option>{{/if}}{{#each @root.condizioniGruppi as |g|}}<optgroup label="{{g.label}}">{{#each g.voci as |c|}}<option value="{{c.name}}" {{#if (eq c.name azione.condizione)}}selected{{/if}}>{{c.label}}</option>{{/each}}</optgroup>{{/each}}</select></label>
+                                            <label><span>{{localize "M6.Nemico.SogliaBersaglio"}}</span><input type="number" class="m6-nemico-num" name="flags.m6.nemico.azioni.{{azione.id}}.soglia" value="{{#if azione.soglia}}{{azione.soglia}}{{/if}}" placeholder="{{azione.servono}}" min="0" max="20" title="{{localize 'M6.Nemico.SogliaBersaglioHint'}}"></label>
+                                        {{else}}
+                                            {{!-- Senza tiro: cosa accende «Usa», per esempio +2 alla soglia «Da lontano» fino al suo turno. --}}
+                                            <label><span>{{localize "M6.Nemico.BonusSoglia"}}</span><input type="number" class="m6-nemico-num" name="flags.m6.nemico.azioni.{{azione.id}}.bonusSoglia" value="{{azione.bonusSoglia}}" min="-10" max="10"></label>
+                                            <label><span>{{localize "M6.Nemico.BonusA"}}</span><select name="flags.m6.nemico.azioni.{{azione.id}}.bonusA"><option value="">{{localize "M6.Nemico.Nessuna"}}</option>{{#each @root.bersagliBonus as |b|}}<option value="{{b.id}}" {{#if (eq b.id azione.bonusA)}}selected{{/if}}>{{b.label}}</option>{{/each}}</select></label>
+                                        {{/unless}}
+                                        <label><span>{{localize "M6.Nemico.Limite"}}</span><input type="text" name="flags.m6.nemico.azioni.{{azione.id}}.limite" value="{{azione.limite}}" placeholder="{{localize 'M6.Nemico.LimiteNessuno'}}"></label>
+                                        <label class="intera"><span>{{localize "M6.Nemico.NoteAzione"}}</span><input type="text" name="flags.m6.nemico.azioni.{{azione.id}}.note" value="{{azione.note}}"></label>
+                                        {{#if azione.daArma}}
+                                            <span class="fermo intera"><span>{{localize "M6.Nemico.NasceDa"}}</span><b>{{azione.armaNome}}</b></span>
+                                        {{else}}
+                                            <button type="button" class="m6-nemico-via" data-action="nemicoAzioneTogli" data-azione="{{azione.id}}"><i class="fa-solid fa-trash" aria-hidden="true"></i>{{localize "M6.Nemico.AzioneTogli"}}</button>
+                                        {{/if}}
+                                    </div>
+                                {{else}}
+                                    <div class="m6-nemico-riga-corpo">
+                                        <p>{{#if azione.testo}}{{azione.testo}}{{else}}{{#each azione.breve.pezzi as |pezzo|}}{{#if @index}} · {{/if}}{{pezzo}}{{/each}}{{#if azione.breve.condizione}}{{#if azione.breve.pezzi.length}} · {{/if}}<span class="m6-nemico-cn">{{azione.breve.condizione}}</span>{{/if}}{{#if azione.breve.portata}}{{#if azione.breve.pezzi.length}} · {{else}}{{#if azione.breve.condizione}} · {{/if}}{{/if}}{{azione.breve.portata}}{{/if}}{{/if}}</p>
+                                        <p class="m6-nemico-tenue">{{#if azione.senzaTiro}}{{localize "M6.Nemico.SenzaTiro"}}{{else}}{{localize "M6.Nemico.TiraCon" riserva=azione.riserva.label}}{{/if}}{{#if azione.limite}} · {{azione.limite}}{{/if}}{{#if azione.note}} · {{azione.note}}{{/if}}</p>
+                                    </div>
+                                {{/if}}
+                            {{/if}}
+                        </div>
+                    {{else}}
+                        {{#unless scrivi}}<p class="m6-nemico-nessuna">{{localize "M6.Nemico.AzioniVuote"}}</p>{{/unless}}
+                    {{/each}}
+                    {{#if scrivi}}<button type="button" class="m6-nemico-aggiungi" data-action="nemicoAzioneNuova"><i class="fa-solid fa-plus" aria-hidden="true"></i><b>{{localize "M6.Nemico.AzioneAggiungi"}}</b>{{#if vuoto}}<small>{{localize "M6.Nemico.AzioneAggiungiHint"}}</small>{{/if}}</button>{{/if}}
+                </div>
+            </div>
+
+            {{!-- Il blocco della Natura: lo accende la Natura scelta in testata. --}}
+            {{#if blocco.tipo}}
+                <div class="m6-nemico-riq m6-nemico-blocco" data-blocco="{{blocco.tipo}}">
+                    <div class="m6-nemico-titolo-riga">
+                        <h3 class="m6-nemico-titolo">{{blocco.titolo}}</h3>
+                        <span class="m6-nemico-titolo-dx">
+                            {{#if scrivi}}
+                                {{#if blocco.punteggio.arete}}
+                                    <label class="m6-nemico-inline"><span>{{blocco.punteggio.nome}}</span><input type="number" class="m6-nemico-num" name="flags.m6.nemico.magick.arete" value="{{blocco.punteggio.valore}}" min="1" max="5"></label>
+                                    <label class="m6-nemico-inline"><span>{{localize "M6.Nemico.Tipo"}}</span><select name="flags.m6.nemico.magick.tipo">{{#each magick.tipi as |t|}}<option value="{{t.id}}" {{#if t.on}}selected{{/if}}>{{t.label}}</option>{{/each}}</select></label>
+                                {{else}}
+                                    <input type="text" class="m6-nemico-punteggio-nome" name="flags.m6.nemico.punteggio.nome" value="{{blocco.punteggio.nomeScritto}}" placeholder="{{#if blocco.punteggio.nomeBase}}{{blocco.punteggio.nomeBase}}{{else}}{{localize 'M6.Nemico.PunteggioNomeHint'}}{{/if}}" aria-label="{{localize 'M6.Nemico.PunteggioNome'}}" title="{{localize 'M6.Nemico.PunteggioNome'}}">
+                                    <input type="number" class="m6-nemico-num" name="flags.m6.nemico.punteggio.valore" value="{{blocco.punteggio.valore}}" min="0" max="{{blocco.punteggio.max}}" aria-label="{{localize 'M6.Nemico.PunteggioValore'}}" title="{{localize 'M6.Nemico.PunteggioValore'}}">
+                                {{/if}}
+                            {{else}}
+                                {{#if blocco.punteggio.on}}<span class="m6-nemico-tenue">{{blocco.punteggio.nome}}</span><b>{{blocco.punteggio.valore}}</b>{{/if}}
+                                {{#if blocco.magick}}<span class="m6-nemico-tenue">·</span><span>{{magick.tipoLabel}}</span>{{/if}}
+                            {{/if}}
+                        </span>
+                    </div>
+
+                    {{#if blocco.magick}}
+                        {{!-- Le Sfere del Risvegliato: in Gioca quelle che ha, col sigillo sul disco d'oro; in Scrivi tutte e nove, un clic accende o spegne. --}}
+                        {{#if scrivi}}
+                            <div class="m6-nemico-domini scrivi" title="{{localize 'M6.Nemico.DominiHint'}}">
+                                <span class="m6-nemico-tenue">{{localize "M6.Nemico.Domini"}}</span>
+                                {{#each magick.domini as |d|}}<button type="button" class="m6-nemico-disco{{#if d.on}} on{{/if}}" data-action="nemicoDominio" data-sfera="{{d.id}}" title="{{d.label}}" aria-label="{{d.label}}" aria-pressed="{{d.on}}"><img src="{{d.icon}}" alt=""></button>{{/each}}
+                            </div>
+                        {{else}}
+                            <div class="m6-nemico-domini">
+                                {{#each magick.dominiScelti as |d|}}<span class="m6-nemico-dominio"><span class="m6-nemico-disco on"><img src="{{d.icon}}" alt=""></span>{{d.label}}</span>{{else}}<span class="m6-nemico-nessuna">{{localize "M6.Nemico.DominiNessuno"}}</span>{{/each}}
+                            </div>
+                        {{/if}}
+
+                        {{!-- Gli effetti di Magick: ognuno è una soglia che il PG resiste. Il Narratore non tira mai: Lancia manda la carta in chat. --}}
+                        <div class="m6-nemico-righe">
+                            {{#each magick.effetti as |e|}}
+                                <div class="m6-nemico-riga{{#if e.aperta}} aperta{{/if}}" data-effetto-magick="{{e.id}}">
+                                    <div class="m6-nemico-riga-testa">
+                                        <button type="button" class="m6-nemico-riga-nome" data-action="nemicoMagickApri" data-effetto="{{e.id}}" aria-expanded="{{e.aperta}}" title="{{localize 'M6.Nemico.EffettoMagickApri'}}">{{#if e.sfera}}<span class="m6-nemico-disco on" title="{{e.sfera.label}}"><img src="{{e.sfera.icon}}" alt="{{e.sfera.label}}"></span>{{/if}}<b>{{e.nome}}</b></button>
+                                        {{#if @root.scrivi}}{{#unless e.resisteTesto}}<button type="button" class="m6-nemico-manca" data-action="nemicoMagickApri" data-effetto="{{e.id}}" title="{{localize 'M6.Nemico.ResistenzaMancaHint'}}"><i class="fa-solid fa-plus" aria-hidden="true"></i>{{localize "M6.Nemico.ResistenzaManca"}}</button>{{/unless}}{{/if}}
+                                        <span class="m6-nemico-riga-dx">
+                                            {{#if @root.scrivi}}
+                                                <label class="m6-nemico-inline"><span>{{localize "M6.Nemico.Soglia"}}</span><input type="number" class="m6-nemico-num{{#if e.aMano}} a-mano{{/if}}" name="flags.m6.nemico.magick.effetti.{{e.id}}.soglia" value="{{e.soglia}}" min="0" max="10" title="{{e.sogliaHint}}">{{#if e.conto}}<input type="hidden" name="flags.m6.nemico.magick.effetti.{{e.id}}.conto" value="{{e.conto}}">{{/if}}</label>
+                                                <button type="button" class="m6-nemico-matita" data-action="nemicoMagickApri" data-effetto="{{e.id}}" title="{{localize 'M6.Nemico.Matita'}}" aria-label="{{localize 'M6.Nemico.Matita'}}: {{e.nome}}"><i class="fa-solid fa-pen" aria-hidden="true"></i></button>
+                                            {{else}}
+                                                <span class="m6-nemico-dato"{{#if e.aMano}} title="{{localize 'M6.Nemico.SogliaEffettoManoBreve' conto=e.conto}}"{{/if}}>{{localize "M6.Nemico.Soglia"}} <b class="oro">{{e.soglia}}</b></span>
+                                                <button type="button" class="m6-nemico-lancia" data-action="nemicoLancia" data-effetto="{{e.id}}" title="{{localize 'M6.Nemico.LanciaHint' nome=e.nome}}">{{localize "M6.Nemico.Lancia"}}</button>
+                                            {{/if}}
+                                        </span>
+                                    </div>
+                                    {{#if e.aperta}}
+                                        {{#if @root.scrivi}}
+                                            {{!-- I campi dell'effetto: il nome, cosa fa, il tiro con cui il PG resiste. Gli Ambiti e la soglia base vengono da come è nato. --}}
+                                            <div class="m6-nemico-dettagli">
+                                                <label><span>{{localize "M6.Nemico.ManoNome"}}</span><input type="text" name="flags.m6.nemico.magick.effetti.{{e.id}}.nome" value="{{e.nome}}"></label>
+                                                <label class="larga"><span>{{localize "M6.Nemico.ManoCosa"}}</span><input type="text" name="flags.m6.nemico.magick.effetti.{{e.id}}.breve" value="{{e.breve}}"></label>
+                                                <label class="intera m6-nemico-resiste"><span>{{localize "M6.Nemico.ManoResiste"}}</span><span class="m6-nemico-resiste-campi"><select name="flags.m6.nemico.magick.effetti.{{e.id}}.resiste.attribute"><option value="">–</option>{{#each @root.attributiScelta as |a|}}<option value="{{a.id}}" {{#if (eq a.id e.resiste.attribute)}}selected{{/if}}>{{a.label}}</option>{{/each}}</select><span>+</span><select name="flags.m6.nemico.magick.effetti.{{e.id}}.resiste.skill"><option value="">–</option>{{#each @root.secondoTratto as |s|}}<option value="{{s.id}}" {{#if (eq s.id e.resiste.skill)}}selected{{/if}}>{{s.label}}</option>{{/each}}</select><input type="text" name="flags.m6.nemico.magick.effetti.{{e.id}}.resiste.testo" value="{{e.resiste.testo}}" placeholder="{{localize 'M6.Nemico.ManoResisteTesto'}}"></span></label>
+                                                <p class="m6-nemico-tenue">{{e.comeLabel}} · {{localize "M6.Nemico.Ambiti"}}: {{#each e.ambiti as |a|}}{{#if @index}} · {{/if}}{{a.label}} {{a.level}}{{else}}{{localize "M6.Nemico.TuttiZero"}}{{/each}} · {{#if (eq e.da "grimorio")}}{{localize "M6.Nemico.DalGrimorio"}}{{else}}{{localize "M6.Nemico.AMano"}}{{/if}}{{#if e.danni}} · {{localize "M6.Nemico.DadiDanni" dadi=e.danni}}{{/if}}</p>
+                                                <button type="button" class="m6-nemico-via" data-action="nemicoMagickTogli" data-effetto="{{e.id}}"><i class="fa-solid fa-trash" aria-hidden="true"></i>{{localize "M6.Nemico.EffettoMagickTogli"}}</button>
+                                            </div>
+                                        {{else}}
+                                            <div class="m6-nemico-riga-corpo">
+                                                {{#if e.breve}}<p>{{e.breve}}</p>{{/if}}
+                                                {{#if e.testo}}<p>{{e.testo}}</p>{{/if}}
+                                                <p class="m6-nemico-tenue">{{e.comeLabel}} · {{e.resisteLabel}}{{#if e.danni}} · {{localize "M6.Nemico.DadiDanni" dadi=e.danni}}{{/if}}</p>
+                                            </div>
+                                        {{/if}}
+                                    {{/if}}
+                                </div>
+                            {{else}}
+                                {{#unless scrivi}}<p class="m6-nemico-nessuna">{{localize "M6.Nemico.MagickVuota"}}</p>{{/unless}}
+                            {{/each}}
+                            {{#if scrivi}}<button type="button" class="m6-nemico-aggiungi{{#if cassetto}} on{{/if}}" data-action="nemicoCassetto" data-cassetto="{{#if cassetto}}{{cassetto}}{{else}}grimorio{{/if}}" aria-expanded="{{#if cassetto}}true{{else}}false{{/if}}"><i class="fa-solid fa-plus" aria-hidden="true"></i><b>{{localize "M6.Nemico.EffettoMagickAggiungi"}}</b><small>{{localize "M6.Nemico.EffettoMagickAggiungiHint"}}</small></button>{{/if}}
+                        </div>
+
+                        {{#if scrivi}}{{#if cassetto}}
+                            {{!-- Il cassetto che aggiunge un effetto: dal Grimorio (le Formule che le Sfere aprono) o a mano (i sei Ambiti coi pallini). Una strada per volta. --}}
+                            <div class="m6-nemico-cassetto" data-cassetto="{{cassetto}}">
+                                <div class="m6-nemico-cassetto-vie" role="group" aria-label="{{localize 'M6.Nemico.EffettoMagickAggiungi'}}">
+                                    <button type="button" class="m6-nemico-pastiglia{{#if (eq cassetto 'grimorio')}} on{{/if}}" data-action="nemicoCassettoVia" data-cassetto="grimorio" aria-pressed="{{#if (eq cassetto 'grimorio')}}true{{else}}false{{/if}}"><i class="fa-solid fa-book-open" aria-hidden="true"></i>{{localize "M6.Nemico.DalGrimorio"}}</button>
+                                    <button type="button" class="m6-nemico-pastiglia{{#if (eq cassetto 'mano')}} on{{/if}}" data-action="nemicoCassettoVia" data-cassetto="mano" aria-pressed="{{#if (eq cassetto 'mano')}}true{{else}}false{{/if}}">{{localize "M6.Nemico.AMano"}}</button>
+                                </div>
+                                {{#if grimorio}}
+                                    {{#if grimorio.senzaDomini}}
+                                        <p class="m6-nemico-nessuna">{{localize "M6.Nemico.GrimorioSenzaDomini"}}</p>
+                                    {{else}}
+                                        <label class="m6-nemico-cerca"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><input type="search" data-nemico-cerca="grimorio" value="{{grimorio.cerca}}" placeholder="{{localize 'M6.Nemico.GrimorioCerca' domini=grimorio.dominiTesto}}" aria-label="{{localize 'M6.Nemico.DalGrimorio'}}"></label>
+                                        <div class="m6-nemico-grimorio" data-nemico-lista="grimorio">
+                                            {{#each grimorio.formule as |f|}}
+                                                <div class="m6-nemico-formula" data-search="{{f.name}} {{f.use}}">
+                                                    <span class="m6-nemico-formula-nome" title="{{f.use}}">{{f.name}}</span>
+                                                    <span class="m6-nemico-accessi">{{#each f.access as |s|}}<img src="{{s.icon}}" alt="{{s.label}}" title="{{s.label}}" class="{{#if s.owned}}lit{{/if}}">{{/each}}</span>
+                                                    <span class="m6-nemico-tenue m6-nemico-formula-ambiti">{{#each f.soglie as |t|}}{{#if @index}} · {{/if}}{{t.ambiti}}{{/each}}</span>
+                                                    <span class="m6-nemico-formula-tasti">{{#each f.soglie as |t|}}<button type="button" class="m6-nemico-prendi{{#if f.presa}} presa{{/if}}" data-action="nemicoFormula" data-formula="{{f.id}}" data-indice="{{t.index}}" title="{{#if f.presa}}{{localize 'M6.Nemico.GrimorioPresa'}}{{else}}{{localize 'M6.Nemico.GrimorioAggiungi'}}{{/if}}" aria-label="{{localize 'M6.Nemico.Aggiungi'}}: {{f.name}}, {{localize 'M6.Nemico.Soglia'}} {{t.soglia}}"><b>{{t.soglia}}</b><i class="fa-solid {{#if f.presa}}fa-check{{else}}fa-plus{{/if}}" aria-hidden="true"></i></button>{{/each}}</span>
+                                                </div>
+                                            {{else}}
+                                                <p class="m6-nemico-nessuna">{{localize "M6.Nemico.GrimorioVuoto"}}</p>
+                                            {{/each}}
+                                            <p class="m6-nemico-nessuna" data-nemico-nessuna hidden>{{localize "M6.Nemico.GrimorioVuoto"}}</p>
+                                        </div>
+                                    {{/if}}
+                                {{/if}}
+                                {{#if mano}}
+                                    {{!-- A mano: nome, cosa fa, il tiro di resistenza, la Sfera e come; in cima l'Epicità,
+                                         staccata, che vale almeno 1 (2/10), poi i sei Ambiti con la lente (il clic la cambia) e i
+                                         numeri da 1 a 7 con la lettura (lo stesso numero di nuovo lo toglie); la soglia in grande,
+                                         i danni se la lente della Potenza è Danni, Aggiungi. --}}
+                                    <div class="m6-nemico-dettagli">
+                                        <label><span>{{localize "M6.Nemico.ManoNome"}}</span><input type="text" data-mano="nome" value="{{mano.nome}}"></label>
+                                        <label class="larga"><span>{{localize "M6.Nemico.ManoCosa"}}</span><input type="text" data-mano="cosa" value="{{mano.cosa}}"></label>
+                                        <label class="intera m6-nemico-resiste"><span>{{localize "M6.Nemico.ManoResiste"}}</span><span class="m6-nemico-resiste-campi"><select data-mano="attribute" aria-label="{{localize 'M6.Nemico.ManoResiste'}}"><option value="">–</option>{{#each attributiScelta as |a|}}<option value="{{a.id}}" {{#if (eq a.id @root.mano.attribute)}}selected{{/if}}>{{a.label}}</option>{{/each}}</select><span>+</span><select data-mano="skill" aria-label="{{localize 'M6.Nemico.CasoSkill'}}"><option value="">–</option>{{#each secondoTratto as |s|}}<option value="{{s.id}}" {{#if (eq s.id @root.mano.skill)}}selected{{/if}}>{{s.label}}</option>{{/each}}</select><input type="text" data-mano="resisteTesto" value="{{mano.resisteTesto}}" placeholder="{{localize 'M6.Nemico.ManoResisteTesto'}}" aria-label="{{localize 'M6.Nemico.ManoResisteTesto'}}"></span></label>
+                                        <span class="intera m6-nemico-scelte">
+                                            <span class="m6-nemico-tenue">{{localize "M6.Nemico.ManoDominio"}}</span>
+                                            {{#each mano.domini as |d|}}<button type="button" class="m6-nemico-pastiglia{{#if d.on}} on{{/if}}" data-action="nemicoManoScelta" data-campo="dominio" data-value="{{d.id}}" aria-pressed="{{d.on}}">{{d.label}}</button>{{/each}}
+                                            <span class="m6-nemico-spazio" aria-hidden="true"></span>
+                                            {{#each mano.come as |c|}}<button type="button" class="m6-nemico-pastiglia{{#if c.on}} on{{/if}}" data-action="nemicoManoScelta" data-campo="come" data-value="{{c.id}}" aria-pressed="{{c.on}}">{{c.label}}</button>{{/each}}
+                                        </span>
+                                    </div>
+                                    <div class="m6-nemico-ambiti">
+                                        {{#each mano.ambiti.righe as |a|}}
+                                            <div class="m6-nemico-ambito{{#if a.base}} base{{/if}}{{#if a.alto}} alto{{/if}}" data-scope="{{a.id}}">
+                                                <i class="{{a.faIcon}}" aria-hidden="true"></i>
+                                                <span class="m6-nemico-anm">{{a.label}}</span>
+                                                {{#if a.lente.altra}}<button type="button" class="m6-nemico-lente" data-action="nemicoLente" data-scope="{{a.id}}" title="{{localize 'M6.Nemico.Lente'}}">{{a.lente.label}}</button>{{else}}<span class="m6-nemico-lente ferma">{{a.lente.label}}</span>{{/if}}
+                                                <span class="m6-nemico-liv">{{#each a.pallini as |p|}}<button type="button" class="{{#if p.on}}on{{/if}}" data-action="nemicoAmbito" data-scope="{{a.id}}" data-level="{{p.value}}" title="{{p.title}}" aria-label="{{a.label}} {{p.value}}">{{p.value}}</button>{{/each}}</span>
+                                                <span class="m6-nemico-let">{{a.lettura}}</span>
+                                            </div>
+                                        {{/each}}
+                                    </div>
+                                    <div class="m6-nemico-avviso" data-nemico-avviso>{{#if mano.ambiti.fuoriTetto.length}}{{localize "M6.Nemico.TettoAmbiti"}}{{/if}}</div>
+                                    <div class="m6-nemico-somma">
+                                        <span class="m6-nemico-dato">{{localize "M6.Nemico.Soglia"}} <b class="m6-nemico-grande">{{mano.ambiti.soglia}}</b></span>
+                                        <span class="m6-nemico-tenue">{{mano.ambiti.conto}}{{#if mano.ambiti.danni}} · {{localize "M6.Nemico.DadiDanni" dadi=mano.ambiti.danni}}{{/if}}</span>
+                                        <button type="button" class="m6-nemico-lancia" data-action="nemicoManoAggiungi"><i class="fa-solid fa-plus" aria-hidden="true"></i>{{localize "M6.Nemico.Aggiungi"}}</button>
+                                    </div>
+                                {{/if}}
+                            </div>
+                        {{/if}}{{/if}}
+                    {{/if}}
+
+                    {{!-- I poteri del manuale: gli stessi dei maghi, presi dal catalogo; il testo si apre al clic.
+                         Sotto la Magick stanno solo se ce ne sono, o in Scrivi per aggiungerne. --}}
+                    {{#if mostraPoteri}}
+                    {{#if blocco.magick}}<h4 class="m6-nemico-sottotitolo">{{localize "M6.Nemico.Poteri"}}</h4>{{/if}}
+                    <div class="m6-nemico-pastiglie">
+                        {{#each poteri as |p|}}<button type="button" class="m6-nemico-pastiglia{{#if p.aperta}} on{{/if}}" data-action="nemicoEffettoApri" data-effetto="{{p.id}}" aria-expanded="{{p.aperta}}">{{p.nome}}</button>{{/each}}
+                        {{#if scrivi}}<button type="button" class="m6-nemico-pastiglia vuota" data-action="nemicoEffettoCatalogo" title="{{localize 'M6.Nemico.PotereAggiungiHint'}}"><i class="fa-solid fa-plus" aria-hidden="true"></i>{{localize "M6.Nemico.PotereAggiungi"}}</button>{{else}}{{#unless poteri.length}}<span class="m6-nemico-nessuna">{{localize "M6.Nemico.PoteriNessuno"}}</span>{{/unless}}{{/if}}
+                    </div>
+                    {{#each poteri as |p|}}{{#if p.aperta}}
+                        <div class="m6-nemico-cassettino" data-effetto="{{p.id}}">
+                            {{#if p.potere}}
+                                <p class="m6-nemico-tenue">{{localize "M6.Poteri.GradoN" n=p.potere.grado}}{{#if p.potere.sfereTesto}} · {{p.potere.sfereTesto}}{{/if}}</p>
+                                {{!-- Le parti del potere come sulla scheda del mago: il costo dell'attivo e la cadenza del passivo accanto al titolo, il sigillo al posto di «Accesso con». --}}
+                                {{#unless p.potere.attivo.vuota}}<div class="m6-nemico-parte"><b>{{localize "M6.Poteri.EffettoAttivo"}}{{#if p.potere.attivo.misura}}<small>{{p.potere.attivo.misura}}</small>{{/if}}</b>{{#each p.potere.attivo.voci as |v|}}<p>{{#if v.accesso}}<strong class="m6-accesso">{{#if v.con}}{{localize "M6.Poteri.ConSfera"}}{{else}}{{localize "M6.Grimorio.Access"}}{{/if}} {{#each v.sfere as |sfera|}}<img class="m6-sfera-inline" src="systems/m6/assets/icons/sheet/{{sfera}}.png" alt="{{localize (concat 'M6.Spheres.' sfera)}}" title="{{localize (concat 'M6.Spheres.' sfera)}}">{{/each}}:</strong> {{else if v.chiave}}<strong>{{v.chiave}}:</strong> {{/if}}{{v.testo}}</p>{{/each}}</div>{{/unless}}
+                                {{#unless p.potere.passivo.vuota}}<div class="m6-nemico-parte"><b>{{localize "M6.Poteri.EffettoPassivo"}}{{#if p.potere.passivo.misura}}<small>{{p.potere.passivo.misura}}</small>{{/if}}</b>{{#each p.potere.passivo.voci as |v|}}<p>{{#if v.accesso}}<strong class="m6-accesso">{{#if v.con}}{{localize "M6.Poteri.ConSfera"}}{{else}}{{localize "M6.Grimorio.Access"}}{{/if}} {{#each v.sfere as |sfera|}}<img class="m6-sfera-inline" src="systems/m6/assets/icons/sheet/{{sfera}}.png" alt="{{localize (concat 'M6.Spheres.' sfera)}}" title="{{localize (concat 'M6.Spheres.' sfera)}}">{{/each}}:</strong> {{else if v.chiave}}<strong>{{v.chiave}}:</strong> {{/if}}{{v.testo}}</p>{{/each}}</div>{{/unless}}
+                            {{else}}
+                                <p class="m6-nemico-tenue">{{localize "M6.Nemico.PotereTolto"}}</p>
+                                {{#if p.testo}}<p>{{p.testo}}</p>{{/if}}
+                            {{/if}}
+                            {{#if @root.scrivi}}<button type="button" class="m6-nemico-via" data-action="nemicoEffettoTogli" data-effetto="{{p.id}}"><i class="fa-solid fa-trash" aria-hidden="true"></i>{{localize "M6.Nemico.PotereTogli"}}</button>{{/if}}
+                        </div>
+                    {{/if}}{{/each}}
+                    {{/if}}
+
+                    {{!-- Un nemico che aveva la Magick accesa col vecchio tasto la tiene anche con un'altra Natura: qui si toglie. --}}
+                    {{#if scrivi}}{{#if blocco.eredita}}<button type="button" class="m6-nemico-via" data-action="magickSpegni" title="{{localize 'M6.Nemico.MagickTogli'}}"><i class="fa-solid fa-xmark" aria-hidden="true"></i>{{localize "M6.Nemico.MagickTogliBreve"}}</button>{{/if}}{{/if}}
+                </div>
+            {{/if}}
+        </div>
+    </div>
+</section>

@@ -1,0 +1,272 @@
+/* ==========================================================================
+   Maghi 6ª Edizione, la base: i colori della casa, il dado e la carta del
+   tiro semplice in chat, i pezzi comuni delle schede e la scheda degli oggetti.
+   ========================================================================== */
+
+:root {
+  --m6-oro: #d9a827;           /* titoli, pallini pieni, tasto acceso */
+  --m6-oro-scuro: #98772b;     /* cornici e righelli */
+  --m6-oro-tenue: #6b4f12;     /* bordi discreti */
+  --m6-oro-chiaro: #f5e7b2;    /* numeri e intestazioni sul fondo scuro */
+  --m6-voce: #f3e4c8;          /* le voci: bianco sporco d'arancio */
+  --m6-testo: #e6dcc2;         /* corpo del testo sul fondo scuro */
+  --m6-tenue: #ab9f85;         /* didascalie e posti vuoti */
+  --m6-incavo: #15130f;        /* fondi incassati */
+  --m6-fondo: #1f1a10;         /* fondo dei fogli */
+  --m6-riq: linear-gradient(#2a2314, #1f1a10);
+  --m6-riga-sorvolo: #3a352c;
+  --m6-scelta: #3b2a55;        /* la riga scelta, in viola */
+  --m6-su-oro: #1a140a;        /* il testo sui tasti pieni d'oro */
+  --m6-viola: #5a2b82;         /* l'arcano: il colore dei successi */
+  --m6-viola-chiaro: #b58ade;  /* cornici e segni del dado */
+  --m6-viola-dado: #2f2153;    /* corpo del dado */
+}
+
+/* --------------------------------------------------------------------------
+   Il dado: un quadrato viola, vuoto da 1 a 5, con la scintilla da 6 a 9 e la
+   stellina sul 10.
+   -------------------------------------------------------------------------- */
+.m6-dado {
+  background: var(--m6-viola-dado) center / 86% no-repeat;
+  border: 1px solid var(--m6-viola-chiaro);
+  border-radius: 4px;
+  box-sizing: border-box;
+  display: inline-block;
+  flex: none;
+  height: 32px;
+  width: 32px;
+}
+
+.m6-dado--scintilla {
+  background-image: url("../assets/dadi/scintilla.svg");
+}
+
+.m6-dado--stellina {
+  background-image: url("../assets/dadi/stellina.svg");
+}
+
+/* --------------------------------------------------------------------------
+   La carta del tiro in chat: con cosa si tira, i dadi, una riga per voce,
+   la fascia con una parola.
+   -------------------------------------------------------------------------- */
+.m6-carta {
+  background: var(--m6-fondo);
+  border: 1px solid var(--m6-oro-scuro);
+  border-radius: 4px;
+  color: var(--m6-testo);
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+}
+
+.m6-carta__coppia {
+  color: var(--m6-oro);
+  font-size: 0.86rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.m6-carta__dadi {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: center;
+}
+
+.m6-carta__riga {
+  align-items: baseline;
+  border-top: 1px solid rgb(152 119 43 / 35%);
+  color: var(--m6-voce);
+  display: flex;
+  justify-content: space-between;
+  padding-top: 4px;
+}
+
+.m6-carta__riga > b {
+  color: var(--m6-oro-chiaro);
+  font-size: 1.05rem;
+}
+
+.m6-carta__fascia {
+  border: 1px solid var(--m6-oro-tenue);
+  border-radius: 3px;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 4px 6px;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.m6-carta--successo .m6-carta__fascia {
+  background: var(--m6-viola);
+  border-color: var(--m6-viola-chiaro);
+  color: var(--m6-oro-chiaro);
+}
+
+.m6-carta--fallimento .m6-carta__fascia {
+  background: var(--m6-incavo);
+  color: var(--m6-tenue);
+}
+
+/* --------------------------------------------------------------------------
+   Il lucchetto in fondo alla barra delle pagine: aperto si scrive, chiuso no.
+   -------------------------------------------------------------------------- */
+.m6w .m6-lucchetto {
+  align-items: center;
+  border-radius: 4px;
+  color: var(--m6-tenue);
+  cursor: pointer;
+  display: flex;
+  flex: none;
+  height: 34px;
+  justify-content: center;
+  width: 100%;
+}
+
+.m6w .m6-lucchetto:hover,
+.m6w .m6-lucchetto.chiuso {
+  color: var(--m6-oro);
+}
+
+/* --------------------------------------------------------------------------
+   Chi può solo guardare una scheda: il ritratto e il nome.
+   -------------------------------------------------------------------------- */
+.m6w .m6-limitata {
+  align-items: center;
+  color: var(--m6-voce);
+  display: grid;
+  gap: 12px;
+  justify-items: center;
+  padding: 24px;
+}
+
+.m6w .m6-limitata > img {
+  border: 1px solid var(--m6-oro-scuro);
+  border-radius: 4px;
+  max-height: 60vh;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.m6w .m6-limitata > h2 {
+  border: 0;
+  color: var(--m6-oro);
+  letter-spacing: 0.07em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+/* --------------------------------------------------------------------------
+   La scheda di un oggetto: il capo con immagine e nome, i campi in riga,
+   la descrizione sotto.
+   -------------------------------------------------------------------------- */
+.m6-oggetto-scheda .window-content {
+  background: var(--m6-fondo);
+  color: var(--m6-testo);
+  padding: 0;
+}
+
+.m6-oggetto-foglio {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.m6-oggetto-foglio .m6-riq-occhiello {
+  color: var(--m6-oro);
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.m6-oggetto-capo {
+  align-items: center;
+  border-bottom: 1px solid var(--m6-oro-scuro);
+  display: flex;
+  gap: 12px;
+  padding-bottom: 10px;
+}
+
+.m6-oggetto-capo > img {
+  border: 1px solid var(--m6-oro-tenue);
+  border-radius: 4px;
+  cursor: pointer;
+  flex: none;
+  height: 56px;
+  object-fit: cover;
+  width: 56px;
+}
+
+.m6-oggetto-capo > div {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+}
+
+.m6-oggetto-foglio input[type="text"],
+.m6-oggetto-foglio input[type="number"],
+.m6-oggetto-foglio select {
+  background: var(--m6-incavo);
+  border: 1px solid var(--m6-oro-tenue);
+  border-radius: 3px;
+  color: var(--m6-voce);
+}
+
+.m6-oggetto-capo input[type="text"] {
+  font-size: 1.15rem;
+  height: 32px;
+}
+
+.m6-oggetto-campi {
+  display: grid;
+  gap: 8px 12px;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+
+.m6-oggetto-campi > label {
+  color: var(--m6-voce);
+  display: grid;
+  gap: 2px;
+}
+
+.m6-oggetto-campi > label > span {
+  color: var(--m6-tenue);
+  font-size: 0.78rem;
+}
+
+.m6-oggetto-campi > .m6-oggetto-spunta {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+}
+
+.m6-oggetto-foglio prose-mirror {
+  background: var(--m6-incavo);
+  border: 1px solid var(--m6-oro-tenue);
+  border-radius: 3px;
+  color: var(--m6-testo);
+  flex: 1;
+  min-height: 160px;
+}
+
+/* --------------------------------------------------------------------------
+   Un oggetto mandato in chat: l'immagine accanto al nome, poi la descrizione.
+   -------------------------------------------------------------------------- */
+.m6-oggetto-chat > h3 {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.m6-oggetto-chat > h3 > img {
+  border: 0;
+  flex: none;
+}

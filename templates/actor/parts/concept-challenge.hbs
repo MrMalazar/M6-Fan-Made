@@ -1,0 +1,36 @@
+<section class="tab {{tab.cssClass}} m6-concept-challenge" data-tab="{{tab.id}}" data-group="{{tab.group}}">
+    <div class="m6-concept-content">
+        <header class="m6-concept-heading">
+            <h2>{{localize "M6.ConceptChallenge.Label"}}</h2>
+        </header>
+
+        {{!-- Ogni gruppo è una tendina richiudibile, e dentro le domande
+             corrono su due colonne: si comprime quello che non serve ora. --}}
+        {{#each conceptChallenge as |group|}}
+            <details class="m6-concept-group" open>
+                <summary>
+                    <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+                    <span>{{localize group.label}}</span>
+                </summary>
+
+                <div class="m6-concept-fields">
+                    {{#each group.fields as |field|}}
+                        {{!-- Ogni domanda si chiude a tendina dal suo titolo:
+                             aperta se ha già un testo, chiusa se è vuota. --}}
+                        <details class="m6-concept-field" data-field="{{field.id}}"{{#if field.value}} open{{/if}}>
+                            <summary>
+                                <strong><i class="fa-solid fa-chevron-down" aria-hidden="true"></i>{{localize field.label}}</strong>
+                                <small>{{localize field.prompt}}</small>
+                            </summary>
+                            <div class="resource">
+                                <prose-mirror name="flags.m6.conceptChallenge.{{field.id}}" value="{{field.value}}" toggled="true" compact="true">
+                                    {{{field.enrichedValue}}}
+                                </prose-mirror>
+                            </div>
+                        </details>
+                    {{/each}}
+                </div>
+            </details>
+        {{/each}}
+    </div>
+</section>

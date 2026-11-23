@@ -1,0 +1,59 @@
+{{!-- Le Condizioni addosso (20/9; la regola di base del 29/9), in fondo alle
+     Risorse sotto la Ruota. In testa l'occhiello col più, che apre la scelta:
+     le quattro famiglie (Sensi, Corpo, Mente, Soprannaturale), ognuna con la
+     sua icona e le sue scale, una riga per scala coi gradi in numeri romani;
+     poi i lievi del corpo e della mente, poi lo scontro. Un clic accende, un
+     altro spegne, e su una scala si sta a un gradino solo. La lente cerca
+     quelle fuori lista. Sotto, una riga per Condizione accesa: l'icona della
+     famiglia col grado (un clic spegne), il nome (un clic apre e chiude la
+     spiegazione: la scala, com'è e cosa fa), il peso. Da vuota la sezione è
+     la sola riga del titolo. --}}
+<div class="m6-condizioni-box">
+    <span class="m6-riq-occhiello m6-condizioni-occhiello">{{localize "M6.Comuni.ItemsList.Conditions"}}</span>
+    <details class="m6-condizioni-drawer">
+        <summary title="{{localize 'M6.Condizioni.AddHint'}}" aria-label="{{localize 'M6.Condizioni.AddHint'}}">
+            <i class="fa-solid fa-plus" aria-hidden="true"></i>
+        </summary>
+        <div class="m6-condizioni">
+            {{#each condizioni as |sezione|}}
+                <div class="m6-cond-sezione sezione-{{sezione.id}}">
+                    <span class="m6-cond-sezione-nome">{{#if sezione.icon}}<span class="m6-cond-icona"><i style="-webkit-mask-image: url({{sezione.icon}}); mask-image: url({{sezione.icon}})"></i></span>{{/if}}{{sezione.label}}</span>
+                    {{#each sezione.scale as |scala|}}
+                        <div class="m6-cond-scala">
+                            {{#if scala.label}}<span class="m6-cond-scala-nome">{{scala.label}}</span>{{/if}}
+                            <span class="m6-cond-voci">
+                                {{#each scala.voci as |entry|}}
+                                    <button type="button" class="m6-cond-voce{{#if entry.active}} lit{{/if}}{{#if entry.suppressed}} suppressed{{/if}}" data-action="condizioneToggle" data-condizione="{{entry.id}}" title="{{entry.title}}" aria-pressed="{{entry.active}}">{{#if entry.numeral}}<b class="m6-cond-grado">{{entry.numeral}}</b>{{/if}}<span>{{entry.name}}</span></button>
+                                {{/each}}
+                            </span>
+                        </div>
+                    {{/each}}
+                </div>
+            {{/each}}
+            <a class="item-control search-data-item m6-condizioni-search" data-action="searchItem" title="{{localize 'M6.Comuni.Search'}}" data-type="condition">
+                <i class="fa-solid fa-magnifying-glass"></i> <span>{{localize "M6.Condizioni.SearchHint"}}</span>
+            </a>
+        </div>
+    </details>
+    {{#each condizioniRows as |row|}}
+        <div class="m6-condizione-riga{{#if row.suppressed}} suppressed{{/if}}{{#if row.weight}} peso-{{row.weight}}{{/if}}">
+            <div class="m6-condizione-testa">
+                <button type="button" class="m6-condizione-spegni" data-action="condizioneToggle" data-condizione="{{row.condizione}}" data-item-id="{{row.id}}" title="{{localize 'M6.Condizioni.OffHint'}}" aria-label="{{localize 'M6.Condizioni.OffHint'}}">
+                    {{#if row.list}}<span class="m6-cond-icona"><i style="-webkit-mask-image: url({{row.img}}); mask-image: url({{row.img}})"></i>{{#if row.numeral}}<b>{{row.numeral}}</b>{{/if}}</span>{{else}}<img src="{{row.img}}" alt="">{{/if}}
+                </button>
+                <button type="button" class="m6-condizione-nome" data-action="condizioneApri" title="{{localize 'M6.Condizioni.OpenHint'}}" aria-expanded="false">
+                    <span>{{row.name}}</span>
+                    <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+                </button>
+                {{#if row.dice}}<b class="m6-condizione-dadi">{{row.dice}}</b>{{/if}}
+            </div>
+            {{#if row.what}}
+                <div class="m6-condizione-spiega">
+                    {{#if row.scale}}<small>{{row.scale}}{{#if row.numeral}} {{row.numeral}}{{/if}}</small>{{/if}}<em>{{row.what}}</em>{{#if row.effect}}<span>{{row.effect}}</span>{{/if}}
+                </div>
+            {{else if row.effect}}
+                <div class="m6-condizione-spiega">{{#if row.scale}}<small>{{row.scale}}{{#if row.numeral}} {{row.numeral}}{{/if}}</small>{{/if}}<span>{{row.effect}}</span></div>
+            {{/if}}
+        </div>
+    {{/each}}
+</div>

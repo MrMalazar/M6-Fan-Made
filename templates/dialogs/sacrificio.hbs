@@ -1,0 +1,24 @@
+{{!-- Il Sacrificio (Blue, 29/9): danni a scelta del giocatore, fisici o mentali,
+     superficiali o aggravati, in cambio di Quintessenza (1 a superficiale, 3 ad
+     aggravato). Ogni segno porta il suo massimo: le caselle libere della Salute
+     e il posto sulla Ruota. Niente <form>: DialogV2 mette il contenuto dentro il suo. --}}
+<div class="m6-danni m6-sacrificio">
+    <p class="m6-arete-hint">{{localize "M6.Sacrificio.Intro"}}</p>
+    <p class="m6-sacrificio-limiti">{{localize "M6.Sacrificio.Limiti" boxes=boxes cells=cells}}</p>
+    <span class="m6-arete-row-label">{{localize "M6.Sacrificio.Sign"}}</span>
+    <input type="hidden" name="state" value="{{chosen}}">
+    <div class="m6-danni-grid" role="group" aria-label="{{localize 'M6.Sacrificio.Sign'}}">
+        {{#each signs as |sign|}}
+            <button type="button" class="m6-danni-sign{{#unless sign.max}} vuoto{{/unless}}" data-role="danniSign" data-state="{{sign.state}}" data-max="{{sign.max}}" aria-label="{{localize sign.label}}">
+                <i class="m6-salute-glyph" data-state="{{sign.state}}" aria-hidden="true"></i>
+                <span>{{localize sign.label}}</span>
+                <b class="m6-sacrificio-resa">+{{sign.resa}}</b>
+            </button>
+        {{/each}}
+    </div>
+    <label class="m6-item-field m6-danni-amount">
+        <span class="m6-arete-row-label">{{localize "M6.Sacrificio.Amount"}}</span>
+        <input type="number" name="amount" min="1" max="9" step="1" value="1">
+    </label>
+    <p class="m6-sacrificio-out" data-role="sacrificioResa" aria-live="polite"></p>
+</div>

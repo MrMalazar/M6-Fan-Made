@@ -1,0 +1,67 @@
+{{!-- Il contatore (24/9): il numero, il ritmo, quello che il Paradosso ha in scena (orologi, Presenze, Ancore, fatti fissati), i tasti. --}}
+<div class="m6-quadro-corpo m6-quadro-contatore">
+    <div class="m6-quadro-numero">
+        <button type="button" data-action="meno" title="{{localize 'M6.Paradosso.Minus'}}" aria-label="{{localize 'M6.Paradosso.Minus'}}"><i class="fa-solid fa-minus" aria-hidden="true"></i></button>
+        <b>{{points}}</b>
+        <button type="button" data-action="piu" title="{{localize 'M6.Paradosso.Plus'}}" aria-label="{{localize 'M6.Paradosso.Plus'}}"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+    </div>
+    <p class="m6-quadro-sotto">{{localize "M6.Menu.PuntiRiserva"}}</p>
+    <p class="m6-quadro-ritmo">
+        <i class="fa-solid fa-hourglass-half" aria-hidden="true"></i>
+        {{#if round}}{{localize "M6.Menu.RitmoTurno" n=ritmo.turno}} · {{/if}}{{localize "M6.Menu.RitmoScena" n=ritmo.scena}}
+        {{#if ritmo.perMago.length}}<span class="tenue">({{#each ritmo.perMago as |m|}}{{m.name}} {{m.n}}{{#unless @last}} · {{/unless}}{{/each}})</span>{{/if}}
+    </p>
+    <button type="button" class="m6-quadro-visibile" data-action="visibile">
+        <i class="fa-solid {{#if visible}}fa-eye{{else}}fa-eye-slash{{/if}}" aria-hidden="true"></i>
+        {{#if visible}}{{localize "M6.Paradosso.HideHint"}}{{else}}{{localize "M6.Paradosso.ShowHint"}}{{/if}}
+    </button>
+
+    <h3 class="m6-quadro-tit">{{localize "M6.Menu.InScena"}} <small>{{inScena}}</small></h3>
+    {{#if inScena}}
+        <ul class="m6-quadro-inscena">
+            {{#each orologi as |c|}}
+                <li class="orologio{{#if c.pieno}} pieno{{/if}}">
+                    {{{c.svg}}}
+                    <span class="testo">
+                        <span class="nome">{{c.titolo}} <span class="conto">{{c.pieni}}/{{c.segmenti}}</span></span>
+                        <span class="tenue">{{c.formaLabel}}{{#if c.scattaLabel}} · {{localize "M6.Menu.OrologioPieno"}}: {{c.scattaLabel}}{{/if}}</span>
+                    </span>
+                    {{#unless c.visibile}}<i class="fa-solid fa-eye-slash tenue" title="{{localize 'M6.Paradosso.Whisper'}}" aria-hidden="true"></i>{{/unless}}
+                    <span class="tasti">
+                        {{#unless c.pieno}}<button type="button" data-action="orologioAvanti" data-id="{{c.id}}" title="{{localize 'M6.Menu.Avanti'}}" aria-label="{{localize 'M6.Menu.Avanti'}}"><i class="fa-solid fa-forward-step" aria-hidden="true"></i></button>{{/unless}}
+                        <button type="button" data-action="orologioChiudi" data-id="{{c.id}}" title="{{localize 'M6.Menu.Chiudi'}}" aria-label="{{localize 'M6.Menu.Chiudi'}}"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+                    </span>
+                </li>
+            {{/each}}
+            {{#each presenze as |p|}}
+                <li class="presenza"><i class="fa-solid fa-ghost" aria-hidden="true"></i><span class="nome">{{p.nome}}</span><span class="tenue">· {{p.actorName}}{{#if p.testo}} · {{p.testo}}{{/if}}</span></li>
+            {{/each}}
+            {{#each ancore as |a|}}
+                <li class="ancora"><i class="fa-solid fa-anchor" aria-hidden="true"></i><span class="nome">{{a.nome}}</span><span class="tenue">· {{a.actorName}}{{#if a.testo}} · {{a.testo}}{{/if}}</span></li>
+            {{/each}}
+            {{!-- I fatti fissati dal menù circolare (18/11/2026): restano con la loro soglia finché i maghi non li scardinano. --}}
+            {{#each fissati as |f|}}
+                <li class="fissato"><i class="fa-solid fa-thumbtack" aria-hidden="true"></i><span class="nome">{{f.testo}}</span><span class="tasti"><button type="button" data-action="scardina" data-id="{{f.id}}" title="{{localize 'M6.MenuCircolare.Fissati.via' nome=f.nome}}" aria-label="{{localize 'M6.MenuCircolare.Fissati.via' nome=f.nome}}"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button></span></li>
+            {{/each}}
+        </ul>
+    {{else}}
+        <p class="m6-quadro-vuoto">{{localize "M6.Menu.NienteInScena"}}</p>
+    {{/if}}
+
+    <div class="m6-quadro-tasti">
+        <button type="button" data-action="cambioScena"><i class="fa-solid fa-clapperboard" aria-hidden="true"></i> {{localize "M6.Menu.CambioScena"}}</button>
+        <button type="button" data-action="nuovaSessione"><i class="fa-solid fa-sun" aria-hidden="true"></i> {{localize "M6.Paradosso.NewSession"}}</button>
+        <button type="button" data-action="magickParadosso" title="{{localize 'M6.Paradosso.SpendHint'}}"><i class="fa-solid fa-wand-sparkles" aria-hidden="true"></i> {{localize "M6.Menu.MagickParadosso"}}</button>
+        <button type="button" data-action="registro" class="ghost"><i class="fa-solid fa-list" aria-hidden="true"></i> {{localize "M6.Menu.Registro"}}</button>
+        <button type="button" data-action="azzera" class="ghost" title="{{localize 'M6.Paradosso.ResetHint'}}"><i class="fa-solid fa-eraser" aria-hidden="true"></i> {{localize "M6.Paradosso.Reset"}}</button>
+    </div>
+    {{#if registro}}
+        <ul class="m6-quadro-registro">
+            {{#each log as |entry|}}
+                <li><b class="{{#if (gt entry.amount 0)}}su{{else}}giu{{/if}}">{{entry.sign}}</b> <span>{{entry.text}}</span></li>
+            {{else}}
+                <li class="tenue">{{localize "M6.Menu.RegistroVuoto"}}</li>
+            {{/each}}
+        </ul>
+    {{/if}}
+</div>

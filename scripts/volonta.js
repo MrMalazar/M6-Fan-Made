@@ -1,0 +1,266 @@
+import { calculateAreteSuccesses } from "./arete-dice-pool.js";
+import { MODULE_ID } from "./constants.js";
+import { isMageActor } from "./mage-dice.js";
+import { calculateRamoCSuccesses, RAMO, resolveSuccessFrom, successModifier, SUCCESS_FROM } from "./ramo-c.js";
+import { markRollOpen, ROLL_CARD_FLAG, rollActionsBox } from "./roll-card.js";
+import { addSaluteDamage } from "./salute.js";
+import { successiDellaCarta } from "./rossi.js";
+import { esito, RIUSCITA_DA } from "./sistema.js";
+
+/**
+ * Il ritiro di Volontà sotto il tiro (Sistema, 14/11): quando un tiro
+ * fallisce, cioè i successi non arrivano alla soglia, il giocatore SCEGLIE
+ * sulla carta fino a tre dadi falliti e li tira di nuovo. Si ritirano solo i
+ * dadi normali, mai i rossi. Costa un danno mentale superficiale sulla
+ * Salute, e la spesa va giustificata con la Bussola del personaggio: se non
+ * sta nella sua linea, il Narratore la può negare (lo dice il tasto; il
+ * verdetto resta al tavolo). Il tasto sta nella fila dei tre sotto la fascia,
+ * con Tira Saggezza (l'Indulgere) e Vittoria a un prezzo; sui tiri di
+ * Saggezza non compare. Le carte di prima del Sistema si ritirano e si
+ * ricontano con le regole di allora (anche i rossi contati nella riserva).
+ */
+
+export const VOLONTA_FLAG = "volonta";
+export const REROLL_MAX = 3;
+
+const isActive = (result) => result?.active !== false && !result?.discarded;
+const count = (value) => Math.max(Math.trunc(Number(value) || 0), 0);
+
+/** Col Sistema si riesce dal 6; le carte di prima salvano la scelta 6+/8+, e le più vecchie restano a 8+. */
+function cardSuccessFrom(card) {
+  if (card?.sistema) return RIUSCITA_DA;
+  return card?.ramo === RAMO ? resolveSuccessFrom(card, SUCCESS_FROM) : 6;
+}
+
+/**
+ * I dadi che si possono ritirare: i falliti fra i bianchi (sotto la
+ * riuscita: nel ramo C l'8, quindi 1-7) e i falliti fra i rossi, compreso
+ * l'1 dell'occhio (11/9: si ritira per il successo, lo Scoppio resta; il 10
+ * è già un successo e non si ritira). Dal 29/9 i rossi si tirano a parte e
+ * non fanno successo (`rossi: false`): si ritirano solo i bianchi. Torna
+ * {kind, index} per ognuno.
+ */
+export function rerollableDice(basicResults = [], paradoxResults = [], { successFrom = SUCCESS_FROM, rossi = true } = {}) {
+  const basic = basicResults
+    .map((result, index) => ({ kind: "basic", index, value: Number(result?.result) || 0, ok: isActive(result) }))
+    .filter((entry) => entry.ok && entry.value < successFrom);
+  const paradox = (rossi ? paradoxResults : [])
+    .map((result, index) => ({ kind: "paradox", index, value: Number(result?.result) || 0, ok: isActive(result) }))
+    .filter((entry) => entry.ok && entry.value < successFrom);
+  return [...basic, ...paradox].map(({ kind, index }) => ({ kind, index }));
+}
+
+/** I dadi falliti da ritirare quando nessuno sceglie: i bianchi più bassi, al massimo `count`. Torna gli indici. */
+export function pickRerollDice(results = [], count = 1, { successFrom = SUCCESS_FROM } = {}) {
+  const wanted = Math.min(Math.max(Math.trunc(Number(count) || 0), 0), REROLL_MAX);
+  return results
+    .map((result, index) => ({ index, value: Number(result?.result) || 0, ok: isActive(result) }))
+    .filter((entry) => entry.ok && entry.value < successFrom)
+    .sort((a, b) => a.value - b.value || a.index - b.index)
+    .slice(0, wanted)
+    .map((entry) => entry.index);
+}
+
+/** Il conto del sistema, per i tiri senza carta del Mago: 6+ e coppie di 10 fra tutti i dadi. */
+export function systemTotal(basicResults = [], advancedResults = []) {
+  const all = [...basicResults, ...advancedResults].filter(isActive);
+  const successes = all.filter((result) => Number(result.result) >= 6).length;
+  const tens = all.filter((result) => Number(result.result) === 10).length;
+  return successes + Math.floor(tens / 2) * 2;
+}
+
+/**
+ * Cosa mostrare sotto il tiro: il tasto compare solo a tiro fallito (o
+ * senza soglia, dove decide il giocatore), una volta sola; è acceso solo
+ * se c'è almeno un dado da ritirare (`max`), altrimenti spento con la
+ * ragione nel titolo.
+ */
+export function volontaState({ total = 0, difficulty = 0, failedCount = 0, used = null, burst = false, forced = false, priced = false } = {}) {
+  if (used || burst || forced || priced) return { show: false, max: 0 };
+  const goal = Math.max(Math.trunc(Number(difficulty) || 0), 0);
+  const failed = goal > 0 && Math.max(Math.trunc(Number(total) || 0), 0) < goal;
+  if (goal > 0 && !failed) return { show: false, max: 0 };
+  return { show: true, max: Math.min(REROLL_MAX, Math.max(Math.trunc(Number(failedCount) || 0), 0)) };
+}
+
+function diceTerms(roll) {
+  const terms = roll?.terms ?? [];
+  const basic = terms.find((term) => Array.isArray(term?.results) && term?.denomination !== "p");
+  const advanced = terms.find((term) => Array.isArray(term?.results) && term !== basic);
+  return { basic, advanced };
+}
+
+function speakerActor(message) {
+  const actor = ChatMessage.getSpeakerActor?.(message.speaker) ?? game.actors?.get(message.speaker?.actor);
+  return actor ?? null;
+}
+
+/** Il tasto: «Ritira con Volontà 0/3», acceso se c'è almeno un dado da ritirare (premuto senza dadi scelti, ricorda di sceglierli); senza dadi da ritirare, spento. */
+export function renderRerollButton(state, localize) {
+  const hint = state.max > 0 ? localize("M6.Volonta.RerollHint") : localize("M6.Volonta.NoDice");
+  return `<button type="button" class="m6-roll-action m6-volonta-reroll" data-volonta="reroll"${state.max > 0 ? "" : " disabled"} title="${hint}">${localize("M6.Volonta.Reroll")} <small><b data-role="picked">0</b>/${state.max}</small></button>`;
+}
+
+/** Il dado sulla carta: i bianchi vengono prima dei rossi, ognuno col suo indice. */
+function dieElement(target, { kind, index }) {
+  const dice = [...target.querySelectorAll(".dice-icons img.die")];
+  const paradox = dice.filter((img) => img.classList.contains("paradox-dice"));
+  const basic = dice.filter((img) => !img.classList.contains("paradox-dice"));
+  const pool = kind === "paradox" ? paradox : basic;
+  return pool.find((img) => Number(img.dataset.index) === index) ?? null;
+}
+
+/** La riga di quel che si è fatto, al posto del tasto. Torna vuoto per le scelte che non esistono più. */
+export function renderUsed(used, format) {
+  if (used?.kind !== "reroll") return "";
+  let text = format("M6.Volonta.UsedReroll", { dice: used.dice });
+  // Un rosso ritirato che mostra 1 o 10: l'occhio del Paradosso, da guardare al tavolo.
+  if (Number(used.eyes) > 0) text += ` ${format("M6.Volonta.RerollEyes", { eyes: used.eyes })}`;
+  return `<p class="m6-roll-note m6-roll-note-volonta">${text}</p>`;
+}
+
+/** Sotto i dadi di ogni tiro del Mago: il tasto, o la riga di quel che si è fatto. */
+export function decorateVolonta(message, html) {
+  const roll = message?.rolls?.[0];
+  if (!roll || !html?.querySelector) return false;
+  const target = html.querySelector(".dice-result");
+  if (!target || target.querySelector(".m6-volonta-reroll, .m6-roll-note-volonta")) return false;
+
+  const used = message.getFlag?.(MODULE_ID, VOLONTA_FLAG);
+  const format = game.i18n.format.bind(game.i18n);
+  if (used) {
+    const note = renderUsed(used, format);
+    if (note) target.insertAdjacentHTML("beforeend", note);
+    return Boolean(note);
+  }
+
+  const actor = speakerActor(message);
+  if (!isMageActor(actor) || !actor.isOwner) return false;
+  const card = message.getFlag?.(MODULE_ID, ROLL_CARD_FLAG) ?? {};
+  // Vittoria automatica, Scoppio, lancio indulto o vittoria a un prezzo: niente da ritirare.
+  // E i tiri di Saggezza (3/10): l'esito è già scritto sul segno, non si ritirano.
+  if (card.saggezza) return false;
+  if (card.automatic || card.burst || card.burstResult || card.forced || card.priced) return false;
+
+  const { basic, advanced } = diceTerms(roll);
+  if (!basic) return false;
+  const total = Number.isFinite(Number(card.total)) ? Number(card.total) : systemTotal(basic.results, advanced?.results ?? []);
+  const difficulty = Number.isFinite(Number(card.difficulty)) ? Number(card.difficulty) : Number(roll.options?.difficulty) || 0;
+  const candidates = rerollableDice(basic.results, advanced?.results ?? [], { successFrom: cardSuccessFrom(card), rossi: !card.rossiAParte });
+  const state = volontaState({ total, difficulty, failedCount: candidates.length, used });
+  if (!state.show) return false;
+
+  const box = rollActionsBox(target);
+  box.insertAdjacentHTML("beforeend", renderRerollButton(state, game.i18n.localize.bind(game.i18n)));
+  const rerollButton = box.querySelector("[data-volonta=\"reroll\"]");
+  const counter = rerollButton?.querySelector("[data-role=\"picked\"]");
+  const picked = [];
+  // Con almeno un dado da ritirare il fallimento è ancora aperto: la fascia va in giallo.
+  if (state.max > 0) markRollOpen(html);
+
+  // I dadi da ritirare si scelgono sulla carta: un clic accende, un altro spegne.
+  for (const candidate of candidates) {
+    const img = dieElement(target, candidate);
+    if (!img) continue;
+    img.classList.add("m6-volonta-pick");
+    img.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const at = picked.findIndex((entry) => entry.kind === candidate.kind && entry.index === candidate.index);
+      if (at >= 0) {
+        picked.splice(at, 1);
+        img.classList.remove("picked");
+      } else if (picked.length < state.max) {
+        picked.push(candidate);
+        img.classList.add("picked");
+      }
+      if (counter) counter.textContent = String(picked.length);
+    });
+  }
+
+  rerollButton?.addEventListener("click", (event) => {
+    if (rerollButton.disabled) return;
+    event.preventDefault();
+    event.stopPropagation();
+    // Senza dadi scelti il tasto ricorda come si fa: si cliccano i dadi sulla carta.
+    if (!picked.length) return ui.notifications.warn(game.i18n.localize("M6.Volonta.PickFirst"));
+    return rerollDice(message, actor, picked.slice());
+  });
+  return true;
+}
+
+/**
+ * Il totale nuovo della carta del Mago, dopo il ritiro. Col Sistema contano
+ * i dadi della riserva, le stelline a coppie, e i rossi solo se il tiro li
+ * ha presi; sulle carte del ramo C di prima la riuscita scritta (6 o 8),
+ * senza coppie.
+ */
+export function recountCard(card, basicResults, advancedResults) {
+  if (card?.sistema) return successiDellaCarta(card, basicResults, advancedResults);
+  if (card?.ramo === RAMO) {
+    return calculateRamoCSuccesses(basicResults, advancedResults, card.countedParadox ?? Infinity, {
+      successFrom: cardSuccessFrom(card)
+    });
+  }
+  return calculateAreteSuccesses(basicResults, advancedResults)
+    + Math.max(Math.trunc(Number(card?.autoSuccesses) || 0), 0);
+}
+
+/** Ritira i dadi scelti: i bianchi coi bianchi, i rossi coi rossi. */
+async function rerollDice(message, actor, picks) {
+  if (message.getFlag(MODULE_ID, VOLONTA_FLAG)) return;
+  const rolls = message.rolls;
+  const { basic, advanced } = diceTerms(rolls[0]);
+  const chosen = (Array.isArray(picks) ? picks : []).slice(0, REROLL_MAX);
+  if (!chosen.length) return;
+  const card = message.getFlag(MODULE_ID, ROLL_CARD_FLAG);
+  const modifier = successModifier(cardSuccessFrom(card));
+
+  let eyes = 0;
+  for (const kind of ["basic", "paradox"]) {
+    const term = kind === "paradox" ? advanced : basic;
+    const indices = chosen.filter((pick) => pick.kind === kind).map((pick) => pick.index);
+    if (!term || !indices.length) continue;
+    const reroll = await new foundry.dice.Roll(`${indices.length}d10${modifier}`).evaluate();
+    if (game.dice3d) await game.dice3d.showForRoll(reroll, game.user, true);
+    const fresh = reroll.terms[0]?.results ?? [];
+    for (const index of indices) {
+      term.results[index].discarded = true;
+      term.results[index].active = false;
+    }
+    for (const result of fresh) {
+      term.results.push({ ...result, active: true, discarded: false });
+      if (kind === "paradox" && (result.result === 1 || result.result === 10)) eyes += 1;
+    }
+  }
+
+  const flags = { [MODULE_ID]: { [VOLONTA_FLAG]: { kind: "reroll", dice: chosen.length, eyes } } };
+  if (card && Number.isFinite(Number(card.total))) {
+    const total = recountCard(card, basic.results, advanced?.results ?? []);
+    flags[MODULE_ID][ROLL_CARD_FLAG] = { ...card, total };
+    // Il margine: col Sistema i successi oltre la soglia, su ogni tiro; prima, oltre il primo nei tiri di Abilità.
+    if (card.sistema) flags[MODULE_ID][ROLL_CARD_FLAG].margin = esito({ successi: total, soglia: card.difficulty }).margine;
+    else if (card.skill) flags[MODULE_ID][ROLL_CARD_FLAG].margin = Math.max(total - 1, 0);
+    // Un rosso ritirato che mostra l'occhio chiama il Contraccolpo (ramo C):
+    // l'Ustione, pari alla soglia, aspetta la scelta del giocatore sotto la carta.
+    // Un occhio già uscito resta (11/9: «lo scoppio rimane»): i 10 e gli
+    // occhi si contano su tutti i rossi, anche quelli ritirati.
+    if (eyes > 0 && card.ramo === RAMO && Number(card.threshold) > 0 && !card.skill) {
+      const reds = advanced?.results ?? [];
+      const tens = reds.filter((result) => Number(result.result) === 10).length;
+      const allEyes = reds.filter((result) => Number(result.result) === 1 || Number(result.result) === 10).length;
+      if (!card.ustione) {
+        flags[MODULE_ID][ROLL_CARD_FLAG].ustione = { threshold: Number(card.threshold), sphere: Math.max(Math.trunc(Number(card.sphereMax) || 0), 0), tens, kind: card.effectKind ?? "", eyes: allEyes, choice: "" };
+      } else if (!card.ustione.choice) {
+        flags[MODULE_ID][ROLL_CARD_FLAG].ustione = { ...card.ustione, tens: Math.max(tens, count(card.ustione.tens)), eyes: Math.max(allEyes, count(card.ustione.eyes)) };
+      }
+    }
+  }
+  await addSaluteDamage(actor, { ms: 1 });
+  await message.update({ rolls, flags });
+  ui.notifications.info(game.i18n.format("M6.Volonta.RerollDone", { dice: chosen.length }));
+}
+
+export function registerVolonta() {
+  Hooks.on("renderChatMessageHTML", decorateVolonta);
+}

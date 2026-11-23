@@ -1,0 +1,17 @@
+{{!-- Il Cambio scena (24/9): cosa finisce, la scena dopo, il posto; dal 30/9 il +1 Quintessenza ai maghi del Quadro. --}}
+<form class="dialog-contents m6-quadro-form">
+    <p class="m6-quadro-domanda">{{localize "M6.Menu.ScenaDopo" n=numero}}</p>
+    {{#if finiscono.length}}
+        <p class="m6-quadro-hint"><b>{{localize "M6.Menu.Finisce"}}</b> {{#each finiscono as |f|}}{{f}}{{#unless @last}}, {{/unless}}{{/each}}</p>
+    {{else}}
+        <p class="m6-quadro-hint">{{localize "M6.Menu.FinisceNiente"}}</p>
+    {{/if}}
+    <label class="m6-quadro-campo"><span>{{localize "M6.Menu.Scena"}}</span>
+        <select name="scena"><option value="">{{localize "M6.Menu.NessunaScena"}}</option>{{#each scene as |s|}}<option value="{{s.id}}" {{#if s.selected}}selected{{/if}}>{{s.nome}}</option>{{/each}}</select>
+    </label>
+    <label class="m6-quadro-campo"><span>{{localize "M6.Menu.Posto"}}</span>
+        <select name="posto">{{#each posti as |p|}}<option value="{{p.id}}" {{#if p.selected}}selected{{/if}}>{{p.label}}</option>{{/each}}</select>
+    </label>
+    <p class="m6-quadro-hint">{{localize "M6.Menu.PostoHint"}}</p>
+    <p class="m6-quadro-hint">{{localize "M6.Menu.RicaricaHint"}}</p>
+</form>

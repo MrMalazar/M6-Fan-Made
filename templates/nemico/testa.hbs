@@ -1,0 +1,127 @@
+{{!-- La testata della scheda del nemico, rifatta l'1/10 sul mock approvato
+     (docs/mock_scheda_nemico_1-10.html): resta uguale su ogni pagina. In alto
+     chi è: il ritratto, il nome, il concetto, la disposizione con icona e
+     parola, Natura e Fazione, e il tasto dei due modi. In Gioca è testo fermo;
+     in Scrivi sono campi di carta con la loro etichetta. Sotto, la fascia di
+     come sta: la Salute (le caselle del mago, il conto, il cuore che apre la
+     ruota), l'Armatura se la porta (i punti si cliccano uno per uno), le
+     Condizioni (la × le toglie, il + apre la scelta). In fondo le linguette. --}}
+<header class="m6-nemico-testa" data-disposizione="{{disposizione.id}}" data-modo="{{modo}}">
+    <div class="m6-nemico-chi">
+        <div class="m6-nemico-ritratto">
+            <img src="{{img}}" alt="{{nome}}">
+            {{#if scrivi}}<button type="button" class="m6-nemico-cambia" data-action="ritrattoCambia" title="{{localize 'M6.Nemico.Ritratto'}}" aria-label="{{localize 'M6.Nemico.Ritratto'}}"><i class="fa-solid fa-camera" aria-hidden="true"></i></button>{{/if}}
+        </div>
+        {{#if scrivi}}
+            <div class="m6-nemico-campi">
+                <div class="m6-nemico-campi-riga">
+                    <label class="m6-nemico-campo largo"><span>{{localize "M6.Nemico.Nome"}}</span><input type="text" class="m6-nemico-nome" name="name" value="{{nome}}" placeholder="{{localize 'M6.Nemico.Nome'}}"></label>
+                    <label class="m6-nemico-campo largo"><span>{{localize "M6.Nemico.Concetto"}}</span><input type="text" name="system.headers.concept" value="{{concetto}}" placeholder="{{localize 'M6.Nemico.ConcettoHint'}}"></label>
+                </div>
+                <div class="m6-nemico-campi-riga">
+                    <label class="m6-nemico-campo"><span>{{localize "M6.Nemico.Disposizione"}}</span><select data-nemico-disposizione>{{#each disposizioni as |d|}}<option value="{{d.value}}" {{#if d.on}}selected{{/if}}>{{d.label}}</option>{{/each}}</select></label>
+                    <label class="m6-nemico-campo"><span>{{localize "M6.Nemico.Natura"}}</span><select name="flags.m6.nemico.natura">{{#each nature as |n|}}<option value="{{n.id}}" {{#if n.on}}selected{{/if}}>{{n.label}}</option>{{/each}}</select></label>
+                    <label class="m6-nemico-campo largo"><span>{{localize "M6.Nemico.Fazione"}}</span><input type="text" name="flags.m6.nemico.fazione" value="{{fazione}}" placeholder="{{localize 'M6.Nemico.FazioneHint'}}"></label>
+                </div>
+            </div>
+        {{else}}
+            <div class="m6-nemico-nomi">
+                <h1 class="m6-nemico-nome">{{nome}}</h1>
+                {{#if concetto}}<p class="m6-nemico-concetto">{{concetto}}</p>{{/if}}
+                <p class="m6-nemico-meta"><span class="m6-nemico-disp"><i class="{{disposizione.icona}}" aria-hidden="true"></i>{{disposizione.label}}</span><span class="m6-nemico-appartenenza">{{appartenenza}}</span></p>
+            </div>
+        {{/if}}
+        {{#if puoScrivere}}
+            <div class="m6-nemico-modi" role="group" aria-label="{{localize 'M6.Nemico.Modi.gruppo'}}">
+                {{#each modi as |m|}}<button type="button" class="m6-nemico-modo{{#if m.on}} on{{/if}}" data-action="nemicoModo" data-modo="{{m.id}}" title="{{m.hint}}" aria-pressed="{{m.on}}">{{m.label}}</button>{{/each}}
+            </div>
+        {{/if}}
+    </div>
+
+    <div class="m6-nemico-stato">
+        {{!-- La Salute: le caselle del mago (il clic sinistro sceglie il segno, il destro svuota), il conto, il cuore che apre la ruota. In Scrivi al posto del conto c'è il numero delle caselle. --}}
+        <div class="m6-nemico-cella">
+            <span class="m6-nemico-k">{{localize "M6.Nemico.Salute"}}</span>
+            <div class="m6-nemico-cella-riga">
+                <div class="m6-salute-track m6-nemico-track" role="group" aria-label="{{localize 'M6.Nemico.Salute'}}">
+                    {{#each salute.cells as |cell|}}
+                        <button type="button" class="m6-salute-cell{{#if cell.locked}} m6-salute-locked{{/if}}" data-state="{{cell.state}}" data-action="saluteCellChange" data-index="{{cell.index}}" aria-label="{{localize cell.label}}"></button>
+                    {{/each}}
+                </div>
+                {{#if scrivi}}
+                    <input type="number" class="m6-nemico-num" name="system.health.max" value="{{saluteMax}}" min="1" max="20" title="{{localize 'M6.Salute.Extra'}}" aria-label="{{localize 'M6.Salute.Extra'}}">
+                {{else}}
+                    <span class="m6-nemico-conto">{{salute.total}}/{{salute.max}}</span>
+                    <div class="m6-riga con-ventaglio m6-nemico-ventaglio-riga">
+                        <button type="button" class="m6-riga-tastino m6-ventaglio-tasto m6-nemico-mini" data-action="ventaglioToggle" title="{{localize 'M6.Nemico.SaluteRuota'}}" aria-label="{{localize 'M6.Nemico.SaluteRuota'}}"><i class="fa-solid fa-heart" aria-hidden="true"></i></button>
+                        {{!-- La sorgente della ruota: tre comandi (Danni, Riposo, Reset), come sulla scheda del mago. --}}
+                        <div class="m6-ventaglio m6-ventaglio-tre" role="group" aria-label="{{localize 'M6.Nemico.SaluteRuota'}}">
+                            <button type="button" class="m6-ventaglio-voce" style="--voce: 0" data-action="saluteDanni" title="{{localize 'M6.Salute.DanniHint'}}" aria-label="{{localize 'M6.Salute.Danni'}}"><i class="fa-solid fa-heart-crack" aria-hidden="true"></i><span>{{localize "M6.Salute.DanniBreve"}}</span></button>
+                            <button type="button" class="m6-ventaglio-voce" style="--voce: 1" data-action="saluteRiposo" title="{{localize 'M6.Salute.RiposoHint'}}" aria-label="{{localize 'M6.Salute.Riposo'}}"><i class="fa-solid fa-bed" aria-hidden="true"></i><span>{{localize "M6.Salute.Riposo"}}</span></button>
+                            <button type="button" class="m6-ventaglio-voce" style="--voce: 2" data-action="saluteReset" title="{{localize 'M6.Salute.ResetHint'}}" aria-label="{{localize 'M6.Salute.Reset'}}"><i class="fa-solid fa-eraser" aria-hidden="true"></i><span>{{localize "M6.Salute.Reset"}}</span></button>
+                        </div>
+                    </div>
+                {{/if}}
+            </div>
+        </div>
+
+        {{!-- L'Armatura, una cella per protezione: i punti si cliccano uno per uno; il nome sta nel sorvolo e nella pagina Oggetti. --}}
+        {{#each armature as |arm|}}
+            <div class="m6-nemico-cella" title="{{arm.name}} · {{arm.kindLabel}}">
+                <span class="m6-nemico-k">{{#if arm.mentale}}{{localize "M6.Nemico.ArmaturaMentale"}}{{else}}{{localize "M6.Nemico.Armatura"}}{{/if}}</span>
+                <div class="m6-nemico-cella-riga">
+                    <span class="m6-nemico-punti" role="group" aria-label="{{arm.name}}">
+                        {{#each arm.pips as |pip|}}<button type="button" class="m6-nemico-punto{{#if pip.pieno}} on{{/if}}" data-action="nemicoArmatura" data-item-id="{{arm.id}}" data-punti="{{pip.punti}}" aria-label="{{localize 'M6.Nemico.ArmaturaPunto' nome=arm.name n=pip.n pieno=arm.pieno}}" aria-pressed="{{pip.pieno}}"><i aria-hidden="true"></i></button>{{/each}}
+                    </span>
+                    <span class="m6-nemico-conto">{{arm.conto}}</span>
+                </div>
+            </div>
+        {{/each}}
+
+        <div class="m6-nemico-cella larga">
+            <span class="m6-nemico-k">{{localize "M6.Nemico.Condizioni"}}</span>
+            <div class="m6-nemico-cella-riga">
+                <div class="m6-nemico-conds">
+                    {{#each condizioni as |cond|}}
+                        <span class="m6-nemico-cond{{#if cond.suppressed}} spenta{{/if}}" title="{{cond.title}}">
+                            {{#if cond.list}}<span class="m6-cond-icona"><i style="-webkit-mask-image: url({{cond.img}}); mask-image: url({{cond.img}})"></i>{{#if cond.numeral}}<b>{{cond.numeral}}</b>{{/if}}</span>{{else if cond.img}}<img src="{{cond.img}}" alt="">{{/if}}
+                            <span class="m6-nemico-cond-nome">{{cond.nome}}</span>
+                            {{#if cond.malus}}<span class="m6-nemico-meno">{{cond.malus}}</span>{{/if}}
+                            <button type="button" class="m6-nemico-togli" data-action="condizioneToggle" data-condizione="{{cond.condizione}}" data-item-id="{{cond.id}}" title="{{localize 'M6.Nemico.CondizioneTogli'}}" aria-label="{{localize 'M6.Nemico.CondizioneTogli'}}: {{cond.nome}}"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+                        </span>
+                    {{else}}
+                        <span class="m6-nemico-nessuna">{{localize "M6.Nemico.Nessuna"}}</span>
+                    {{/each}}
+                </div>
+                {{!-- Il + apre la scelta delle Condizioni come sulla scheda del mago (29/9): le famiglie con le
+                     loro scale, ogni grado col numero romano, poi i lievi e lo scontro; un clic accende. --}}
+                <details class="m6-nemico-condizioni-tendina">
+                    <summary class="m6-nemico-mini" title="{{localize 'M6.Nemico.CondizioneAggiungi'}}" aria-label="{{localize 'M6.Nemico.CondizioneAggiungi'}}"><i class="fa-solid fa-plus" aria-hidden="true"></i></summary>
+                    <div class="m6-nemico-condizioni-scelta">
+                        {{#each condizioniScelta as |sezione|}}
+                            <div class="m6-cond-sezione sezione-{{sezione.id}}">
+                                <span class="m6-cond-sezione-nome">{{#if sezione.icon}}<span class="m6-cond-icona"><i style="-webkit-mask-image: url({{sezione.icon}}); mask-image: url({{sezione.icon}})"></i></span>{{/if}}{{sezione.label}}</span>
+                                {{#each sezione.scale as |scala|}}
+                                    <div class="m6-cond-scala">
+                                        {{#if scala.label}}<span class="m6-cond-scala-nome">{{scala.label}}</span>{{/if}}
+                                        <span class="m6-cond-voci">
+                                            {{#each scala.voci as |entry|}}
+                                                <button type="button" class="m6-cond-voce{{#if entry.active}} lit{{/if}}" data-action="condizioneToggle" data-condizione="{{entry.id}}" title="{{entry.title}}" aria-pressed="{{entry.active}}">{{#if entry.numeral}}<b class="m6-cond-grado">{{entry.numeral}}</b>{{/if}}<span>{{entry.name}}</span></button>
+                                            {{/each}}
+                                        </span>
+                                    </div>
+                                {{/each}}
+                            </div>
+                        {{/each}}
+                    </div>
+                </details>
+            </div>
+        </div>
+    </div>
+
+    <nav class="m6-nemico-pagine tabs" data-group="primary">
+        {{#each pagine as |pagina|}}
+            <button type="button" class="m6-nemico-pagina{{#if (eq pagina.id @root.tabAttiva)}} active{{/if}}" data-action="tab" data-group="primary" data-tab="{{pagina.id}}">{{pagina.label}}</button>
+        {{/each}}
+    </nav>
+</header>

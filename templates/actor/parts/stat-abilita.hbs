@@ -1,0 +1,108 @@
+{{!-- Abilità (16/9): per famiglia, il nome è il tasto che la mette nel tiro
+     (una sola). Le Specializzazioni (Blue, 26/9: via la finestra e la tendina,
+     «un menù a pop anti intuitivo») stanno in riga sotto l'Abilità, tre posti
+     (uno a 1 pallino, due a 3, tre a 5): ogni nome è una pastiglia che la
+     sceglie insieme all'Abilità, la × la toglie, e finché c'è posto una
+     casella tratteggiata ne scrive una nuova (a mano, o dai sei suggerimenti
+     del catalogo, a Invio). La riga si apre e si chiude con la freccetta fra
+     il nome e i pallini (Blue, 26/9 sera: «un compromesso tra prima e dopo»;
+     27/9: a sinistra della ×, coi pallini allineati), che porta il conto delle
+     scritte; nasce aperta se la sua Specializzazione è nel Tiro.
+     I pallini restano quelli della scheda. Le Abilità
+     Specifiche del giocatore chiudono la lista. Il tasto accanto al + (16/9
+     sera) scioglie le famiglie: tutte in fila, Specifiche comprese, in ordine
+     alfabetico, senza divisorie. --}}
+<section class="m6-riq m6-riq-abilita">
+    {{!-- Col memo di creazione acceso (23/9): il conto a destra del titolo (col premio della Sfida se c'è), il tetto se sforato. --}}
+    <header class="m6-riq-title{{#if memo.on}} memo-{{memo.boxes.abilita.state}}{{/if}}">
+        {{#if creazioneReset}}{{> "systems/m6/templates/actor/parts/reset-tasto.hbs" resetsById.skills}}{{/if}}
+        <span>{{localize "M6.Comuni.SkillsList.Skills"}}{{#if memo.on}} <b class="m6-memo-conto" title="{{localize 'M6.Riepilogo.Skills'}}">{{memo.boxes.abilita.text}}{{#if memo.boxes.abilita.sfida}} <small class="m6-memo-premio preso" title="{{localize 'M6.Riepilogo.SfidaPremi.skills'}}">+{{memo.boxes.abilita.sfida}} {{localize "M6.Tabs.Short.conceptChallenge"}}</small>{{/if}}{{#unless memo.boxes.abilita.tetto.ok}} <small class="m6-memo-avviso" title="{{localize 'M6.Riepilogo.SkillCap'}}"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i> {{localize "M6.Riepilogo.SkillCapBreve"}} {{memo.boxes.abilita.tetto.target}}</small>{{/unless}}</b>{{/if}}</span>
+        <button type="button" class="m6-riq-tasto-piccolo{{#if skillsFlat}} active{{/if}}" data-action="skillsFlatToggle" title="{{#if skillsFlat}}{{localize 'M6.Stat.AbilitaFamiglie'}}{{else}}{{localize 'M6.Stat.AbilitaInFila'}}{{/if}}" aria-label="{{#if skillsFlat}}{{localize 'M6.Stat.AbilitaFamiglie'}}{{else}}{{localize 'M6.Stat.AbilitaInFila'}}{{/if}}" aria-pressed="{{skillsFlat}}"><i class="fa-solid {{#if skillsFlat}}fa-layer-group{{else}}fa-arrow-down-a-z{{/if}}" aria-hidden="true"></i></button>
+        <button type="button" class="m6-riq-tasto-piccolo" data-action="customSkillAdd" title="{{localize 'M6.CustomSkills.Add'}}" aria-label="{{localize 'M6.CustomSkills.Add'}}" {{#if locked}}disabled{{/if}}><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+    </header>
+    <div class="m6-riq-body">
+        {{#each skillGroups as |group|}}
+            {{#if group.label}}<span class="m6-riq-occhiello">{{group.label}}</span>{{/if}}
+            <div class="m6-tratti-lista">
+                {{#each group.rows as |skill|}}
+                    {{#if skill.custom}}
+                        <div class="m6-riga m6-riga-tratto m6-riga-specifica{{#if skill.chosen}} scelta{{/if}}">
+                            {{!-- Il nome si scrive; la spunta a sinistra la mette nel tiro. --}}
+                            <button type="button" class="m6-riga-spunta-tasto" data-action="tiroSkill" data-key="custom:{{skill.id}}" aria-pressed="{{skill.chosen}}" title="{{localize 'M6.Tiro.SkillHint'}}"><span class="m6-riga-spunta" aria-hidden="true"></span></button>
+                            <input type="text" class="m6-custom-skill-name" name="flags.m6.customSkills.{{skill.id}}.name" value="{{skill.name}}" placeholder="{{localize 'M6.CustomSkills.NameHint'}}" aria-label="{{localize 'M6.CustomSkills.Name'}}" {{#if ../../locked}}disabled{{/if}}>
+                            <div class="resource-value" data-value="{{skill.value}}" data-name="flags.m6.customSkills.{{skill.id}}.value">
+                                <span class="resource-value-empty" data-action="dotCounterEmpty"></span>
+                                {{#numLoop 5}}
+                                    <span class="resource-value-step" data-action="dotCounterChange" data-index="{{this}}"></span>
+                                {{/numLoop}}
+                            </div>
+                            <button type="button" class="m6-custom-skill-delete" data-action="customSkillDelete" data-row="{{skill.id}}" title="{{localize 'M6.CustomSkills.Remove'}}" aria-label="{{localize 'M6.CustomSkills.Remove'}}" {{#if ../../locked}}disabled{{/if}}><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+                        </div>
+                    {{else}}
+                        <div class="m6-riga m6-riga-tratto m6-riga-abilita{{#if skill.chosen}} scelta{{/if}}{{#if skill.spec.slots}} con-specializzazioni{{#if skill.spec.chosen}} aperta{{/if}}{{/if}}" data-skill="{{skill.id}}">
+                            <button type="button" class="m6-riga-nome" data-action="tiroSkill" data-key="{{skill.key}}" aria-pressed="{{skill.chosen}}" title="{{localize 'M6.Tiro.SkillHint'}}">
+                                {{#if skill.icon}}<img class="m6-riga-icona" src="{{skill.icon}}" alt="">{{/if}}
+                                <span>{{skill.displayName}}</span>
+                            </button>
+                            {{#if skill.spec.slots}}
+                                {{!-- La freccetta (26/9 sera; 27/9: a sinistra della × dei pallini, così i pallini restano
+                                     allineati fra le righe): apre e chiude la riga delle Specializzazioni, col conto delle scritte. --}}
+                                <button type="button" class="m6-abilita-apri{{#if skill.spec.scritte.length}} piena{{/if}}" data-action="specialtyToggle" aria-expanded="{{#if skill.spec.chosen}}true{{else}}false{{/if}}" title="{{localize 'M6.Specialties.Apri'}}" aria-label="{{skill.displayName}}: {{localize 'M6.Specialties.Apri'}}">{{#if skill.spec.scritte.length}}<small>{{skill.spec.scritte.length}}</small>{{/if}}<i class="fa-solid fa-chevron-down" aria-hidden="true"></i></button>
+                            {{/if}}
+                            {{#if ../../settings.skillAttributeInputs}}
+                                {{#if ../../locked}}
+                                    <b>{{skill.value}}</b>
+                                {{else}}
+                                    <input class="resource-value skill-attribute-input" name="system.skills.{{skill.id}}.value" type="number" value="{{skill.value}}"/>
+                                {{/if}}
+                            {{else}}
+                                <div class="resource-value" data-value="{{skill.value}}" data-name="system.skills.{{skill.id}}.value">
+                                    <span class="resource-value-empty" data-action="essentialSkillClear"></span>
+                                    {{#numLoop 5}}
+                                        <span class="resource-value-step" data-action="essentialSkillDotChange" data-index="{{this}}"></span>
+                                    {{/numLoop}}
+                                </div>
+                            {{/if}}
+                            {{#if skill.spec.slots}}
+                                {{!-- Le Specializzazioni in riga (Blue, 26/9): le pastiglie (il clic nel tiro, la × toglie) e,
+                                     finché c'è posto, la casella tratteggiata che ne scrive una: a mano, o dai suggerimenti. --}}
+                                <div class="m6-specializzazioni" role="group" aria-label="{{skill.displayName}}: {{localize 'M6.Comuni.SkillsList.Specialties'}}">
+                                    {{#each skill.spec.scritte as |s|}}
+                                        <span class="m6-pastiglia m6-pastiglia-spec{{#if s.chosen}} scelta{{/if}}">
+                                            <button type="button" class="m6-pastiglia-nome" data-action="tiroSpecialty" data-key="{{skill.key}}" data-specialty="{{s.name}}" aria-pressed="{{s.chosen}}" title="{{localize 'M6.Tiro.SpecialtyHint'}}">{{s.name}}</button>
+                                            {{#unless @root.locked}}<button type="button" class="m6-pastiglia-via" data-action="specialtyDelete" data-skill="{{skill.id}}" data-index="{{s.index}}" title="{{localize 'M6.Specialties.Remove'}}" aria-label="{{localize 'M6.Specialties.Remove'}}: {{s.name}}">×</button>{{/unless}}
+                                        </span>
+                                    {{/each}}
+                                    {{#if skill.spec.free}}
+                                        <input type="text" class="m6-pastiglia-scrivi" list="m6-spec-{{@root.actor.id}}-{{skill.id}}" data-specialty-add="{{skill.id}}" data-skill-label="{{skill.displayName}}" placeholder="{{localize 'M6.Specialties.Scrivi'}}" title="{{localize 'M6.Specialties.ScriviHint' free=skill.spec.free slots=skill.spec.slots}}" aria-label="{{skill.displayName}}: {{localize 'M6.Specialties.Scrivi'}}" autocomplete="off" maxlength="30" {{#if @root.locked}}disabled{{/if}}>
+                                        {{#if skill.spec.suggestions.length}}<datalist id="m6-spec-{{@root.actor.id}}-{{skill.id}}">{{#each skill.spec.suggestions as |nome|}}<option value="{{nome}}"></option>{{/each}}</datalist>{{/if}}
+                                    {{/if}}
+                                </div>
+                            {{/if}}
+                        </div>
+                    {{/if}}
+                {{/each}}
+            </div>
+        {{/each}}
+
+        {{#if customSkills.length}}
+            <span class="m6-riq-occhiello">{{localize "M6.CustomSkills.Label"}}</span>
+            <div class="m6-tratti-lista">
+                {{#each customSkills as |skill|}}
+                    <div class="m6-riga m6-riga-tratto m6-riga-specifica{{#if skill.chosen}} scelta{{/if}}">
+                        {{!-- Il nome si scrive; la spunta a sinistra la mette nel tiro. --}}
+                        <button type="button" class="m6-riga-spunta-tasto" data-action="tiroSkill" data-key="custom:{{skill.id}}" aria-pressed="{{skill.chosen}}" title="{{localize 'M6.Tiro.SkillHint'}}"><span class="m6-riga-spunta" aria-hidden="true"></span></button>
+                        <input type="text" class="m6-custom-skill-name" name="flags.m6.customSkills.{{skill.id}}.name" value="{{skill.name}}" placeholder="{{localize 'M6.CustomSkills.NameHint'}}" aria-label="{{localize 'M6.CustomSkills.Name'}}" {{#if ../locked}}disabled{{/if}}>
+                        <div class="resource-value" data-value="{{skill.value}}" data-name="flags.m6.customSkills.{{skill.id}}.value">
+                            <span class="resource-value-empty" data-action="dotCounterEmpty"></span>
+                            {{#numLoop 5}}
+                                <span class="resource-value-step" data-action="dotCounterChange" data-index="{{this}}"></span>
+                            {{/numLoop}}
+                        </div>
+                        <button type="button" class="m6-custom-skill-delete" data-action="customSkillDelete" data-row="{{skill.id}}" title="{{localize 'M6.CustomSkills.Remove'}}" aria-label="{{localize 'M6.CustomSkills.Remove'}}" {{#if ../locked}}disabled{{/if}}><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+                    </div>
+                {{/each}}
+            </div>
+        {{/if}}
+    </div>
+</section>

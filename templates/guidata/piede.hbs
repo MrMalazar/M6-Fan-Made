@@ -1,0 +1,14 @@
+{{!-- Il piede: Indietro, la nota di quel che è già scritto sulla scheda, Avanti col nome del passo dopo. --}}
+<footer class="m6-guidata-piede">
+    {{#if indietro}}
+        <button type="button" class="m6-guidata-tasto fantasma" data-action="passoVai" data-passo="{{indietro.n}}"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i> {{localize "M6.Guidata.Indietro"}}</button>
+    {{else}}
+        <span></span>
+    {{/if}}
+    <span class="m6-guidata-nota"><i class="fa-solid fa-circle-check" aria-hidden="true"></i> {{nota}}</span>
+    {{#if avanti}}
+        <button type="button" class="m6-guidata-tasto avanti" data-action="passoVai" data-passo="{{avanti.n}}">{{localize "M6.Guidata.Avanti" passo=avanti.label}} <i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>
+    {{else}}
+        <button type="button" class="m6-guidata-tasto avanti{{#if done.controllo}} pronto{{/if}}" data-action="chiudi">{{#if done.controllo}}{{localize "M6.Guidata.Pronto"}}{{else}}{{localize "M6.Guidata.Chiudi"}}{{/if}} <i class="fa-solid fa-wand-sparkles" aria-hidden="true"></i></button>
+    {{/if}}
+</footer>

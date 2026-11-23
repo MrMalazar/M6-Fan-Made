@@ -72,6 +72,8 @@ jobs:
           mkdir -p dist/.release-stage
           cp system.json dist/.release-stage/
           cp -r assets lang scripts styles templates dist/.release-stage/
+          mkdir -p dist/.release-stage/packs
+          cp packs/*.db dist/.release-stage/packs/
           find dist/.release-stage -name .gitkeep -delete
           (cd dist/.release-stage && zip -qr ../m6.zip .)
           cp system.json dist/system.json

@@ -1,0 +1,164 @@
+import { SCOPE_ALIASES } from "./scopes.js";
+import { MODULE_ID } from "./constants.js";
+import {
+  AFFINITY_SPHERE_FLAG,
+  affinitySphereFromItem,
+  getAffinitySpherePackId
+} from "./affinity-sphere-data.js";
+import { prepareSpheres } from "./spheres.js";
+
+/**
+ * Le Specialità delle Sfere (ramo A, 4/9/2026): al terzo pallino di una
+ * Sfera il giocatore sceglie uno dei suoi poteri passivi, letti dal
+ * compendio delle Sfere; il quarto e il quinto pallino ne danno un'altra
+ * l'uno (tre a Sfera piena). Non esiste più la Sfera affine. Il potere
+ * dell'Ambito fa contare quell'Ambito come il minore fra il livello della
+ * Sfera e il suo, senza pesare come Ambito in più nella soglia.
+ */
+export const SPECIALTY_MIN_RATING = 3;
+export const SPHERE_SPECIALTIES_FLAG = "sphereSpecialties";
+
+function readPowers(item) {
+  if (typeof item?.getFlag === "function") return item.getFlag(MODULE_ID, AFFINITY_SPHERE_FLAG);
+  return item?.flags?.[MODULE_ID]?.[AFFINITY_SPHERE_FLAG];
+}
+
+// I poteri letti una volta per lingua: il compendio non cambia in sessione,
+// e rileggerlo a ogni render della scheda la rallentava (4/9 notte).
+const powersCache = new Map();
+
+export function clearSpherePowersCache() {
+  powersCache.clear();
+}
+
+/** I poteri passivi di ogni Sfera, dal compendio nella lingua attiva. */
+export async function loadSpherePowers({
+  getPack = (packId) => globalThis.game?.packs?.get?.(packId),
+  lang = globalThis.game?.i18n?.lang,
+  cache = true
+} = {}) {
+  const packId = getAffinitySpherePackId(lang);
+  if (cache && powersCache.has(packId)) return powersCache.get(packId);
+  const load = (async () => {
+    const pack = getPack?.(packId);
+    const documents = (await pack?.getDocuments?.()) ?? [];
+    const powers = {};
+    for (const item of documents) {
+      const sphere = affinitySphereFromItem(item);
+      if (sphere) powers[sphere.id] = sphere;
+    }
+    return powers;
+  })();
+  if (cache) {
+    powersCache.set(packId, load);
+    load.catch(() => powersCache.delete(packId));
+  }
+  return load;
+}
+
+/** Quante Specialità dà una Sfera: una al terzo pallino, poi una per pallino. */
+export function specialtySlots(rating) {
+  return Math.max(Math.trunc(Number(rating) || 0) - (SPECIALTY_MIN_RATING - 1), 0);
+}
+
+/**
+ * Le scelte salvate: Sfera → lista degli id dei poteri, uno per slot.
+ * Le schede vecchie tenevano una stringa sola: vale come primo slot.
+ */
+export function slotKey(index) {
+  return `slot${index}`;
+}
+
+function slotNumber(key) {
+  const match = String(key).match(/^(?:slot)?(\d+)$/);
+  return match ? Number(match[1]) : NaN;
+}
+
+export function getSphereSpecialtyChoices(actor) {
+  const stored = actor.getFlag(MODULE_ID, SPHERE_SPECIALTIES_FLAG);
+  if (!stored || typeof stored !== "object") return {};
+  return Object.fromEntries(
+    Object.entries(stored).map(([sphereId, choice]) => {
+      if (typeof choice === "string") return [sphereId, [choice]];
+      if (!choice || typeof choice !== "object") return [sphereId, []];
+      // Le chiavi sono slot1, slot2, slot3 (le chiavi numeriche di prima
+      // diventavano un array e perdevano il primo slot); un array vecchio
+      // si legge posizione per posizione.
+      const entries = Array.isArray(choice)
+        ? choice.map((value, index) => [index + 1, value])
+        : Object.entries(choice).map(([key, value]) => [slotNumber(key), value]);
+      const list = [];
+      for (const [slot, value] of entries) {
+        if (!Number.isInteger(slot) || slot < 1) continue;
+        list[slot - 1] = String(value ?? "");
+      }
+      return [sphereId, Array.from(list, (value) => value ?? "")];
+    })
+  );
+}
+
+/**
+ * Le righe della scheda: una per Sfera sbloccata con almeno tre pallini,
+ * con uno slot per Specialità (tre a cinque pallini), la tendina dei poteri
+ * e la descrizione di quello scelto. Un potere preso in uno slot non si
+ * ripete negli altri.
+ */
+export function prepareSphereSpecialties(actor, { powers = {}, localize = (key) => key, locale } = {}) {
+  const choices = getSphereSpecialtyChoices(actor);
+  const spheres = prepareSpheres(actor, { localize, locale }).selected;
+
+  return spheres
+    .filter((sphere) => sphere.value >= SPECIALTY_MIN_RATING)
+    .map((sphere) => {
+      const abilities = powers[sphere.id]?.abilities ?? [];
+      const known = (id) => abilities.some((ability) => ability.id === id);
+      const picked = (choices[sphere.id] ?? []).map((id) => (known(id) ? id : ""));
+      const slots = Array.from({ length: specialtySlots(sphere.value) }, (_, index) => {
+        const choice = picked[index] ?? "";
+        const chosen = abilities.find((ability) => ability.id === choice) ?? null;
+        return {
+          index: index + 1,
+          key: slotKey(index + 1),
+          choice,
+          options: abilities.map((ability) => ({
+            id: ability.id,
+            label: ability.label,
+            kind: ability.kind,
+            selected: ability.id === choice,
+            taken: ability.id !== choice && picked.includes(ability.id)
+          })),
+          chosen: chosen
+            ? { label: chosen.label, kind: chosen.kind, description: chosen.description }
+            : null
+        };
+      });
+      return {
+        id: sphere.id,
+        label: sphere.label,
+        icon: sphere.icon,
+        value: sphere.value,
+        hasPowers: abilities.length > 0,
+        slots
+      };
+    });
+}
+
+/**
+ * Per il tiro: le Sfere che hanno scelto il potere dell'Ambito, con
+ * l'Ambito che coprono. Conta solo dal terzo pallino.
+ */
+export function specialtyScopes(actor, powers = {}) {
+  const choices = getSphereSpecialtyChoices(actor);
+  const spheres = prepareSpheres(actor).all;
+  const map = {};
+  for (const sphere of spheres) {
+    if (sphere.value < SPECIALTY_MIN_RATING) continue;
+    const picked = (choices[sphere.id] ?? []).slice(0, specialtySlots(sphere.value));
+    const ability = (powers[sphere.id]?.abilities ?? [])
+      .find((entry) => picked.includes(entry.id) && ["ambito", "scope"].includes(entry.kind));
+    // L'Area di ieri è una lente dei Bersagli (23/9): la Specialità di
+    // Materia sull'Area vale sui Bersagli, finché Blue non la riassegna.
+    if (ability) map[sphere.id] = SCOPE_ALIASES[ability.id] ?? ability.id;
+  }
+  return map;
+}

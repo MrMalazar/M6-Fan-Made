@@ -1,0 +1,19 @@
+{{!-- La testa del Quadro (24/9): i tre modi come bottoni, la scena in corso, la riserva. --}}
+<div class="m6-quadro-testa">
+    <div class="m6-quadro-modi" role="tablist">
+        {{#each modi as |m|}}
+            <button type="button" class="m6-quadro-modo{{#if m.attivo}} attivo{{/if}}" data-action="modo" data-modo="{{m.id}}" role="tab" aria-selected="{{m.attivo}}"><i class="{{m.icona}}" aria-hidden="true"></i> {{m.label}}</button>
+        {{/each}}
+    </div>
+    <div class="m6-quadro-stato">
+        <span class="m6-quadro-pill"><i class="{{scena.icona}}" aria-hidden="true"></i> {{scena.nome}} · {{scena.numero}}</span>
+        {{#if posto}}<span class="m6-quadro-pill tenue">{{posto}}</span>{{/if}}
+        {{#if round}}<span class="m6-quadro-pill tenue">{{localize "M6.Menu.Giro"}} {{round}}</span>{{/if}}
+        <span class="m6-quadro-riserva">{{localize "M6.Menu.Riserva"}} <b>{{points}}</b></span>
+    </div>
+    {{#if orologiMini.length}}
+        <div class="m6-quadro-orologi-mini" aria-label="{{localize 'M6.Menu.InScena'}}">
+            {{#each orologiMini as |c|}}<span class="mini" title="{{c.titolo}} · {{c.pieni}}/{{c.segmenti}}">{{{c.svg}}}<span class="nome">{{c.titolo}}</span><b>{{c.pieni}}/{{c.segmenti}}</b></span>{{/each}}
+        </div>
+    {{/if}}
+</div>

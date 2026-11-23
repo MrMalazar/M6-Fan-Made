@@ -1,0 +1,464 @@
+/**
+ * Il verdetto del Narratore (Blue, 16/9 sera): quando un giocatore lancia
+ * il tiro, al Narratore compare una finestra col tiro com'è (chi, cosa,
+ * Riserva, Difficoltà, dadi) e parte un conto alla rovescia di cinque
+ * secondi (Blue, 27/9: erano dieci). In quei secondi il Narratore può
+ * alzare o abbassare la Difficoltà o i dadi; può anche cliccare OK e il
+ * tiro parte subito. Se non tocca niente, allo scadere il tiro prosegue
+ * com'era.
+ *
+ * Il giro passa dal socket del modulo: il giocatore manda la richiesta a
+ * tutti i Narratori collegati (27/9: non più a uno solo), il primo che
+ * risponde manda il verdetto e chiude la finestra agli altri, il giocatore
+ * tira. Se non c'è un Narratore collegato, o chi tira è un Narratore, o il
+ * giocatore ha spento «Dal Narratore» nel riquadro del Tiro, il tiro parte
+ * senza fermarsi. Se nessuno risponde entro il tempo (i moduli spenti, la
+ * finestra chiusa male), il tiro parte lo stesso.
+ *
+ * Le funzioni pure stanno sopra e si collaudano da sole; quelle che
+ * parlano con Foundry (socket, finestra) stanno sotto.
+ */
+import { MODULE_ID } from "./constants.js";
+
+/** I secondi del conto alla rovescia del Narratore (Blue, 27/9: cinque, non più dieci). */
+export const VERDETTO_SECONDI = 5;
+/** Quanto aspetta il giocatore prima di tirare da solo: il conto più un margine. */
+export const VERDETTO_ATTESA_MS = (VERDETTO_SECONDI + 5) * 1000;
+/** L'impostazione (per client) «Dal Narratore»: il tiro passa dal Narratore, o parte subito. */
+export const TIRO_NARRATORE_SETTING = "tiroDalNarratore";
+/** Il canale del modulo. */
+export const SOCKET_NAME = `system.${MODULE_ID}`;
+/** I due messaggi. */
+export const TIPO_RICHIESTA = "tiro:richiesta";
+export const TIPO_VERDETTO = "tiro:verdetto";
+
+function count(value) {
+  return Math.max(Math.trunc(Number(value) || 0), 0);
+}
+
+function delta(value) {
+  return Math.trunc(Number(value) || 0);
+}
+
+/** I Narratori collegati che non sono chi tira: a tutti loro va la richiesta (Blue, 27/9). */
+export function narratoriAttivi(users, user = null) {
+  const lista = Array.isArray(users) ? users : Array.isArray(users?.contents) ? users.contents : Array.from(users ?? []);
+  return lista.filter((u) => u && u.active && u.isGM && String(u.id) !== String(user?.id ?? ""));
+}
+
+/** A chi va un messaggio: la lista dei destinatari, sempre come stringhe. */
+export function destinatari(payload) {
+  return [].concat(payload?.to ?? []).map((id) => String(id ?? "")).filter(Boolean);
+}
+
+/** Il messaggio è per me? */
+export function perMe(payload, me) {
+  return Boolean(me) && destinatari(payload).includes(String(me));
+}
+
+/**
+ * Serve il verdetto? Solo se chi tira lo vuole («Dal Narratore» acceso),
+ * c'è almeno un Narratore collegato, e non è un Narratore a tirare.
+ */
+export function serveVerdetto({ user, narratori = [], scelto = true } = {}) {
+  return Boolean(scelto) && Boolean(user?.id) && !user?.isGM && (narratori?.length ?? 0) > 0;
+}
+
+/** «Dal Narratore» (Blue, 27/9): la scelta di chi tira, per client; senza impostazione vale sì. */
+export function dalNarratore() {
+  try {
+    const value = globalThis.game?.settings?.get?.(MODULE_ID, TIRO_NARRATORE_SETTING);
+    return value === undefined || value === null ? true : Boolean(value);
+  } catch {
+    return true;
+  }
+}
+
+/** Accende o spegne «Dal Narratore» per questo client. */
+export async function scriviDalNarratore(value) {
+  try {
+    await globalThis.game?.settings?.set?.(MODULE_ID, TIRO_NARRATORE_SETTING, Boolean(value));
+  } catch {
+    /* senza l'impostazione registrata resta il valore di partenza */
+  }
+  return dalNarratore();
+}
+
+/**
+ * La richiesta che il giocatore manda ai Narratori (`to`: tutti i loro id).
+ * `condizioni` (29/9): quelle che pesano sul tiro in una riga, quelle che
+ * il giocatore ha tolto, e se il tiro fallisce per una di loro.
+ */
+export function richiestaTiro({ id, from, to, actorId = "", actorName = "", title = "", magick = false, kind = "", pool = 0, difficulty = 0, successFrom = 6, condizioni = null, sogliaBase = 0 } = {}) {
+  return {
+    type: TIPO_RICHIESTA,
+    id: String(id ?? ""),
+    from: String(from ?? ""),
+    to: destinatari({ to }),
+    actorId: String(actorId ?? ""),
+    actorName: String(actorName ?? ""),
+    title: String(title ?? ""),
+    magick: Boolean(magick),
+    kind: String(kind ?? ""),
+    pool: count(pool),
+    difficulty: count(difficulty),
+    successFrom: count(successFrom) || 6,
+    // La soglia di un lancio prima che qualcuno la ritocchi a mano (0 nei tiri di Abilità, che non hanno conto).
+    sogliaBase: magick ? count(sogliaBase) : 0,
+    condizioni: {
+      testo: String(condizioni?.testo ?? ""),
+      fuori: [].concat(condizioni?.fuori ?? []).map(String).filter(Boolean),
+      fallisce: Boolean(condizioni?.fallisce),
+      dadi: Math.min(delta(condizioni?.dadi), 0),
+      // I dadi che si tirerebbero se le Condizioni non contassero (tornano quelli tolti, e la riserva non è dimezzata).
+      dadiSenza: count(condizioni?.dadiSenza ?? pool)
+    }
+  };
+}
+
+/**
+ * Il verdetto che il Narratore rimanda: la Difficoltà com'è adesso e i dadi
+ * in più o in meno; `from` e `fromName` dicono quale Narratore ha risposto.
+ */
+export function verdettoTiro(richiesta, { difficulty, dice, senzaCondizioni = false } = {}, { from = "", fromName = "" } = {}) {
+  const nuova = difficulty === null || difficulty === undefined || difficulty === "" ? count(richiesta?.difficulty) : count(difficulty);
+  const dadi = delta(dice);
+  // Le Condizioni non contano (29/9): il Narratore decide che su questo tiro non c'entrano.
+  const via = Boolean(senzaCondizioni) && Boolean(richiesta?.condizioni?.testo);
+  return {
+    type: TIPO_VERDETTO,
+    id: String(richiesta?.id ?? ""),
+    from: String(from || destinatari(richiesta)[0] || ""),
+    fromName: String(fromName ?? ""),
+    to: String(richiesta?.from ?? ""),
+    difficulty: nuova,
+    dice: dadi,
+    senzaCondizioni: via,
+    touched: nuova !== count(richiesta?.difficulty) || dadi !== 0 || via
+  };
+}
+
+/** Il tetto della soglia: 7 in un tiro di Abilità, 10 in un lancio di Magick. Il fondo è 1. */
+export const SOGLIA_VERDETTO_MAX = Object.freeze({ abilita: 7, magick: 10 });
+
+/** La soglia che il Narratore scrive, dentro la scala del tiro. */
+export function sogliaVerdetto(value, magick = false) {
+  return Math.min(Math.max(count(value), 1), magick ? SOGLIA_VERDETTO_MAX.magick : SOGLIA_VERDETTO_MAX.abilita);
+}
+
+/**
+ * La mano sulla soglia di un lancio va oltre il metro delle penalità (Blue,
+ * 15/11): il Narratore la sposta liberamente, ma oltre +3 o −3 dal conto il
+ * numero diventa rosso, a ricordarlo. Nei tiri di Abilità non c'è conto, e
+ * il rosso non serve.
+ */
+export function sogliaOltre(richiesta, value) {
+  const base = count(richiesta?.sogliaBase);
+  if (!richiesta?.magick || !base) return false;
+  return Math.abs(count(value) - base) > 3;
+}
+
+/** I dadi che si tirano con questi numeri: tutta la riserva, coi dadi del Narratore (il Sistema: la soglia non ne toglie). */
+export function dadiVerdetto({ pool = 0, dice = 0 } = {}) {
+  return Math.max(count(pool) + delta(dice), 0);
+}
+
+/**
+ * Il conto del tiro col verdetto sopra: la riserva prende i dadi del
+ * Narratore, la Difficoltà è la sua. Senza verdetto (o senza ritocchi) il
+ * conto torna com'era.
+ */
+export function applicaVerdetto(conto, verdetto) {
+  if (!verdetto?.touched) return conto;
+  // Senza le Condizioni: tornano i dadi che toglievano, la riserva non è più dimezzata, e il tiro non fallisce più.
+  const via = Boolean(verdetto.senzaCondizioni) && Boolean(conto?.condizioni);
+  const base = via ? count(conto.condizioni.dadiSenza ?? conto?.pool) : count(conto?.pool);
+  const pool = Math.max(base + delta(verdetto.dice), 0);
+  // La soglia del Narratore: i successi che servono, dentro la scala del tiro (1-7 l'Abilità, 1-10 la Magick).
+  const difficulty = sogliaVerdetto(verdetto.difficulty, Boolean(conto?.magick));
+  const fallisce = via ? false : Boolean(conto?.fallisce);
+  const dice = fallisce ? 0 : pool;
+  return {
+    ...conto,
+    pool,
+    difficulty,
+    dice,
+    impossible: dice === 0,
+    fallisce,
+    condizioniVia: via,
+    narratore: { difficultyBefore: count(conto?.difficulty), difficulty, dice: delta(verdetto.dice), name: String(verdetto.fromName ?? "") }
+  };
+}
+
+/** La nota in carta: cosa ha toccato il Narratore (col nome, se più d'uno può rispondere), o niente. */
+export function notaVerdetto(conto, format = (key, data) => `${key} ${JSON.stringify(data)}`) {
+  const n = conto?.narratore;
+  if (!n) return "";
+  const parti = [];
+  if (conto?.condizioniVia) parti.push(format("M6.Verdetto.NoteCondizioni", {}));
+  if (n.difficulty !== n.difficultyBefore) parti.push(format("M6.Verdetto.NoteDifficulty", { before: n.difficultyBefore, after: n.difficulty }));
+  if (n.dice) parti.push(format("M6.Verdetto.NoteDice", { dice: `${n.dice > 0 ? "+" : ""}${n.dice}` }));
+  if (!parti.length) return "";
+  return n.name
+    ? format("M6.Verdetto.NoteChi", { name: n.name, changes: parti.join(" · ") })
+    : format("M6.Verdetto.Note", { changes: parti.join(" · ") });
+}
+
+/** I secondi che restano, da quando è partito il conto. */
+export function secondiRimasti(startMs, nowMs, total = VERDETTO_SECONDI) {
+  const passed = Math.floor((Number(nowMs) - Number(startMs)) / 1000);
+  return Math.max(total - Math.max(passed, 0), 0);
+}
+
+/* ------------------------------------------------------------------ */
+/* Foundry: il socket e la finestra.                                   */
+/* ------------------------------------------------------------------ */
+
+/** Le richieste in attesa di verdetto, per id: chi risolve e il timer di sicurezza. */
+const inAttesa = new Map();
+/** I personaggi con un tiro già mandato al Narratore: niente doppio clic. */
+const attoriInAttesa = new Set();
+
+/** Un tiro di questo personaggio è già dal Narratore? */
+export function tiroInAttesa(actorId) {
+  return attoriInAttesa.has(String(actorId ?? ""));
+}
+
+/**
+ * Il giocatore chiede il verdetto: manda la richiesta a tutti i Narratori
+ * collegati e aspetta il primo che risponde. Torna il verdetto, o null se
+ * non serve (nessun Narratore, è un Narratore a tirare, «Dal Narratore»
+ * spento) o se nessuno risponde in tempo.
+ */
+export function chiediVerdetto({ actor, title = "", magick = false, kind = "", conto = {}, condizioni = null } = {}) {
+  const user = globalThis.game?.user;
+  const narratori = narratoriAttivi(globalThis.game?.users, user);
+  const socket = globalThis.game?.socket;
+  if (!socket?.emit || !serveVerdetto({ user, narratori, scelto: dalNarratore() })) return Promise.resolve(null);
+  const id = globalThis.foundry?.utils?.randomID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const richiesta = richiestaTiro({
+    id,
+    from: user.id,
+    to: narratori.map((u) => u.id),
+    actorId: actor?.id ?? "",
+    actorName: actor?.name ?? "",
+    title,
+    magick,
+    kind,
+    pool: conto.pool,
+    difficulty: conto.difficulty,
+    successFrom: conto.successFrom,
+    condizioni,
+    // La soglia del lancio senza ritocchi a mano: il Narratore vede in rosso quando se ne allontana di più di 3.
+    sogliaBase: conto.sogliaSenzaMano
+  });
+  const actorKey = String(actor?.id ?? "");
+  attoriInAttesa.add(actorKey);
+  const format = globalThis.game?.i18n?.format?.bind(globalThis.game.i18n) ?? ((key) => key);
+  globalThis.ui?.notifications?.info?.(format(narratori.length > 1 ? "M6.Verdetto.SentMany" : "M6.Verdetto.Sent", { seconds: VERDETTO_SECONDI, count: narratori.length }));
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      inAttesa.delete(id);
+      attoriInAttesa.delete(actorKey);
+      resolve(null);
+    }, VERDETTO_ATTESA_MS);
+    inAttesa.set(id, { resolve, timer, actorKey });
+    socket.emit(SOCKET_NAME, richiesta);
+  });
+}
+
+/** Il verdetto arrivato: chiude l'attesa di quella richiesta. */
+export function riceviVerdetto(verdetto) {
+  const pending = inAttesa.get(String(verdetto?.id ?? ""));
+  if (!pending) return false;
+  clearTimeout(pending.timer);
+  inAttesa.delete(String(verdetto.id));
+  attoriInAttesa.delete(pending.actorKey);
+  pending.resolve(verdetto);
+  return true;
+}
+
+/**
+ * Il messaggio sul socket: la richiesta ai Narratori, il verdetto al
+ * giocatore. Il verdetto di un altro Narratore passa anche da me: se ho
+ * ancora la finestra su quel tiro, si chiude senza rispondere (27/9).
+ */
+export async function onSocketVerdetto(payload) {
+  const me = globalThis.game?.user?.id;
+  if (!payload || !me) return;
+  if (payload.type === TIPO_RICHIESTA) {
+    if (perMe(payload, me)) return apriFinestraVerdetto(payload);
+    return;
+  }
+  if (payload.type === TIPO_VERDETTO) {
+    if (perMe(payload, me)) { riceviVerdetto(payload); return; }
+    if (String(payload.from ?? "") !== String(me)) chiudiFinestraVerdetto(payload.id, payload);
+  }
+}
+
+/** Le finestre del verdetto aperte su questo client, per id del tiro. */
+const finestre = new Map();
+
+/** C'è una finestra aperta su questo tiro? */
+export function finestraAperta(id) {
+  return finestre.has(String(id ?? ""));
+}
+
+/** Un altro Narratore ha risposto: la finestra su quel tiro si chiude senza mandare niente. */
+export function chiudiFinestraVerdetto(id, verdetto = null) {
+  const stato = finestre.get(String(id ?? ""));
+  if (!stato) return false;
+  stato.altrui = verdetto ?? {};
+  stato.ferma?.();
+  stato.dialog?.close?.();
+  return true;
+}
+
+/** Si aggancia al canale del modulo (main.js, a Foundry pronto). */
+export function registraSocketVerdetto() {
+  const socket = globalThis.game?.socket;
+  if (!socket?.on) return false;
+  socket.on(SOCKET_NAME, (payload) => { onSocketVerdetto(payload); });
+  return true;
+}
+
+/** Il contesto della finestra del Narratore (con quanti altri la vedono). */
+export function contestoVerdetto(richiesta, localize = (key) => key, format = (key, data) => `${key} ${JSON.stringify(data)}`) {
+  const altri = Math.max(destinatari(richiesta).length - 1, 0);
+  return {
+    altri,
+    altriTesto: altri ? format("M6.Verdetto.Altri", { count: altri }) : "",
+    actorName: richiesta.actorName,
+    title: richiesta.title,
+    kindLabel: richiesta.magick
+      ? `${localize("M6.Tiro.KindMagick")}${richiesta.kind ? ` · ${localize(`M6.Tiro.Kinds.${richiesta.kind}`)}` : ""}`
+      : localize("M6.Tiro.KindSkill"),
+    pool: richiesta.pool,
+    difficulty: richiesta.difficulty,
+    difficultyMax: richiesta.magick ? SOGLIA_VERDETTO_MAX.magick : SOGLIA_VERDETTO_MAX.abilita,
+    // La soglia arriva già ritoccata dal giocatore oltre ±3: parte in rosso.
+    oltre: sogliaOltre(richiesta, richiesta.difficulty),
+    dice: richiesta.condizioni?.fallisce ? 0 : dadiVerdetto(richiesta),
+    successFrom: richiesta.successFrom,
+    // Le Condizioni (29/9): quelle che pesano, quelle tolte dal giocatore, e la casella per dire che non contano.
+    condizioni: richiesta.condizioni?.testo ? {
+      testo: richiesta.condizioni.testo,
+      fallisce: Boolean(richiesta.condizioni.fallisce)
+    } : null,
+    fuori: (richiesta.condizioni?.fuori ?? []).length ? format("M6.Verdetto.CondizioniFuori", { list: richiesta.condizioni.fuori.join(", ") }) : "",
+    seconds: VERDETTO_SECONDI
+  };
+}
+
+/** Legge la finestra: la Difficoltà scritta e i dadi in più o in meno. */
+export function leggiVerdetto(root) {
+  return {
+    difficulty: root?.querySelector?.("[name=difficulty]")?.value,
+    dice: root?.querySelector?.("[name=dice]")?.value,
+    senzaCondizioni: Boolean(root?.querySelector?.("[name=senzaCondizioni]")?.checked)
+  };
+}
+
+/**
+ * Cabla la finestra: il meno e il più sui due numeri, i dadi che si
+ * tirano ricalcolati a ogni tocco, il conto alla rovescia che allo
+ * scadere preme OK da solo. `now` e `tick` servono al collaudo.
+ */
+export function cablaVerdetto(root, richiesta, submit, { now = () => Date.now(), tick = (fn) => setInterval(fn, 250), stop = (h) => clearInterval(h) } = {}) {
+  if (!root) return () => {};
+  const difficolta = root.querySelector("[name=difficulty]");
+  const dadi = root.querySelector("[name=dice]");
+  const uscita = root.querySelector("[data-role=dadi]");
+  const secondi = root.querySelector("[data-role=secondi]");
+  const senza = root.querySelector("[name=senzaCondizioni]");
+  const riuscita = root.querySelector("[data-role=riuscita]");
+  const ricalcola = () => {
+    // Le Condizioni (29/9): se fanno fallire il tiro i dadi sono zero; se il Narratore dice che non contano, tornano i loro.
+    const via = Boolean(senza?.checked);
+    const fallisce = Boolean(richiesta.condizioni?.fallisce) && !via;
+    const base = via ? count(richiesta.condizioni?.dadiSenza ?? richiesta.pool) : count(richiesta.pool);
+    if (uscita) uscita.textContent = String(fallisce ? 0 : dadiVerdetto({ pool: base, dice: dadi?.value }));
+    if (riuscita) riuscita.textContent = String(richiesta.successFrom);
+    // Oltre +3 o −3 dal conto del lancio la soglia si segna in rosso.
+    difficolta?.classList?.toggle?.("oltre", sogliaOltre(richiesta, difficolta.value));
+  };
+  root.addEventListener("click", (event) => {
+    const button = event.target?.closest?.("[data-campo]");
+    if (!button) return;
+    event.preventDefault();
+    const input = button.dataset.campo === "dice" ? dadi : difficolta;
+    if (!input) return;
+    if (button.dataset.campo === "dice") input.value = String(delta(input.value) + delta(button.dataset.delta));
+    else input.value = String(sogliaVerdetto(delta(input.value) + delta(button.dataset.delta), Boolean(richiesta.magick)));
+    ricalcola();
+  });
+  root.addEventListener("input", ricalcola);
+  root.addEventListener("change", ricalcola);
+  ricalcola();
+  const start = now();
+  let done = false;
+  const handle = tick(() => {
+    if (done) return;
+    if (!root.isConnected && root.ownerDocument) { done = true; stop(handle); return; }
+    const left = secondiRimasti(start, now());
+    if (secondi) secondi.textContent = String(left);
+    if (left <= 0) {
+      done = true;
+      stop(handle);
+      submit?.();
+    }
+  });
+  return () => { done = true; stop(handle); };
+}
+
+/**
+ * La finestra del Narratore: OK o lo scadere del tempo rimandano il verdetto
+ * al giocatore, col nome di chi ha risposto. Se nel frattempo ha risposto un
+ * altro Narratore, la finestra si chiude e da qui non parte niente.
+ */
+export async function apriFinestraVerdetto(richiesta) {
+  const localize = (key) => globalThis.game?.i18n?.localize?.(key) ?? key;
+  const format = globalThis.game?.i18n?.format?.bind(globalThis.game.i18n) ?? ((key, data) => `${key} ${JSON.stringify(data)}`);
+  const socket = globalThis.game?.socket;
+  const id = String(richiesta?.id ?? "");
+  const stato = { dialog: null, ferma: () => {}, altrui: null };
+  finestre.set(id, stato);
+  let letto = null;
+  try {
+    const content = await globalThis.foundry.applications.handlebars.renderTemplate(
+      `systems/${MODULE_ID}/templates/dialogs/verdetto-narratore.hbs`,
+      contestoVerdetto(richiesta, localize, format)
+    );
+    letto = await globalThis.foundry.applications.api.DialogV2.wait({
+      window: { title: localize("M6.Verdetto.Title") },
+      classes: ["m6", "m6-verdetto-finestra"],
+      position: { width: 420 },
+      content,
+      buttons: [{
+        action: "ok",
+        label: "M6.Verdetto.Ok",
+        icon: "fa-solid fa-check",
+        default: true,
+        callback: (event, button, dialog) => { stato.ferma(); return leggiVerdetto(dialog?.element ?? button?.form); }
+      }],
+      rejectClose: false,
+      render: (event, dialog) => {
+        const root = dialog?.element ?? dialog;
+        stato.dialog = dialog;
+        stato.ferma = cablaVerdetto(root, richiesta, () => root?.querySelector?.('button[data-action="ok"]')?.click());
+        if (stato.altrui) dialog?.close?.();
+      }
+    });
+  } catch (error) {
+    console.warn("m6 | La finestra del verdetto non si è aperta: il tiro prosegue com'era.", error);
+  }
+  finestre.delete(id);
+  if (stato.altrui) {
+    globalThis.ui?.notifications?.info?.(format("M6.Verdetto.Altrui", { actor: String(richiesta?.actorName ?? ""), name: String(stato.altrui.fromName || "") || localize("M6.Verdetto.AltroNarratore") }));
+    return null;
+  }
+  const me = globalThis.game?.user;
+  const verdetto = verdettoTiro(richiesta, letto ?? {}, { from: me?.id ?? "", fromName: me?.name ?? "" });
+  socket?.emit?.(SOCKET_NAME, verdetto);
+  return verdetto;
+}

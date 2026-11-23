@@ -1,0 +1,63 @@
+{{!-- La finestra di conferma: la riserva, che si tira tutta, la soglia (i
+     successi che servono), la riga viva e i rossi della Ruota, che non si
+     toccano. Nei tiri di Abilità i rossi non ci sono. --}}
+<div class="dice-group-header flex-group-center m6-ramoc-head">
+    <label>{{#if onlyParadox}}{{localize "M6.Dice.ParadoxDice"}}{{else}}{{localize "M6.RamoC.Pool"}}{{/if}}</label>
+    {{#if showReds}}{{#unless onlyParadox}}<label>{{localize "M6.Dice.ParadoxDice"}}</label>{{/unless}}{{/if}}
+</div>
+
+<div class="base-dice-group flex-group-center">
+    {{#unless onlyParadox}}
+    <div class="basic-dice">
+        <div class="dice-input">
+            <img
+                class="mage-dice-preview mage-dice"
+                src="systems/m6/assets/icons/dice/chat/magick-scintilla.svg"
+                alt=""
+                aria-hidden="true"
+            >
+            <div class="flexrow">
+                <i class="fas fa-minus dialog-control dialog-minus" data-action="minus" data-resource="inputBasicDice"></i>
+                <input type="number" min="0" id="inputBasicDice" value="{{basicDice}}" {{#if bought}}readonly{{/if}}>
+                <i class="fas fa-plus dialog-control dialog-plus" data-action="plus" data-resource="inputBasicDice"></i>
+            </div>
+        </div>
+    </div>
+    {{/unless}}
+
+    {{#if showReds}}
+    <div class="advanced-dice">
+        <div class="dice-input">
+            <img
+                class="mage-dice-preview paradox-dice"
+                src="systems/m6/assets/icons/dice/chat/paradosso-occhio-completo.svg"
+                alt=""
+                aria-hidden="true"
+            >
+            <div class="flexrow">
+                {{!-- I rossi sono quelli della Ruota: si leggono, non si scelgono. --}}
+                <input type="number" min="0" id="inputParadoxDice" value="{{paradoxDice}}" readonly>
+            </div>
+        </div>
+    </div>
+    {{/if}}
+</div>
+
+{{!-- La riga viva: i dadi, i successi che servono, e i rossi. --}}
+<p class="m6-ramoc-dice" data-role="diceOut"></p>
+
+{{> "systems/m6/templates/base/modificatori.hbs"}}
+{{#unless onlyParadox}}
+<div class="form-group m6-ramoc-threshold">
+    <label>{{localize "M6.RamoC.Threshold"}}</label>
+    <input type="number" min="1"{{#if skill}} max="7"{{/if}} id="inputDifficulty" value="{{difficulty}}" style="max-width: 100%; text-align: left;">
+</div>
+{{else}}
+<input type="hidden" id="inputDifficulty" value="0">
+{{/unless}}
+<div class="form-group">
+    <label>{{localize "M6.Comuni.RollList.RollMode"}}</label>
+    <select name="rollMode" data-type="String">
+        {{selectOptions rollModes selected=rollMode localize=true}}
+    </select>
+</div>

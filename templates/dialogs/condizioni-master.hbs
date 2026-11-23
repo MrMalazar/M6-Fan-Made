@@ -1,0 +1,28 @@
+{{!-- La finestra del Master: i personaggi scelti in testa, poi le Condizioni
+     per famiglia (con la sua icona) e per scala, ogni grado col numero romano,
+     il nome e il peso; poi i lievi e lo scontro. Un clic accende a tutti, un
+     altro spegne; su una scala il grado nuovo prende il posto del vecchio.
+     Il numero in oro dice quanti dei scelti la portano. --}}
+<div class="m6-master-condizioni">
+    <p class="m6-master-targets">
+        <strong>{{localize "M6.Condizioni.MasterTargets"}}</strong>
+        <span data-role="targets">{{targets}}</span>
+    </p>
+    {{#each groups as |sezione|}}
+        <section class="m6-master-group m6-cond-sezione sezione-{{sezione.id}}">
+            <h3>{{#if sezione.icon}}<span class="m6-cond-icona"><i style="-webkit-mask-image: url({{sezione.icon}}); mask-image: url({{sezione.icon}})"></i></span>{{/if}}{{sezione.label}}</h3>
+            {{#each sezione.scale as |scala|}}
+                <div class="m6-cond-scala">
+                    {{#if scala.label}}<span class="m6-cond-scala-nome">{{scala.label}}</span>{{/if}}
+                    <span class="m6-cond-voci">
+                        {{#each scala.voci as |entry|}}
+                            <button type="button" class="m6-cond-voce{{#if entry.all}} lit{{/if}}{{#if entry.some}} partial{{/if}}" data-condizione="{{entry.id}}" title="{{entry.title}}">
+                                {{#if entry.numeral}}<b class="m6-cond-grado">{{entry.numeral}}</b>{{/if}}<span>{{entry.name}}</span>{{#if entry.dice}}<em>{{entry.dice}}</em>{{/if}}<b class="m6-master-conto" data-role="count">{{entry.badge}}</b>
+                            </button>
+                        {{/each}}
+                    </span>
+                </div>
+            {{/each}}
+        </section>
+    {{/each}}
+</div>

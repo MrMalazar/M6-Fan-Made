@@ -1,0 +1,44 @@
+{{!-- Passo 3 · la Sottofamiglia (Blue, 25/9 sera: a parte, dopo la Famiglia): le vie della
+     Famiglia scelta, con la Sfera che portano, il Credo e la pratica che consigliano. Una
+     Craft non ha vie: il passo lo dice e si va avanti. --}}
+<section class="m6-guidata-riq m6-guidata-cosa">
+    <header class="m6-guidata-riq-titolo"><span>{{localize "M6.Guidata.Cosa"}}</span><small>{{passo.sotto}}</small></header>
+    <h2 class="m6-guidata-domanda">{{passo.domanda}}</h2>
+    {{#if corpo.family}}
+        {{#if corpo.sottofamiglie.length}}
+            <header class="m6-guidata-riq-titolo via"><span>{{localize "M6.Guidata.Famiglia.Via"}}</span><small>{{localize "M6.Guidata.Famiglia.ViaSotto" famiglia=corpo.family.label kind=corpo.family.subKind}}</small></header>
+            <div class="m6-guidata-carte carte-famiglie">
+                {{#each corpo.sottofamiglie as |card|}}
+                    <button type="button" class="m6-guidata-carta grande{{#if card.selected}} scelta{{/if}}{{#if card.delCredo}} del-credo{{/if}}" data-action="sottofamigliaScegli" data-sottofamiglia="{{card.id}}" aria-pressed="{{card.selected}}" {{#unless @root.canEdit}}disabled{{/unless}} title="{{#if card.credoLabel}}{{localize 'M6.Guidata.Famiglia.CredoVia'}}: {{card.credoLabel}}{{/if}}{{#if card.pratica}} · {{localize 'M6.Guidata.Famiglia.Pratica'}}: {{card.pratica}}{{/if}}">
+                        <span class="m6-guidata-arte immagine" data-iniziale="{{card.initial}}"><img src="{{card.image}}" alt="" loading="lazy" onerror="this.parentElement.classList.add('manca')"><span class="m6-guidata-arte-manca">{{localize "M6.Guidata.ImmagineDaFare"}}</span></span>
+                        <h4>{{card.label}}</h4>
+                        <span class="m6-guidata-sfere">
+                            {{#if card.sphere}}<span class="m6-guidata-sfera"><img src="{{card.sphere.icon}}" alt=""> {{card.sphere.label}} <b>1</b></span>{{/if}}
+                            {{#if card.delCredo}}<small class="m6-guidata-tag oro">{{localize "M6.Guidata.Famiglia.DelCredo"}}</small>{{/if}}
+                        </span>
+                    </button>
+                {{/each}}
+            </div>
+        {{else}}
+            <p class="m6-guidata-nota-passo">{{localize "M6.Guidata.Famiglia.CraftSenzaVia" famiglia=corpo.family.label}}</p>
+        {{/if}}
+    {{else}}
+        <p class="m6-guidata-nota-passo">{{localize "M6.Guidata.Famiglia.ScegliPrima"}}</p>
+    {{/if}}
+</section>
+<aside class="m6-guidata-spiega">
+    {{> "systems/m6/templates/guidata/perche.hbs"}}
+    <section class="m6-guidata-riq m6-guidata-guadagni">
+        <header class="m6-guidata-riq-titolo"><span>{{localize "M6.Guidata.Guadagni"}}</span></header>
+        <div class="m6-guidata-voci">
+            {{#if corpo.family.craft}}
+                <div class="m6-guidata-voce"><i class="fa-solid fa-circle-nodes" aria-hidden="true"></i> {{localize "M6.Guidata.Famiglia.CraftSotto"}}</div>
+            {{else}}
+                <div class="m6-guidata-voce"><i class="fa-solid fa-circle-nodes" aria-hidden="true"></i> {{localize "M6.Guidata.Famiglia.SferaVia"}} <b>{{#if corpo.sub.sphere}}{{corpo.sub.sphere.label}}{{else}}…{{/if}}</b></div>
+                <div class="m6-guidata-voce"><i class="fa-solid fa-compass" aria-hidden="true"></i> {{localize "M6.Guidata.Famiglia.CredoVia"}} <b>{{#if corpo.sub.credoLabel}}{{corpo.sub.credoLabel}}{{else}}…{{/if}}</b></div>
+            {{/if}}
+            {{#if corpo.pratica}}<div class="m6-guidata-voce"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> {{localize "M6.Guidata.Famiglia.Pratica"}} <b>{{corpo.pratica}}</b></div>{{/if}}
+            <div class="m6-guidata-voce"><i class="fa-solid fa-hand-sparkles" aria-hidden="true"></i> {{localize "M6.Guidata.Famiglia.Strumenti"}} <b>{{localize "M6.Guidata.Credo.NelPasso" n=8}}</b></div>
+        </div>
+    </section>
+</aside>

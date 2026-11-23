@@ -1,0 +1,37 @@
+{{!-- Passo 5 · il Concetto in una riga, e la Sfida a tre gruppi coi premi. --}}
+<section class="m6-guidata-riq m6-guidata-cosa">
+    <header class="m6-guidata-riq-titolo"><span>{{localize "M6.Guidata.Cosa"}}</span><small>{{passo.sotto}}</small></header>
+    <h2 class="m6-guidata-domanda">{{passo.domanda}}</h2>
+    <div class="m6-guidata-campo">
+        <label class="m6-guidata-etichetta" for="m6-guidata-concept"><i class="fa-solid fa-user-pen" aria-hidden="true"></i> {{localize "M6.Guidata.Concetto.Concetto"}} <small>{{localize "M6.Guidata.Concetto.Hint"}}</small></label>
+        <div class="m6-guidata-riga-campo">
+            <input type="text" id="m6-guidata-concept" name="system.headers.concept" value="{{corpo.concept}}" {{#unless @root.canEdit}}disabled{{/unless}}>
+            <button type="button" class="m6-guidata-tastino" data-action="catalogoApri" data-kind="concetto" title="{{localize 'M6.Guidata.Catalogo'}}" {{#unless @root.canEdit}}disabled{{/unless}}><i class="fa-solid fa-book-open" aria-hidden="true"></i></button>
+        </div>
+        {{#if corpo.proposte.length}}
+            <div class="m6-guidata-proposte"><small>{{localize "M6.Guidata.ProposteComuni"}}</small>
+                {{#each corpo.proposte as |p|}}<button type="button" class="m6-guidata-chip" data-action="propostaMetti" data-kind="concetto" data-uuid="{{p.uuid}}" {{#unless @root.canEdit}}disabled{{/unless}}>{{p.name}}</button>{{/each}}
+            </div>
+        {{/if}}
+    </div>
+    <div class="m6-guidata-campo">
+        <div class="m6-guidata-etichetta"><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i> {{localize "M6.Guidata.Concetto.Sfida"}} <small>{{localize "M6.Guidata.Concetto.SfidaHint"}}</small></div>
+        <div class="m6-guidata-gruppi-sfida">
+            {{#each corpo.gruppi as |g|}}
+                <div class="m6-guidata-gruppo-sfida{{#if g.complete}} completo{{/if}}"><b>{{g.label}}</b><span>{{localize "M6.Guidata.Concetto.Gruppo" done=g.done total=g.total}}</span></div>
+            {{/each}}
+        </div>
+        <button type="button" class="m6-guidata-tasto" data-action="sfidaApri"><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i> {{localize "M6.Guidata.Concetto.ApriSfida"}}</button>
+    </div>
+</section>
+<aside class="m6-guidata-spiega">
+    {{> "systems/m6/templates/guidata/perche.hbs"}}
+    <section class="m6-guidata-riq m6-guidata-guadagni">
+        <header class="m6-guidata-riq-titolo"><span>{{localize "M6.Guidata.Guadagni"}}</span></header>
+        <div class="m6-guidata-voci">
+            {{#each corpo.premi as |premio|}}
+                <div class="m6-guidata-voce{{#unless premio.earned}} no{{/unless}}"><i class="fa-solid {{#if premio.earned}}fa-circle-check{{else}}fa-circle{{/if}}" aria-hidden="true"></i> {{premio.text}} <b>{{#if premio.earned}}{{localize "M6.Guidata.Concetto.Preso"}}{{else}}{{localize "M6.Guidata.Concetto.DaPrendere" n=premio.groups}}{{/if}}</b></div>
+            {{/each}}
+        </div>
+    </section>
+</aside>

@@ -1,0 +1,231 @@
+{{!-- La finestra del Grimorio: scrive un incantesimo (col Sistema si lancia
+     dal riquadro del Tiro, che conta soglia, premio, Quintessenza e Paradosso).
+     DialogV2 mette questo contenuto dentro un suo <form>:
+     un form dentro un form il browser lo butta via, quindi qui c'è un <div>.
+     Con `step` (l'Areté semplificata, 8/9) la finestra mostra un passo solo:
+     1 cosa vuoi, 2 come lo fai, 3 il conto; i passi già fatti viaggiano come
+     campi nascosti (`carry`), così il conto e il tiro leggono tutto.
+     L'ordine dei gruppi e le divisorie sono di Blue (10/9 notte): a sinistra
+     Obiettivo, Effetto | Sfere Effetto | Ambiti; a destra i tratti | la
+     Tipologia Effetto | Armonia e Quintessenza | Altro. --}}
+<div class="m6-arete-body">
+    {{#if simple}}
+        <ol class="m6-arete-steps" aria-label="{{localize 'M6.Arete.Simple'}}">
+            <li class="{{#if show.goal}}active{{/if}}"><b>1</b> {{localize "M6.Arete.Steps.1"}}</li>
+            <li class="{{#if show.traits}}active{{/if}}"><b>2</b> {{localize "M6.Arete.Steps.2"}}</li>
+            <li class="{{#if show.conto}}active{{/if}}"><b>3</b> {{localize "M6.Arete.Steps.3"}}</li>
+        </ol>
+    {{/if}}
+    <div class="m6-arete-layout{{#if simple}} m6-arete-simple{{/if}}" data-arete="{{arete.value}}">
+        {{!-- Colonna sinistra: nome, Obiettivo, Effetto, poi Sfere e Ambiti a pallini. Per ogni
+             Sfera scegli il livello che usi, per ogni Ambito il livello da 1 a 7. --}}
+        {{!-- Una griglia sola: simbolo | nome | pallini. Le file sono trasparenti
+             (display: contents), così i pallini di tutte le righe partono dalla
+             stessa verticale, subito dopo il nome più lungo, a sinistra. --}}
+        <div class="m6-arete-dots-column" role="group" aria-label="{{localize 'M6.Arete.Spheres'}}">
+            {{#if saveMode}}
+                {{!-- Il Grimorio del personaggio: il nome dell'incantesimo, in cima. --}}
+                <label class="m6-arete-goal m6-arete-spell">
+                    <span class="m6-arete-row-label">{{localize "M6.Incantesimi.Name"}}</span>
+                    <input type="text" name="spellName" id="m6-arete-spell-name" placeholder="{{localize 'M6.Incantesimi.NameHint'}}" aria-label="{{localize 'M6.Incantesimi.Name'}}">
+                </label>
+            {{/if}}
+            {{!-- La matrice da cui viene l'incantesimo (25/9 sera): dice se è un effetto percettivo. --}}
+            <input type="hidden" name="formula" id="m6-arete-formula" value="">
+            {{!-- L'Obiettivo in cima (10/9 notte): cosa vuoi ottenere, scritto a mano o scelto dal
+                 Grimorio (il libro), che accende anche le Sfere coinvolte. È un riquadro (6/9):
+                 c'è spazio per scrivere, e la colonna sinistra pareggia la destra. --}}
+            {{#if show.goal}}
+            <div class="m6-arete-goal m6-arete-goal-box">
+                <span class="m6-arete-row-label">{{localize "M6.Arete.Goal"}}</span>
+                <textarea name="goal" id="m6-arete-goal" rows="4" placeholder="{{localize 'M6.Arete.GoalHint'}}" aria-label="{{localize 'M6.Arete.Goal'}}"></textarea>
+                <button type="button" class="m6-archivio-open m6-arete-grimorio" data-role="grimorioOpen" title="{{localize 'M6.Grimorio.Open'}}" aria-label="{{localize 'M6.Grimorio.Open'}}"><i class="fa-solid fa-book-open" aria-hidden="true"></i></button>
+            </div>
+            {{else}}
+                <input type="hidden" name="goal" value="{{carry.goal}}">
+                {{#if carry.goal}}
+                    {{!-- L'Obiettivo scelto al primo passo, in lettura. --}}
+                    <p class="m6-arete-carry-goal"><b>{{localize "M6.Arete.Goal"}}</b> {{carry.goal}}</p>
+                {{/if}}
+            {{/if}}
+            {{!-- L'Effetto, sotto l'Obiettivo: fisico, mentale o variabile. Dice dove va il Contraccolpo. --}}
+            {{#if show.effect}}
+            <div class="m6-arete-goal m6-arete-effect-kind">
+                <span class="m6-arete-row-label">{{localize "M6.Arete.EffectKind"}}</span>
+                <select name="effectKind" id="m6-arete-effect-kind" aria-label="{{localize 'M6.Arete.EffectKind'}}">
+                    <option value="">{{localize "M6.Arete.EffectKinds.none"}}</option>
+                    <option value="physical">{{localize "M6.Arete.EffectKinds.physical"}}</option>
+                    <option value="mental">{{localize "M6.Arete.EffectKinds.mental"}}</option>
+                    <option value="variable">{{localize "M6.Arete.EffectKinds.variable"}}</option>
+                </select>
+            </div>
+            {{else if carry.effect}}
+                <input type="hidden" name="effectKind" id="m6-arete-effect-kind" value="{{carry.effectKind}}">
+            {{/if}}
+            {{#if show.spheres}}
+            {{!-- La divisoria fra i gruppi (10/9 notte): la stessa riga della colonna destra. --}}
+            {{#if show.goal}}<hr class="m6-arete-rule">{{/if}}
+            <span class="m6-arete-row-label m6-arete-dots-head">{{localize "M6.Arete.Spheres"}}</span>
+            {{#each spheres as |sphere|}}
+                <div class="m6-arete-dotrow" data-role="dotRow" data-kind="sphere" data-id="{{sphere.id}}">
+                    <img class="m6-arete-row-icon" src="{{sphere.icon}}" alt="">
+                    <span class="m6-arete-dot-label">{{localize sphere.label}}</span>
+                    <input type="hidden" name="sphere-{{sphere.id}}" value="0">
+                    <span class="m6-arete-sphere-dots" role="group" aria-label="{{localize sphere.label}}">
+                        {{#each sphere.steps as |step|}}<button type="button" class="m6-arete-sphere-dot" data-level="{{step.value}}" aria-label="{{step.value}}" title="{{step.value}}"></button>{{/each}}
+                    </span>
+                    {{!-- Il nome del livello scelto (Percepire … Rivoluzionare), a destra. --}}
+                    <span class="m6-arete-dot-reading" data-role="dotReading" aria-live="polite"><span data-role="readingText"></span></span>
+                </div>
+            {{else}}
+                <p class="m6-magick-type-hint">{{localize "M6.Arete.NoSpheres"}}</p>
+            {{/each}}
+            {{else}}
+                {{!-- I passi dopo il primo portano le Sfere scelte come file nascoste:
+                     il conto le legge come se fossero a pallini. --}}
+                {{#each carry.spheres as |row|}}
+                    <span data-role="dotRow" data-kind="sphere" data-id="{{row.id}}" hidden><input type="hidden" name="sphere-{{row.id}}" value="{{row.level}}"></span>
+                {{/each}}
+            {{/if}}
+
+            {{#if show.scopes}}
+            {{#if show.spheres}}<hr class="m6-arete-rule">{{/if}}
+            {{!-- L'icona della tavola sta a sinistra della parola. --}}
+            <span class="m6-arete-row-label m6-arete-dots-head m6-arete-scopes-head">
+                <button type="button" class="m6-arete-scope-table" data-role="scopeTableOpen" title="{{localize 'M6.Arete.ScopeTable'}}" aria-label="{{localize 'M6.Arete.ScopeTable'}}"><i class="fa-solid fa-table-list"></i></button>
+                {{localize "M6.Scopes.Label"}}
+            </span>
+            {{!-- Sette pallini per Ambito, i livelli da 1 a 7 (2/10: via lo 0). In cima
+                 l'Epicità, staccata, che parte da 1: ogni lancio vale almeno 1. --}}
+            {{#each scopes as |scope|}}
+                <div class="m6-arete-dotrow{{#if scope.base}} base{{/if}}" data-role="dotRow" data-kind="scope" data-id="{{scope.id}}">
+                    <i class="m6-arete-row-icon {{scope.faIcon}}" aria-hidden="true"></i>
+                    <span class="m6-arete-dot-label">{{localize scope.label}}</span>
+                    <input type="hidden" name="scope-{{scope.id}}" value="{{scope.min}}">
+                    <span class="m6-arete-sphere-dots" role="group" aria-label="{{localize scope.label}}">
+                        {{#each scope.steps as |step|}}<button type="button" class="m6-arete-sphere-dot" data-level="{{step.value}}" aria-label="{{step.value}}" title="{{step.value}}"></button>{{/each}}
+                    </span>
+                    {{!-- La voce della tavola per il livello scelto («Città»), a destra dei pallini (9/9):
+                         una lettura alla volta; il tasto, fra i pallini e la voce, passa alla lettura dopo (10/9). --}}
+                    <span class="m6-arete-dot-reading" data-role="dotReading" aria-live="polite"><button type="button" class="m6-arete-reading-switch" data-role="readingSwitch" title="{{localize 'M6.Arete.ReadingSwitch'}}" aria-label="{{localize 'M6.Arete.ReadingSwitch'}}" hidden><i class="fa-solid fa-right-left" aria-hidden="true"></i></button><span data-role="readingText"></span></span>
+                </div>
+            {{/each}}
+            {{else}}
+                {{#each carry.scopes as |row|}}
+                    <span data-role="dotRow" data-kind="scope" data-id="{{row.id}}" hidden><input type="hidden" name="scope-{{row.id}}" value="{{row.level}}"></span>
+                {{/each}}
+            {{/if}}
+
+            {{!-- Il conto, aggiornato a ogni scelta (il Sistema): la riserva, e la soglia degli
+                 Ambiti contata con l'Areté, che il premio abbassa. Si tira tutta la riserva:
+                 la soglia dice i successi che servono e non toglie dadi. --}}
+            <p class="m6-arete-difficulty">
+                <span{{#unless show.pool}} hidden{{/unless}}>{{localize "M6.Arete.Pool"}}: <strong data-role="pool">0</strong> · </span>{{localize "M6.Arete.Threshold"}}: <strong data-role="threshold">0</strong>
+            </p>
+        </div>
+
+        {{!-- Colonna destra: la riserva, la narrativa, la Tipologia Effetto, i numeri del conto, Altro. --}}
+        {{#if show.side}}
+        <div class="m6-arete-side">
+            {{!-- La riserva: Attributo e Abilità, più la Specializzazione (11/9: al
+                 posto della seconda Abilità, un dado in più). L'Areté non tira: è il premio. --}}
+            {{#if show.traits}}
+            <label class="m6-arete-trait">
+                <span class="m6-arete-row-label">{{localize "M6.RollSelection.Attribute"}}</span>
+                <select id="m6-arete-attribute" name="attributeTrait">
+                    <option value="" data-value="0">{{localize "M6.RollSelection.None"}}</option>
+                    {{#each attributes as |trait|}}
+                        <option value="{{trait.key}}" data-value="{{trait.value}}">{{trait.label}} ({{trait.value}})</option>
+                    {{/each}}
+                </select>
+            </label>
+            <label class="m6-arete-trait">
+                <span class="m6-arete-row-label">{{localize "M6.RollSelection.Ability"}}</span>
+                <select id="m6-arete-primary" name="primaryTrait">
+                    <option value="" data-value="0">{{localize "M6.RollSelection.None"}}</option>
+                    {{#each skills as |trait|}}
+                        <option value="{{trait.key}}" data-value="{{trait.value}}" data-specialties="{{trait.specialties}}">{{trait.label}} ({{trait.value}})</option>
+                    {{/each}}
+                </select>
+            </label>
+            <label class="m6-arete-trait m6-arete-specialty" title="{{localize 'M6.Arete.SkillSpecialtyHint'}}">
+                <span class="m6-arete-row-label">{{localize "M6.Arete.SkillSpecialty"}}</span>
+                <span class="m6-arete-specialty-box"><input type="checkbox" name="skillSpecialty"> <small>+1</small> <small data-role="specialtyNames"></small></span>
+            </label>
+            {{!-- La seconda Abilità non c'è più (11/9): il campo resta vuoto per i preset vecchi. --}}
+            <input type="hidden" id="m6-arete-secondary" name="secondaryTrait" value="" data-value="0">
+            {{else}}
+                {{!-- Al terzo passo la riserva è già scelta: i tratti viaggiano nascosti,
+                     col loro valore, e il conto li legge da lì. --}}
+                {{#each carry.traits as |trait|}}
+                    <input type="hidden" name="{{trait.field}}" id="{{trait.id}}" value="{{trait.key}}" data-value="{{trait.value}}">
+                {{/each}}
+            {{/if}}
+
+            {{#if saveMode}}
+                {{!-- La narrativa: come si lancia, sulla base delle Abilità scelte. --}}
+                <label class="m6-arete-narrative">
+                    <span class="m6-arete-row-label">{{localize "M6.Incantesimi.Narrative"}}</span>
+                    <textarea name="narrative" id="m6-arete-narrative" rows="5" placeholder="{{localize 'M6.Incantesimi.NarrativeHint'}}" aria-label="{{localize 'M6.Incantesimi.Narrative'}}"></textarea>
+                </label>
+            {{/if}}
+
+            {{#if show.types}}
+            {{#if show.traits}}<hr class="m6-arete-rule">{{/if}}
+            {{!-- La Tipologia Effetto: una scelta sola. Sta col «come lo fai», prima del conto. --}}
+            <div class="m6-arete-types" role="group" aria-label="{{localize 'M6.Arete.MagickTypeHead'}}">
+                <span class="m6-arete-row-label">{{localize "M6.Arete.MagickTypeHead"}}</span>
+                {{!-- Le spiegazioni stanno nei titoli (10/9): niente testo a destra. --}}
+                <div class="m6-arete-type-grid">
+                    <label class="m6-arete-type" title="{{localize 'M6.Arete.CoincidentalHint'}}"><input type="checkbox" class="m6-magick-type" name="coincidental"> <span>{{localize "M6.Arete.Coincidental"}}</span></label>
+                    <label class="m6-arete-type" title="{{localize 'M6.Arete.VulgarHint'}}"><input type="checkbox" class="m6-magick-type" name="vulgar"> <span>{{localize "M6.Arete.Vulgar"}}</span></label>
+                    <label class="m6-arete-type" title="{{localize 'M6.Arete.WitnessesHint'}}"><input type="checkbox" class="m6-magick-type" name="witnesses"> <span>{{localize "M6.Arete.VulgarWithWitnesses"}}</span></label>
+                </div>
+            </div>
+            {{else}}
+                {{!-- La Tipologia scelta al secondo passo, nascosta: una casella spuntata vale «on». --}}
+                {{#if carry.coincidental}}<input type="hidden" name="coincidental" value="on">{{/if}}
+                {{#if carry.vulgar}}<input type="hidden" name="vulgar" value="on">{{/if}}
+                {{#if carry.witnesses}}<input type="hidden" name="witnesses" value="on">{{/if}}
+            {{/if}}
+
+            {{#if show.conto}}
+            {{!-- Armonia, Quintessenza, Bussola e Paradosso li conta il riquadro del Tiro, dove l'incantesimo si lancia. --}}
+            {{#if show.types}}<hr class="m6-arete-rule">{{/if}}
+
+            {{!-- Altro (10/9 notte): la Convinzione, l'Effetto Mantenuto, il Premio, sotto il loro titolo. --}}
+            <div class="m6-arete-altro" role="group" aria-label="{{localize 'M6.Arete.Other'}}">
+            <span class="m6-arete-row-label m6-arete-altro-head">{{localize "M6.Arete.Other"}}</span>
+            <div class="m6-arete-conto">
+
+            {{!-- L'Effetto Mantenuto: se spuntato compare il nome, e a tiro risolto
+                 l'effetto finisce fra le Magick in Atto. --}}
+            <div class="m6-arete-maintained">
+                <label class="m6-arete-maintained-toggle m6-arete-conto-row">
+                    <span class="m6-arete-conto-control"><input type="checkbox" name="maintained" id="m6-arete-maintained"></span>
+                    <span class="m6-arete-row-label">{{localize "M6.Arete.Maintained"}}</span>
+                </label>
+                <input type="text" name="maintainedName" id="m6-arete-maintained-name" class="hidden"
+                       placeholder="{{localize 'M6.Arete.MaintainedName'}}"
+                       aria-label="{{localize 'M6.Arete.MaintainedName'}}">
+            </div>
+
+            {{!-- Il premio dell'Areté (il Sistema): la soglia scende di quant'è l'Areté
+                 della scheda. Lo prendono tutti i Tipi, l'Ibrida compresa (2/10).
+                 La casella mostra di quanto scende, −N. --}}
+            <div class="m6-arete-prize" title="{{localize 'M6.Arete.PrizeHint' arete=arete.value}}">
+                <label class="m6-arete-toggle m6-arete-conto-row">
+                    <span class="m6-arete-conto-control">
+                        <input type="checkbox" name="prize" data-value="{{prize.dice}}" aria-label="{{localize 'M6.Arete.Prize'}}">
+                        <span class="m6-arete-toggle-value">−{{prize.dice}}</span>
+                    </span>
+                    <span class="m6-arete-row-label">{{localize "M6.Arete.Prize"}}</span>
+                </label>
+            </div>
+            </div>
+            </div>
+            {{/if}}
+        </div>
+        {{/if}}
+    </div>
+</div>

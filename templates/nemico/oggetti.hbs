@@ -1,0 +1,38 @@
+{{!-- Oggetti, rifatta l'1/10 sul mock approvato: tre riquadri, Armi, Protezioni,
+     Oggetti, gli stessi tipi e lo stesso compendio della scheda del mago. Una
+     riga per oggetto: il nome, cosa fa, una nota breve («crea Spara»,
+     «armatura») e «Dai», che lo passa a un PG. In Scrivi la matita e il
+     cestino, e in fondo a ogni lista il posto vuoto: dal compendio, o a mano.
+     Il trascinamento dal compendio funziona come sul mago. --}}
+<section class="tab {{tab.cssClass}} m6-nemico-corpo" data-tab="{{tab.id}}" data-group="{{tab.group}}">
+    {{#each oggettiGruppi as |gruppo|}}
+        <div class="m6-nemico-riq" data-gruppo="{{gruppo.id}}">
+            <h3 class="m6-nemico-titolo">{{gruppo.label}}</h3>
+            <div class="m6-nemico-righe">
+                {{#each gruppo.righe as |o|}}
+                    <div class="m6-nemico-riga" data-item-id="{{o.id}}" data-drag="true" data-document-uuid="{{o.uuid}}" data-type="Item">
+                        <div class="m6-nemico-riga-testa">
+                            <span class="m6-nemico-riga-nome"><b>{{o.name}}</b>{{#if o.testo}}<span title="{{o.testo}}">{{o.testo}}</span>{{/if}}</span>
+                            <span class="m6-nemico-riga-dx">
+                                {{#if o.nota}}<span class="m6-nemico-dato">{{o.nota}}</span>{{/if}}
+                                {{#if @root.puoScrivere}}<button type="button" class="m6-nemico-tasto" data-action="nemicoDai" data-item-id="{{o.id}}" title="{{localize 'M6.Nemico.Dai'}}" aria-label="{{localize 'M6.Nemico.Dai'}}: {{o.name}}">{{localize "M6.Nemico.DaiBreve"}}</button>{{/if}}
+                                {{#if @root.scrivi}}
+                                    <button type="button" class="m6-nemico-matita" data-action="itemEdit" data-item-id="{{o.id}}" title="{{localize 'M6.Comuni.Edit'}}" aria-label="{{localize 'M6.Comuni.Edit'}}: {{o.name}}"><i class="fa-solid fa-pen" aria-hidden="true"></i></button>
+                                    <button type="button" class="m6-nemico-matita" data-action="itemDelete" data-item-id="{{o.id}}" title="{{localize 'M6.Nemico.OggettoTogli'}}" aria-label="{{localize 'M6.Nemico.OggettoTogli'}}: {{o.name}}"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+                                {{/if}}
+                            </span>
+                        </div>
+                    </div>
+                {{else}}
+                    {{#unless @root.scrivi}}<p class="m6-nemico-nessuna">{{localize "M6.Nemico.OggettoVuoto"}}</p>{{/unless}}
+                {{/each}}
+                {{#if @root.scrivi}}
+                    <div class="m6-nemico-aggiungi doppio">
+                        <button type="button" data-action="archivioOpen" data-kind="equip-{{gruppo.id}}" data-kinds="equip-weapon,equip-armor,equip-gear"><i class="fa-solid fa-plus" aria-hidden="true"></i><b>{{localize (concat "M6.Nemico.OggettoAggiungi." gruppo.id)}}</b><small>{{localize "M6.Nemico.DalCompendio"}}</small></button>
+                        <button type="button" data-action="createItem" data-type="{{gruppo.id}}">{{localize "M6.Nemico.CreaMano"}}</button>
+                    </div>
+                {{/if}}
+            </div>
+        </div>
+    {{/each}}
+</section>

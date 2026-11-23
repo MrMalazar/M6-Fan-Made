@@ -1,0 +1,39 @@
+{{!-- Attributi (16/9): per famiglia (Fisico, Sociale, Mentale), il nome è il
+     tasto che lo mette nel tiro (uno solo), i pallini restano quelli della
+     scheda e cambiano il valore. --}}
+<section class="m6-riq m6-riq-attributi">
+    {{!-- Col memo di creazione acceso (23/9): il conto a destra del titolo, il titolo rosso sotto il traguardo e verde pari. --}}
+    <header class="m6-riq-title{{#if memo.on}} memo-{{memo.boxes.attributi.state}}{{/if}}">
+        {{#if creazioneReset}}{{> "systems/m6/templates/actor/parts/reset-tasto.hbs" resetsById.attributes}}{{/if}}
+        <span>{{localize "M6.Comuni.AttributesList.Attributes"}}{{#if memo.on}} <b class="m6-memo-conto" title="{{localize 'M6.Riepilogo.Attributes'}}">{{memo.boxes.attributi.text}}</b>{{/if}}</span>
+    </header>
+    <div class="m6-riq-body">
+        {{#each attributeGroups as |group|}}
+            <span class="m6-riq-occhiello">{{group.label}}</span>
+            <div class="m6-tratti-lista">
+                {{#each group.rows as |attribute|}}
+                    <div class="m6-riga m6-riga-tratto{{#if attribute.chosen}} scelta{{/if}}">
+                        <button type="button" class="m6-riga-nome" data-action="tiroAttribute" data-attribute="{{attribute.id}}" aria-pressed="{{attribute.chosen}}" title="{{localize 'M6.Tiro.AttributeHint'}}">
+                            {{#if attribute.icon}}<img class="m6-riga-icona" src="{{attribute.icon}}" alt="">{{/if}}
+                            <span>{{attribute.displayName}}</span>
+                        </button>
+                        {{#if ../../settings.skillAttributeInputs}}
+                            {{#if ../../locked}}
+                                <b>{{attribute.value}}</b>
+                            {{else}}
+                                <input class="resource-value skill-attribute-input" name="system.attributes.{{attribute.id}}.value" type="number" value="{{attribute.value}}"/>
+                            {{/if}}
+                        {{else}}
+                            <div class="resource-value" data-value="{{attribute.value}}" data-name="system.attributes.{{attribute.id}}.value">
+                                <span class="resource-value-empty" data-action="dotCounterEmpty"></span>
+                                {{#numLoop 5}}
+                                    <span class="resource-value-step" data-action="dotCounterChange" data-index="{{this}}"></span>
+                                {{/numLoop}}
+                            </div>
+                        {{/if}}
+                    </div>
+                {{/each}}
+            </div>
+        {{/each}}
+    </div>
+</section>

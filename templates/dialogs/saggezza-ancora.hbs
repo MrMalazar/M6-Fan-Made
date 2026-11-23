@@ -1,0 +1,27 @@
+{{!-- L'Ancora (Blue, 3/10): la scena con un'Ancora, una volta per storia per
+     ogni Ancora, fa ritirare per recuperare un passo: Fermezza + Autocontrollo
+     meno il passo dove sta il segno, un 8 riesce. Il Narratore può concedere
+     senza tirare; «Nuova storia» riarma tutte le Ancore. --}}
+<div class="m6-saggezza-ancora">
+    <p class="m6-arete-hint">{{localize "M6.Wisdom.AncoraDialog.Hint" riserva=riserva}}</p>
+
+    <label class="m6-item-field">
+        <span class="m6-arete-row-label">{{localize "M6.Wisdom.AncoraDialog.Ancora"}}</span>
+        <select name="ancora">
+            {{#each ancore as |row|}}
+                <option value="{{row.id}}" {{#if row.usata}}{{#unless ../narratore}}disabled{{/unless}}{{/if}}>{{row.text}}{{#if row.usata}} · {{localize "M6.Wisdom.AncoraDialog.Usata"}}{{/if}}</option>
+            {{/each}}
+        </select>
+    </label>
+
+    <fieldset class="m6-saggezza-lati">
+        <legend>{{localize "M6.Wisdom.AncoraDialog.Lato"}}</legend>
+        {{#each lati as |lato|}}
+            <label class="m6-saggezza-lato lato-{{lato.id}}"><input type="radio" name="lato" value="{{lato.id}}" {{#if lato.fermo}}disabled{{/if}}><span>{{lato.label}}</span><small>{{lato.passo}}</small></label>
+        {{/each}}
+    </fieldset>
+
+    {{#if narratore}}
+        <label class="m6-saggezza-spunta"><input type="checkbox" name="concesso"><span>{{localize "M6.Wisdom.AncoraDialog.Concedi"}}</span></label>
+    {{/if}}
+</div>

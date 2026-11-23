@@ -1,0 +1,91 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { INDULGERE_FLAG, indulgereOptions, indulgereState, normalizeIndulgi, renderIndulgereButton, renderIndulto } from "../scripts/indulgere.js";
+import { rollOutcome } from "../scripts/roll-card.js";
+import { emptyTiro, setIndulgi } from "../scripts/tiro.js";
+
+// L'Indulgere (Blue, 3/10) al posto dello Sforzare la realtà: dichiarato
+// prima del lancio col lato che dice il Narratore, l'incantesimo riesce, e
+// sotto la carta compare «Tira Saggezza»: Fermezza + Autocontrollo meno la
+// soglia dell'incantesimo, un 8 riesce; fallito, il segno di quel lato scende.
+assert.equal(INDULGERE_FLAG, "indulgere");
+assert.deepEqual([normalizeIndulgi("hubris"), normalizeIndulgi("silenzio"), normalizeIndulgi(true), normalizeIndulgi("")], ["hubris", "silenzio", "", ""]);
+
+// Il tasto c'è solo su un lancio indulto e non ancora pagato; la soglia è quella dell'incantesimo.
+assert.deepEqual(indulgereState({ indulgi: "hubris", threshold: 4, total: 6 }), { show: true, lato: "hubris", soglia: 4 }, "anche se il lancio è riuscito da sé: indulgere si paga sempre");
+assert.deepEqual(indulgereState({ indulgi: "silenzio", threshold: 0 }), { show: true, lato: "silenzio", soglia: 0 });
+assert.deepEqual(indulgereState({ indulgi: "", threshold: 4 }), { show: false, lato: "", soglia: 0 });
+assert.deepEqual(indulgereState({ threshold: 4, forced: true }), { show: false, lato: "", soglia: 0 }, "senza lato niente");
+assert.deepEqual(indulgereState({ indulgi: "hubris", threshold: 4 }, { esito: "fallito" }), { show: false, lato: "", soglia: 0 }, "già pagato");
+assert.deepEqual(indulgereState({ indulgi: "hubris", threshold: -2 }), { show: true, lato: "hubris", soglia: 0 });
+
+const it = JSON.parse(readFileSync(new URL("../lang/it.json", import.meta.url), "utf8"));
+const en = JSON.parse(readFileSync(new URL("../lang/en.json", import.meta.url), "utf8"));
+const localize = (key) => key.split(".").reduce((o, k) => (o && typeof o === "object" ? o[k] : undefined), it) ?? key;
+const format = (key, data = {}) => String(localize(key)).replace(/\{(\w+)\}/g, (_, k) => String(data[k]));
+
+// Il menù sul tasto Indulgi del Tiro: nell'Hubris, nel Silenzio, niente.
+assert.deepEqual(indulgereOptions(localize), [
+  { state: "hubris", text: "Indulgi nell'Hubris", glyph: null },
+  { state: "silenzio", text: "Indulgi nel Silenzio", glyph: null },
+  { state: "", text: "Non indulgere", glyph: null }
+]);
+assert.deepEqual(indulgereOptions().map((o) => o.text), ["M6.Indulgere.Nel.hubris", "M6.Indulgere.Nel.silenzio", "M6.Indulgere.No"]);
+
+// Il tasto e la riga sotto la carta.
+assert.equal(
+  renderIndulgereButton({ show: true, lato: "hubris", soglia: 4 }, localize, format),
+  '<button type="button" class="m6-roll-action m6-indulgere-button" data-indulgere="go" title="Hai indulto nell\'Hubris: l\'incantesimo è riuscito. Ora tiri Saggezza, Fermezza + Autocontrollo: servono successi pari alla soglia (4). Fallito, il segno dell\'Hubris scende di un passo.">Tira Saggezza</button>'
+);
+assert.equal(
+  renderIndulto({ esito: "fallito", testo: "Indulgere nell'Hubris: la Saggezza non tiene, il segno scende: passo 1." }, localize),
+  '<p class="m6-roll-note m6-roll-note-indulgere scende"><b class="m6-indulgere-label">Indulgere</b> <span>Indulgere nell\'Hubris: la Saggezza non tiene, il segno scende: passo 1.</span></p>'
+);
+assert.match(renderIndulto({ esito: "coperto", testo: "a <b>" }, localize), /m6-roll-note-indulgere resta"><b class="m6-indulgere-label">Indulgere<\/b> <span>a &lt;b&gt;<\/span>/);
+
+// Il Tiro: il lato dichiarato sta nello stato, uno dei due o niente.
+const vuoto = emptyTiro();
+assert.equal(vuoto.indulgi, "");
+assert.equal(setIndulgi(vuoto, "hubris").indulgi, "hubris");
+assert.equal(setIndulgi(setIndulgi(vuoto, "hubris"), "").indulgi, "");
+assert.equal(setIndulgi(vuoto, "boh").indulgi, "", "un lato che non esiste non si tiene");
+assert.equal(vuoto.sforza, undefined, "lo Sforzare non c'è più nello stato");
+// La fascia della carta: indulgendo il lancio riesce, qualunque sia il conto.
+assert.deepEqual(rollOutcome(1, 5, localize, { forced: true }), { total: 1, cssClass: "success", text: "Successo indulgendo", missing: 0 });
+
+// Il resto della macchina: la carta porta il lato e la riuscita, il tasto nel Tiro, la registrazione, le lingue, il CSS.
+const read = (name) => readFileSync(new URL(`../${name}`, import.meta.url), "utf8");
+const source = read("scripts/indulgere.js");
+assert.match(source, /soglia: state\.soglia,/, "il tiro di Saggezza con la soglia dell'incantesimo");
+assert.match(source, /esitoIndulgere\(stato, \{ lato: state\.lato, successi: tiro\.successi, soglia: state\.soglia, riuscito: tiro\.riuscito \}\)/, "fallito il segno scende, senza cancello");
+assert.match(source, /if \(esito\.sposta\) await saveSaggezza\(actor, esito\.next\)/);
+assert.match(source, /\[INDULGERE_FLAG\]: used/, "sul messaggio resta com'è andata");
+assert.match(source, /if \(!isMageActor\(actor\) \|\| !actor\.isOwner\) return false;/, "il tasto solo a chi possiede il personaggio");
+const scheda = read("scripts/tiro-scheda.js");
+assert.match(scheda, /forced: Boolean\(tiro\.indulgi\)/, "la carta dice Successo indulgendo");
+assert.match(scheda, /indulgi: tiro\.indulgi \?\? ""/);
+assert.match(scheda, /M6\.Indulgere\.Nota/, "la nota del lancio dice che si indulge");
+assert.ok(!scheda.includes("sforza") && !scheda.includes("Sforza"), "lo Sforzare non c'è più nel Tiro");
+assert.match(read("templates/actor/parts/stat-tiro.hbs"), /m6-tiro-indulgi\{\{#if tiro\.indulgi\}\} acceso\{\{\/if\}\}" data-action="tiroIndulgi"[\s\S]*\{\{tiro\.indulgi\.label\}\}[\s\S]*M6\.Tiro\.Indulgi/);
+assert.match(read("scripts/sheets/mage-actor-sheet.js"), /tiroIndulgi: onTiroIndulgi/);
+const main = read("scripts/main.js");
+assert.match(main, /registerVolonta\(\);[\s\S]{0,400}registerIndulgere\(\);\s*registerSaggezza\(\);\s*registerPrezzo\(\);/, "i tasti sotto la carta: Volontà, Tira Saggezza, Vittoria a un prezzo");
+assert.ok(!main.includes("registerSforzo") && !main.includes("sforzo.js"), "lo Sforzare non si registra più");
+assert.match(read("scripts/volonta.js"), /if \(card\.saggezza\) return false;/, "sul tiro di Saggezza niente ritiro con la Volontà");
+assert.doesNotMatch(read("scripts/paradox-dice.js"), /forcedSuccessFrom|successFrom = null/, "la finestra del tiro non forza più l'8: si riesce dal 6");
+assert.match(read("scripts/wisdom.js"), /threshold: sogliaSaggezza\(soglia\),/, "il tiro di Saggezza chiede successi pari alla soglia, fino a 7");
+assert.ok(!read("scripts/ramo-c.js").includes("sforzoCost"), "il prezzo dello Sforzare non c'è più");
+const css = read("styles/m6.css");
+for (const rule of [".m6-indulgere-button", ".m6-roll-note-indulgere", ".m6-indulgere-label", ".m6-tiro-indulgi"]) assert.ok(css.includes(rule), rule);
+for (const [lang, strings] of [["it", it], ["en", en]]) {
+  const i = strings.M6.Indulgere;
+  for (const key of ["Label", "Button", "Hint", "No", "Nota", "Rolling", "Riuscito", "Fallito"]) assert.equal(typeof i[key], "string", `${lang} ${key}`);
+  assert.deepEqual(Object.keys(i.Nel), ["hubris", "silenzio"], lang);
+  assert.equal(typeof strings.M6.Tiro.Indulgi, "string", `${lang} Tiro.Indulgi`);
+  assert.equal(typeof strings.M6.Tiro.IndulgiHint, "string", `${lang} Tiro.IndulgiHint`);
+  for (const key of ["Sforza", "SforzaHint", "SforzaNote"]) assert.equal(strings.M6.Tiro[key], undefined, `${lang} Tiro.${key} tolta`);
+  assert.equal(strings.M6.Sforzo, undefined, `${lang} Sforzo tolto`);
+}
+assert.equal(it.M6.RollCard.Forced, "Successo indulgendo");
+
+console.log("Indulgere: test passati.");

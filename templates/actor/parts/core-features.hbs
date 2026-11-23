@@ -1,0 +1,62 @@
+{{!-- I Vantaggi (21/9, dal mock docs/mock_tre_pagine_21-9.html): un occhiello
+     per Background, Pregi e Difetti coi tre tastini (il libro dell'archivio
+     M6, la lente del compendio, il + che crea da zero); la riga del tratto con
+     l'immagine dell'oggetto o la lettera nel disco (il clic manda in chat), il nome che apre la
+     descrizione, i cinque pallini, la matita e il cestino, e in coda (Blue,
+     24/9 sera) la casella dei dettagli, da scrivere senza aprire niente: dov'è
+     il Rifugio, cos'è, di chi sono i Contatti. Sta nel flag dell'oggetto
+     (flags.m6.dettagli) e si salva al cambio. Le azioni sono
+     quelle del sistema wod5e (5.3.x): itemChat, createItem, searchItem,
+     itemEdit (la matita del modulo), itemDelete, dotCounterChange sugli
+     oggetti, expendItemUse e restoreItemUses. --}}
+{{#each features as |feature key|}}
+    <span class="m6-riq-occhiello m6-occhiello-tasti">
+        {{!-- I nomi di casa (23/9 sera): il sistema traduce «merit» con Vantaggi, qui sono Pregi. --}}
+        <span>{{localize (concat "M6.Stat.Schede." key)}}</span>
+        <span class="m6-occhiello-tastini">
+            {{!-- L'archivio dei Cataloghi M6 (Pregi, Difetti, Background): il libro, distinto dal + che crea da zero. --}}
+            {{#unless (eq key "boon")}}
+            <a class="item-control m6-riga-tastino m6-archivio-open" data-action="archivioOpen" data-subtype="{{key}}" title="{{localize 'M6.Archivi.Open'}}"><i class="fa-solid fa-book-open" aria-hidden="true"></i></a>
+            {{/unless}}
+            <a class="item-control m6-riga-tastino search-data-item" data-action="searchItem" title="{{localize 'M6.Comuni.Search'}}" data-type="feature" data-subtype="{{key}}"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></a>
+            <a class="item-control m6-riga-tastino item-create" data-action="createItem" title="{{localize 'M6.Comuni.Add'}}" data-type="feature" data-subtype="{{key}}"><i class="fas fa-plus" aria-hidden="true"></i></a>
+        </span>
+    </span>
+    {{#each feature as |item|}}
+        <div class="m6-riga m6-riga-apribile m6-riga-oggetto m6-riga-vantaggio tipo-{{key}}" data-drag="true" data-item-id="{{item.id}}" data-document-uuid="{{item.uuid}}" data-type="Item">
+            <div class="m6-riga-testa m6-oggetto-testa">
+                {{!-- L'immagine dell'oggetto (il Rifugio ha la sua, 23/9); la lettera nel disco solo col segnaposto. Il clic manda in chat. --}}
+                {{#if (mageIconaPropria item.img)}}
+                    <a class="m6-oggetto-icona clickable" data-action="itemChat" data-item-id="{{item._id}}" title="{{localize 'M6.Comuni.ItemsList.ShowToChat'}}"><img src="{{item.img}}" alt=""></a>
+                {{else}}
+                    <a class="m6-lettera clickable" data-action="itemChat" data-item-id="{{item._id}}" title="{{localize 'M6.Comuni.ItemsList.ShowToChat'}}">{{localize (concat 'M6.Tratti.Lettera.' key)}}</a>
+                {{/if}}
+                <button type="button" class="m6-riga-nome m6-riga-nome-apri" data-action="rigaApri" title="{{localize 'M6.Tratti.Apri'}}" aria-expanded="false"><span>{{item.name}}</span>{{#if item.system.enrichedDescription}}<i class="fa-solid fa-chevron-down" aria-hidden="true"></i>{{/if}}</button>
+                {{#if item.system.uses.enabled}}
+                    <small class="m6-oggetto-tag">{{item.system.uses.current}} / {{item.system.uses.max}}</small>
+                {{/if}}
+                {{#ifnoteq item.system.featuretype 'boon'}}
+                    <div class="resource-value m6-oggetto-pallini" data-value="{{item.system.points}}" data-name="items.{{item._id}}">
+                        <span class="resource-value-empty" data-action="dotCounterEmpty"></span>
+                        {{#numLoop 5}}
+                            <span class="resource-value-step" data-action="dotCounterChange" data-index="{{this}}"></span>
+                        {{/numLoop}}
+                    </div>
+                {{/ifnoteq}}
+                <div class="m6-riga-tastini">
+                    {{#if item.system.uses.enabled}}
+                        <a class="item-control m6-riga-tastino item-use" data-action="expendItemUse" data-item-id="{{item._id}}" title="{{localize 'M6.Comuni.ItemsList.ExpendUse'}}"><i class="fa-solid fa-angle-down" aria-hidden="true"></i></a>
+                        <a class="item-control m6-riga-tastino item-restore" data-action="restoreItemUses" data-item-id="{{item._id}}" title="{{localize 'M6.Comuni.ItemsList.ResetUses'}}"><i class="fa-solid fa-rotate-left" aria-hidden="true"></i></a>
+                    {{/if}}
+                    <a class="item-control item-edit m6-riga-tastino" data-action="itemEdit" data-item-id="{{item._id}}" title="{{localize 'M6.Comuni.Edit'}}"><i class="fas fa-edit" aria-hidden="true"></i></a>
+                    <a class="item-control item-delete m6-riga-tastino" data-action="itemDelete" data-item-id="{{item._id}}" title="{{localize 'M6.Comuni.Delete'}}"><i class="fas fa-trash" aria-hidden="true"></i></a>
+                </div>
+                {{!-- I dettagli in riga: senza name, così il modulo li scrive sull'oggetto e non sul personaggio. --}}
+                <input type="text" class="m6-oggetto-dettagli" data-item-id="{{item._id}}" data-item-field="flags.m6.dettagli" value="{{item.flags.[m6].dettagli}}" placeholder="{{localize (concat 'M6.Tratti.Dettagli.' key)}}" aria-label="{{item.name}}: {{localize 'M6.Tratti.DettagliLabel'}}" title="{{localize 'M6.Tratti.DettagliHint'}}" {{#if @root.locked}}disabled{{/if}}>
+            </div>
+            <div class="m6-riga-spiega m6-oggetto-spiega">
+                {{#if item.system.enrichedDescription}}{{{item.system.enrichedDescription}}}{{/if}}
+            </div>
+        </div>
+    {{/each}}
+{{/each}}

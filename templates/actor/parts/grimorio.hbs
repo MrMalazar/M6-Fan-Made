@@ -1,0 +1,88 @@
+{{!-- La pagina Formule (Blue, 26/9): due colonne a tutta pagina, nella misura
+     della scheda (26/9 sera: «l'elenco integrale è troppo lungo», ogni colonna
+     scorre da sé). A sinistra le Formule, accessibili dalle Sfere possedute o
+     tutte col tasto in testa, con la cerca e il filtro per Sfera; ogni riga è
+     la matrice del Grimorio con la scelta della Sfera d'Accesso, delle
+     Amalgame e della soglia, e i due tasti (scrivi fra gli effetti, lancia dal
+     Tiro). A destra gli effetti di Magick scritti dal giocatore, per Sfera,
+     con la cerca e il filtro per Sfera, ognuno a tendina: chiuso resta
+     l'Obiettivo, aperto tutto; il dado lo carica nel Tiro della prima pagina
+     coi suoi valori. --}}
+<section class="tab {{tab.cssClass}} m6-grimorio-page" data-tab="{{tab.id}}" data-group="{{tab.group}}">
+    <header class="m6-section-title m6-note-head">
+        <span>{{localize "M6.Tabs.Short.grimorio"}}</span>
+        {{!-- La × in alto a destra (Blue, 16/9): chi apre le Formule dalla prima pagina deve poterle chiudere. --}}
+        <button type="button" class="m6-grimorio-chiudi" data-action="grimorioClose" title="{{localize 'M6.Grimorio.Close'}}" aria-label="{{localize 'M6.Grimorio.Close'}}"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+    </header>
+
+    <div class="m6-spheres-content m6-formule-layout">
+        <div class="m6-formule-col">
+            <section class="m6-riq m6-riq-pagina m6-riq-formule">
+                <header class="m6-riq-title m6-riq-title-tasti">
+                    <span>{{localize "M6.Formule.Label"}}</span>
+                    <small class="m6-riq-conto">{{localize "M6.Formule.Conto" aperte=formule.aperte totale=formule.totale}}</small>
+                    <span class="m6-riq-tasti">
+                        {{!-- Le accessibili dalle Sfere possedute, o tutte (Blue, 26/9). --}}
+                        <button type="button" class="m6-riq-tasto-piccolo m6-formule-tutte{{#if formule.tutte}} active{{/if}}" data-action="formuleTutte" aria-pressed="{{formule.tutte}}" title="{{#if formule.tutte}}{{localize 'M6.Formule.Accessibili'}}{{else}}{{localize 'M6.Formule.Tutte'}}{{/if}}" aria-label="{{#if formule.tutte}}{{localize 'M6.Formule.Accessibili'}}{{else}}{{localize 'M6.Formule.Tutte'}}{{/if}}"><i class="fa-solid {{#if formule.tutte}}fa-filter{{else}}fa-book-open{{/if}}" aria-hidden="true"></i></button>
+                    </span>
+                </header>
+                <div class="m6-riq-body">
+                    <div class="m6-riq-cerca-riga">
+                        <label class="m6-riq-cerca">
+                            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                            <input type="search" placeholder="{{localize 'M6.Formule.Cerca'}}" aria-label="{{localize 'M6.Formule.Cerca'}}" data-filter="formule">
+                        </label>
+                    </div>
+                    {{> "systems/m6/templates/actor/parts/filtro-sfere.hbs" nome="formule" sfere=formule.sfere}}
+                    <div class="m6-formule-lista" data-list="formule">
+                        {{#each formule.righe as |formula|}}
+                            {{> "systems/m6/templates/actor/parts/formula-scheda.hbs" formula=formula}}
+                        {{else}}
+                            <p class="m6-bussola-vuoto">{{localize "M6.Formule.Vuote"}}</p>
+                        {{/each}}
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <div class="m6-formule-col">
+            <section class="m6-riq m6-riq-pagina m6-riq-effetti">
+                <header class="m6-riq-title m6-riq-title-tasti">
+                    <span>{{localize "M6.Formule.Effetti"}}</span>
+                    <small class="m6-riq-conto">{{incantesimi.length}}</small>
+                    <span class="m6-riq-tasti">
+                        {{!-- L'archivio degli effetti del manuale: liste da aggiungere alla scheda e ritoccare. --}}
+                        <button type="button" class="m6-riq-tasto-piccolo" data-action="incantesimoFromEffetti" title="{{localize 'M6.Incantesimi.FromEffetti'}}" aria-label="{{localize 'M6.Incantesimi.FromEffetti'}}" {{#if locked}}disabled{{/if}}><i class="fa-solid fa-book" aria-hidden="true"></i></button>
+                        {{!-- Il libro aperto: il Grimorio comune del tavolo. --}}
+                        <button type="button" class="m6-riq-tasto-piccolo" data-action="grimorioComuneOpen" title="{{localize 'M6.GrimorioComune.Open'}}" aria-label="{{localize 'M6.GrimorioComune.Open'}}"><i class="fa-solid fa-book-open" aria-hidden="true"></i></button>
+                        <button type="button" class="m6-riq-tasto-piccolo" data-action="incantesimoAdd" title="{{localize 'M6.Incantesimi.Add'}}" aria-label="{{localize 'M6.Incantesimi.Add'}}" {{#if locked}}disabled{{/if}}><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+                    </span>
+                </header>
+                <div class="m6-riq-body">
+                    {{#if incantesimi.length}}
+                        <div class="m6-riq-cerca-riga">
+                            <label class="m6-riq-cerca">
+                                <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                                <input type="search" placeholder="{{localize 'M6.Formule.CercaEffetti'}}" aria-label="{{localize 'M6.Formule.CercaEffetti'}}" data-filter="effetti">
+                            </label>
+                        </div>
+                        {{> "systems/m6/templates/actor/parts/filtro-sfere.hbs" nome="effetti" sfere=effettiSfere}}
+                        {{!-- Per Sfere: ogni effetto sotto la Sfera più alta che usa; a pari merito compare in tutte e due. --}}
+                        <div class="m6-incantesimi" data-list="effetti">
+                            {{#each incantesimiGroups as |group|}}
+                                <section class="m6-incantesimi-group" data-gruppo="{{group.sphere}}">
+                                    <h3 class="m6-incantesimi-sphere">{{#if group.icon}}<img src="{{group.icon}}" alt="">{{/if}}{{group.label}} <small>{{group.spells.length}}</small></h3>
+                                    {{#each group.spells as |spell|}}
+                                        {{> "systems/m6/templates/actor/parts/incantesimo-card.hbs" spell=spell}}
+                                    {{/each}}
+                                </section>
+                            {{/each}}
+                        </div>
+                    {{else}}
+                        <p class="m6-bussola-vuoto">{{localize "M6.Incantesimi.Empty"}}</p>
+                    {{/if}}
+                </div>
+            </section>
+        </div>
+    </div>
+</section>

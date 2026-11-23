@@ -1,0 +1,13 @@
+{{!-- I modificatori che gli oggetti portano al tiro (le Condizioni): una spunta
+     per voce, accesa se vale. La finestra del tiro li tiene sotto: contano
+     senza farsi vedere. Le voci scritte a mano entrano nell'elenco in fondo. --}}
+<div class="situational-modifiers m6-modificatori">
+    {{#each situationalModifiers as |modificatore|}}
+    <label class="m6-modificatore">
+        <input type="checkbox" class="mod-checkbox" data-value="{{modificatore.value}}" data-label="{{modificatore.source}}" {{#if modificatore.isActive}}checked{{/if}}>
+        <span>{{modificatore.source}}</span>
+        <b>{{modificatore.value}}</b>
+    </label>
+    {{/each}}
+    <div id="custom-modifiers-list"></div>
+</div>

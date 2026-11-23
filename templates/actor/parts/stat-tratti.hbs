@@ -1,0 +1,62 @@
+{{!-- Tratti (16/9; 23/9; 25/9): al posto della parola Tratti, in testa, un menù a
+     schede, le sei di Blue: Tratti (Background, Pregi e Difetti insieme),
+     Equipaggiamento, Poteri attivi, Poteri passivi, Altro, Grimorio; sotto la
+     cerca, poi le righe della scheda scelta, in ordine di nome. Ogni tratto si
+     mette nel tiro con un clic, anche più d'uno; a destra il bonus scritto
+     sull'oggetto, se ce l'ha. I poteri stanno con il testo dell'effetto sotto
+     il nome (per ricordare quali passivi si hanno e quali attivi si possono
+     fare); il clic sceglie il potere per il tiro come la tendina del Tiro. Un
+     incantesimo cliccato si carica nel compositore com'è scritto e i tre
+     tasti del Tiro tirano; un altro clic lo toglie. Il libro accanto alla
+     cerca, sulla scheda del Grimorio, apre la pagina dove gli incantesimi si
+     scrivono. Le schede sono i filtri di specie (`data-filters`): la scelta
+     resta nella scheda attraverso i render. Niente righe di vuoto (25/9). --}}
+<section class="m6-riq m6-riq-tratti" data-scheda="{{trattiScheda}}">
+    <header class="m6-riq-title m6-riq-schede{{#if memo.on}} memo-{{memo.boxes.tratti.state}}{{/if}}" role="tablist" aria-label="{{localize 'M6.Stat.Tratti'}}">
+        <div class="m6-schede" role="group" data-filters="tratti">
+            {{#each traitKinds as |kind|}}
+                <button type="button" class="m6-filtro m6-scheda{{#if kind.active}} active{{/if}}" role="tab" data-kind="{{kind.id}}" aria-selected="{{kind.active}}" title="{{kind.label}}">{{kind.short}}</button>
+            {{/each}}
+        </div>
+        {{#if memo.on}}
+            {{!-- Col memo di creazione acceso (23/9): Vantaggi (Background e Pregi insieme) e Difetti, col premio della Sfida se c'è. --}}
+            <b class="m6-memo-conto"><span class="m6-memo-voce {{memo.boxes.tratti.vantaggi.state}}" title="{{localize 'M6.Riepilogo.MeritsHint'}}">{{localize "M6.Tratti.Vantaggi"}} {{memo.boxes.tratti.vantaggi.text}}</span>{{#if memo.boxes.tratti.vantaggi.sfida}} <small class="m6-memo-premio preso" title="{{localize 'M6.Riepilogo.SfidaPremi.merits'}}">+{{memo.boxes.tratti.vantaggi.sfida}} {{localize "M6.Tabs.Short.conceptChallenge"}}</small>{{/if}} · <span class="m6-memo-voce {{memo.boxes.tratti.difetti.state}}" title="{{localize 'M6.Riepilogo.Flaws'}}">{{localize "M6.Stat.TrattiDifetti"}} {{memo.boxes.tratti.difetti.text}}</span></b>
+        {{/if}}
+    </header>
+    <div class="m6-riq-body">
+        <div class="m6-riq-cerca-riga">
+            <label class="m6-riq-cerca">
+                <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                <input type="search" class="m6-cerca-tratti" placeholder="{{localize 'M6.Stat.CercaTratto'}}" aria-label="{{localize 'M6.Stat.CercaTratto'}}" data-filter="tratti">
+            </label>
+            <button type="button" class="m6-riq-tasto-piccolo m6-tratti-libro" data-action="tiroGrimorio" title="{{localize 'M6.Stat.ApriGrimorio'}}" aria-label="{{localize 'M6.Stat.ApriGrimorio'}}"><i class="fa-solid fa-book-open" aria-hidden="true"></i></button>
+        </div>
+        <div class="m6-riq-scroll m6-tratti-oggetti" data-list="tratti">
+            {{#each traitRows as |row|}}
+                <button type="button" class="m6-riga m6-riga-oggetto{{#if row.chosen}} scelta{{/if}}" data-action="tiroTrait" data-item-id="{{row.id}}" data-kind="{{row.kind}}" data-search="{{row.name}} {{row.kindLabel}}" aria-pressed="{{row.chosen}}" title="{{row.hint}}">
+                    <span class="m6-riga-spunta" aria-hidden="true"></span>
+                    {{#if row.img}}<img class="m6-riga-icona" src="{{row.img}}" alt="">{{/if}}
+                    <span class="m6-riga-nome-testo">{{row.name}}</span>
+                    <small class="m6-riga-coda">{{#if row.dice}}<b>{{row.dice}}</b>{{/if}}</small>
+                </button>
+            {{/each}}
+            {{#each poteriFiltri as |p|}}
+                <button type="button" class="m6-riga m6-riga-oggetto m6-riga-potere-filtro{{#if p.chosen}} scelta{{/if}}" data-action="tiroPower" data-power="{{p.pick}}" data-sphere="{{p.sphere}}" data-any="{{p.any}}" data-kind="{{p.kind}}" data-search="{{p.search}}" aria-pressed="{{p.chosen}}" title="{{p.hint}}">
+                    <span class="m6-riga-spunta" aria-hidden="true"></span>
+                    <img class="m6-riga-icona m6-sfera-sigillo" src="{{p.sphereIcon}}" alt="">
+                    <span class="m6-riga-nome-testo">{{p.name}}</span>
+                    <small class="m6-riga-coda">{{#if p.nota}}{{p.nota}}{{else}}{{p.cost}}{{/if}}</small>
+                    <span class="m6-riga-effetto">{{#each p.blocchi as |b|}}<span class="m6-riga-effetto-blocco{{#if b.kind}} {{b.kind}}{{/if}}">{{#if (eq b.kind "amalgama")}}<b>{{b.titolo}}:</b> {{/if}}{{#each b.voci as |v|}}<span>{{#if v.accesso}}<b class="m6-accesso">{{localize "M6.Grimorio.Access"}} {{#each v.sfere as |sfera|}}<img class="m6-sfera-inline" src="systems/m6/assets/icons/sheet/{{sfera}}.png" alt="{{localize (concat 'M6.Spheres.' sfera)}}" title="{{localize (concat 'M6.Spheres.' sfera)}}">{{/each}}:</b> {{else if v.chiave}}<b>{{v.chiave}}:</b> {{/if}}{{v.testo}}</span>{{/each}}</span>{{/each}}</span>
+                </button>
+            {{/each}}
+            {{#each incantesimi as |spell|}}
+                <button type="button" class="m6-riga m6-riga-oggetto m6-riga-incantesimo{{#if spell.chosen}} scelta{{/if}}" data-action="tiroIncantesimo" data-row="{{spell.id}}" data-kind="grimorio" data-search="{{spell.name}} {{spell.coda}}" aria-pressed="{{spell.chosen}}" title="{{spell.hint}}">
+                    <span class="m6-riga-spunta" aria-hidden="true"></span>
+                    {{#if spell.icon}}<img class="m6-riga-icona m6-sfera-sigillo" src="{{spell.icon}}" alt="">{{/if}}
+                    <span class="m6-riga-nome-testo">{{spell.name}}</span>
+                    <small class="m6-riga-coda">{{spell.coda}}</small>
+                </button>
+            {{/each}}
+        </div>
+    </div>
+</section>

@@ -6,23 +6,27 @@ Qui dati, schede, dado e tiro sono di M6 da cima a fondo.
 
 ## Stato
 
-Prima tappa, le fondamenta.
+Seconda tappa, il Mago. La scheda e le regole del modulo sono passate nel
+sistema, su una base scritta da capo.
 
 | Pezzo | Cosa c'è |
 | :--- | :--- |
-| Mago | I nove Attributi, le quattordici Abilità e la Salute |
-| PNG | Le tre riserve (Fisico, Sociale, Mentale) e la Salute |
-| Tiro | Si tira tutta la riserva in d10 e si contano i successi contro la soglia. Senza soglia il tiro non parte |
-| Carta | In chat dice con cosa si è tirato, mostra i dadi, conta successi, soglia e margine, e chiude con la fascia dell'esito |
-| Schede | Nude. Il nome di un tratto lo mette nel tiro, i pallini ne cambiano il valore |
+| Mago | La scheda a nove pagine, cioè Stat, Tratti, Magick, Formule, Credo, Bussola, Sfida, Esperienza e Note |
+| Tiro | Il tiro di Abilità e il lancio di Magick, con Specializzazioni, Condizioni, soglia, dadi rossi e Volontà |
+| Carta | In chat mostra con cosa si è tirato, i dadi, i successi contro la soglia e la fascia dell'esito |
+| Oggetti | Pregi, Difetti, Background, Condizioni, armi, armature ed equipaggiamento, con una scheda sola per tutti |
+| Compendi | Quindici, dai Vantaggi all'Equipaggiamento alla Bussola |
+| PNG | La scheda del nemico, con le tre riserve, i casi, la Salute e la Natura |
+| Narratore | Il Quadro, il verdetto sui tiri, le Condizioni e il Vathrâ |
 | Telefono | Su uno schermo stretto una pagina sola prende il posto di Foundry |
 
 Il dado ha la faccia vuota da 1 a 5, la scintilla da 6 a 9 e la stellina sul 10.
 La scintilla vale un successo. Le stelline contano a coppie, 4 successi la
 coppia e 1 la spaiata.
 
-Le schede vere, il Narratore, gli oggetti e l'interfaccia dell'app arrivano
-nelle tappe dopo.
+La scheda del nemico e gli strumenti del Narratore ci sono già, ma la loro
+prova a fondo è la terza tappa. Poi vengono gli oggetti e l'interfaccia dell'app
+sul telefono.
 
 ## Installazione
 
@@ -41,12 +45,30 @@ Poi si crea un mondo che usa il sistema «Maghi 6ª Edizione - Fan Made».
 Chi entra da un telefono usa lo stesso indirizzo e lo stesso utente di
 sempre. Il sistema riconosce lo schermo stretto, spegne la mappa e al posto
 dell'interfaccia di Foundry mostra una pagina sola, con la scheda da cui
-tirare, la soglia, il tasto e l'elenco dei tiri di tutti.
+tirare, la soglia, il tasto e l'elenco dei tiri.
 
 In fondo alla pagina «Foundry intero» riporta all'interfaccia di Foundry per
 quella visita. La scelta fissa sta nelle impostazioni del sistema, alla voce
 «Pagina del telefono», e vale per il dispositivo. Le voci sono tre, cioè
 solo sugli schermi stretti, sempre e mai.
+
+## Impianto
+
+Il sistema è fatto per cambiare un pezzo senza toccare gli altri.
+
+| Cartella | Cosa tiene |
+| :--- | :--- |
+| `scripts/base/` | Quello che parla con Foundry e non è una regola. Dati, dadi, tiro, scheda di base, oggetti, telefono |
+| `scripts/base/tratti.js` | La tavola degli Attributi e delle Abilità. Dati, pallini e tiri la leggono da qui |
+| `scripts/sistema.js` | Il motore delle regole del tiro, senza niente di Foundry |
+| `scripts/data/` | I cataloghi, cioè poteri, Formule, Condizioni, Strumenti e menù del Paradosso |
+| `scripts/sheets/` | Le due schede, il Mago e il nemico |
+| `templates/actor/parts/` | I riquadri della scheda, un file per riquadro |
+| `tools/` | Gli attrezzi che rigenerano cataloghi e compendi dalle loro sorgenti |
+
+I tratti stanno nei campi della scheda (`system.attributes`, `system.skills`).
+Il resto del Mago sta nelle bandiere `flags.m6`, senza schema, così una regola
+che cambia non chiede una migrazione dei mondi.
 
 ## Sviluppo
 
@@ -63,14 +85,21 @@ npm ci
 npm run check
 ```
 
-Guarda la sintassi di ogni file e fa girare le prove in `tests/`. Le prove
-coprono le regole del tiro sugli esempi del Sistema, la Salute, la carta, la
-scelta del telefono, i modelli delle schede e il pacchetto com'è su disco.
-`tests/finta/` tiene una Foundry finta, quanto basta per caricare il sistema
-fuori da Foundry.
+Guarda la sintassi di ogni file e fa girare le prove in `tests/`. Quelle in
+`tests/base/` provano la base, le altre le regole e le schede. `tests/finta/`
+tiene una Foundry finta, quanto basta per far girare le schede fuori da
+Foundry.
 
 Un rilascio parte da un tag `x.y.z` senza «v», uguale alla versione scritta
 in `system.json`, e lo costruisce GitHub Actions.
+
+## Crediti
+
+Le icone delle mosse del menù circolare vengono da Game-icons
+(https://game-icons.net), di Lorc, Delapouite e degli altri autori del sito,
+con licenza CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/). Sono
+prese da `@iconify-json/game-icons`. L'elenco di quelle in uso sta in
+`tools/dati/icone_game_icons.json`.
 
 ## Avviso
 

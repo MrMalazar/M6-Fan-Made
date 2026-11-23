@@ -1,0 +1,63 @@
+{{!-- L'atto (Blue, 3/10): il Narratore dice il gradino e il lato; una Convinzione
+     attiva può coprire l'atto, e allora si tira Fermezza + Autocontrollo meno il
+     gradino, un 8 riesce. Tradire una Convinzione la spegne. Niente <form>:
+     DialogV2 mette il contenuto dentro il suo. --}}
+<div class="m6-saggezza-atto">
+    <p class="m6-arete-hint">{{localize "M6.Wisdom.Atto.Hint" riserva=riserva}}</p>
+
+    <table class="m6-saggezza-tavola">
+        <thead>
+            <tr>
+                <th>{{localize "M6.Wisdom.Atto.Gradino"}}</th>
+                <th>{{localize "M6.Wisdom.Lati.hubris"}}</th>
+                <th>{{localize "M6.Wisdom.Atto.Generici"}}</th>
+                <th>{{localize "M6.Wisdom.Lati.silenzio"}}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{#each tavola as |riga|}}
+                <tr>
+                    <td><label class="m6-saggezza-gradino"><input type="radio" name="gradino" value="{{riga.gradino}}" {{#if (eq riga.gradino 1)}}checked{{/if}}><b>{{riga.gradino}}</b></label></td>
+                    <td>{{riga.hubris}}</td>
+                    <td>{{riga.generico}}</td>
+                    <td>{{riga.silenzio}}</td>
+                </tr>
+            {{/each}}
+        </tbody>
+    </table>
+
+    <div class="m6-saggezza-campi">
+        <fieldset class="m6-saggezza-lati">
+            <legend>{{localize "M6.Wisdom.Atto.Lato"}}</legend>
+            {{#each lati as |lato|}}
+                <label class="m6-saggezza-lato lato-{{lato.id}}"><input type="radio" name="lato" value="{{lato.id}}"><span>{{lato.label}}</span><small>{{lato.passo}}</small></label>
+            {{/each}}
+        </fieldset>
+
+        <label class="m6-item-field">
+            <span class="m6-arete-row-label">{{localize "M6.Wisdom.Atto.Copre"}}</span>
+            <select name="copre">
+                <option value="">{{localize "M6.Wisdom.Atto.CopreNone"}}</option>
+                {{#each attive as |row|}}
+                    <option value="{{row.id}}">{{row.text}}</option>
+                {{/each}}
+            </select>
+            <small class="m6-saggezza-nota">{{localize "M6.Wisdom.Atto.CopreHint"}}</small>
+        </label>
+
+        <label class="m6-item-field">
+            <span class="m6-arete-row-label">{{localize "M6.Wisdom.Atto.Tradisce"}}</span>
+            <select name="tradisce">
+                <option value="">{{localize "M6.Wisdom.Atto.TradisceNone"}}</option>
+                {{#each attive as |row|}}
+                    <option value="{{row.id}}">{{row.text}}</option>
+                {{/each}}
+            </select>
+            <small class="m6-saggezza-nota">{{localize "M6.Wisdom.Atto.TradisceHint"}}</small>
+        </label>
+
+        {{#if spente.length}}
+            <p class="m6-saggezza-spente">{{localize "M6.Wisdom.Atto.Spente"}} {{#each spente as |row|}}<em>{{row.text}}</em>{{#unless @last}}, {{/unless}}{{/each}}</p>
+        {{/if}}
+    </div>
+</div>

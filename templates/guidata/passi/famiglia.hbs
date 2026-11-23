@@ -1,0 +1,35 @@
+{{!-- Passo 2 · la Famiglia (le nove Tradizioni, le dieci Craft) con la Sfera che porta; la via è il passo 3 (Blue, 25/9 sera). --}}
+<section class="m6-guidata-riq m6-guidata-cosa">
+    <header class="m6-guidata-riq-titolo"><span>{{localize "M6.Guidata.Cosa"}}</span><small>{{passo.sotto}}</small></header>
+    <h2 class="m6-guidata-domanda">{{passo.domanda}}</h2>
+    {{#each corpo.gruppi as |gruppo|}}
+        <h3 class="m6-guidata-occhiello">{{gruppo.label}}</h3>
+        <div class="m6-guidata-carte carte-famiglie">
+            {{#each gruppo.famiglie as |card|}}
+                <button type="button" class="m6-guidata-carta grande{{#if card.selected}} scelta{{/if}}{{#if card.delCredo}} del-credo{{/if}}" data-action="famigliaScegli" data-famiglia="{{card.id}}" aria-pressed="{{card.selected}}" {{#unless @root.canEdit}}disabled{{/unless}}>
+                    <span class="m6-guidata-arte immagine" data-iniziale="{{card.initial}}" title="{{localize 'M6.Guidata.ImmagineHint'}}"><img src="{{card.image}}" alt="" loading="lazy" onerror="this.parentElement.classList.add('manca')"><span class="m6-guidata-arte-manca">{{localize "M6.Guidata.ImmagineDaFare"}}</span></span>
+                    <h4>{{card.label}}</h4>
+                    <span class="m6-guidata-sfere">
+                        {{#if card.sphere}}<span class="m6-guidata-sfera"><img src="{{card.sphere.icon}}" alt=""> {{card.sphere.label}} <b>1</b></span>{{/if}}
+                        {{#if card.delCredo}}<small class="m6-guidata-tag oro">{{localize "M6.Guidata.Famiglia.DelCredo"}}</small>{{/if}}
+                        {{#if card.craft}}<small class="m6-guidata-tag">{{localize "M6.Guidata.Famiglia.Craft"}}</small>{{/if}}
+                    </span>
+                </button>
+            {{/each}}
+        </div>
+    {{/each}}
+</section>
+<aside class="m6-guidata-spiega">
+    {{> "systems/m6/templates/guidata/perche.hbs"}}
+    <section class="m6-guidata-riq m6-guidata-guadagni">
+        <header class="m6-guidata-riq-titolo"><span>{{localize "M6.Guidata.Guadagni"}}</span></header>
+        <div class="m6-guidata-voci">
+            <div class="m6-guidata-voce"><i class="fa-solid fa-circle-nodes" aria-hidden="true"></i> {{localize "M6.Guidata.Famiglia.SferaFamiglia"}} <b>{{#if corpo.family.sphere}}{{corpo.family.sphere.label}}{{else}}…{{/if}}</b></div>
+            {{#unless corpo.family.craft}}<div class="m6-guidata-voce"><i class="fa-solid fa-signs-post" aria-hidden="true"></i> {{localize "M6.Guidata.Famiglia.ViaPasso"}} <b>{{localize "M6.Guidata.Credo.NelPasso" n=3}}</b></div>{{/unless}}
+            {{#if corpo.pratica}}<div class="m6-guidata-voce"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> {{localize "M6.Guidata.Famiglia.Pratica"}} <b>{{corpo.pratica}}</b></div>{{/if}}
+            <div class="m6-guidata-voce"><i class="fa-solid fa-compass" aria-hidden="true"></i> {{localize "M6.Guidata.Famiglia.Bussola"}} <b>{{localize "M6.Guidata.Credo.NelPasso" n=4}}</b></div>
+            <div class="m6-guidata-voce"><i class="fa-solid fa-microchip" aria-hidden="true"></i> {{localize "M6.Guidata.Famiglia.Tipo"}} <b>{{localize "M6.Guidata.Credo.NelPasso" n=5}}</b></div>
+            <div class="m6-guidata-voce"><i class="fa-solid fa-hand-sparkles" aria-hidden="true"></i> {{localize "M6.Guidata.Famiglia.Strumenti"}} <b>{{localize "M6.Guidata.Credo.NelPasso" n=8}}</b></div>
+        </div>
+    </section>
+</aside>

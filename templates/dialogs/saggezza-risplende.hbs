@@ -1,0 +1,29 @@
+{{!-- Risplende (Blue, 3/10): l'atto che fa risplendere una Convinzione, chiamato
+     dal Narratore a fine scena, una volta per sessione per giocatore. La
+     Convinzione torna attiva e il segno del lato scelto torna indietro di un
+     passo; se è già al centro, riaccende e basta. --}}
+<div class="m6-saggezza-risplende">
+    <p class="m6-arete-hint">{{localize "M6.Wisdom.RisplendeDialog.Hint"}}</p>
+
+    <label class="m6-item-field">
+        <span class="m6-arete-row-label">{{localize "M6.Wisdom.RisplendeDialog.Convinzione"}}</span>
+        <select name="convinzione">
+            <option value="">{{localize "M6.Wisdom.RisplendeDialog.ConvinzioneNone"}}</option>
+            {{#each convinzioni as |row|}}
+                <option value="{{row.id}}">{{row.text}}{{#if row.spenta}} · {{localize "M6.Wisdom.Convinzione.Spenta"}}{{/if}}</option>
+            {{/each}}
+        </select>
+    </label>
+
+    <fieldset class="m6-saggezza-lati">
+        <legend>{{localize "M6.Wisdom.RisplendeDialog.Lato"}}</legend>
+        {{#each lati as |lato|}}
+            <label class="m6-saggezza-lato lato-{{lato.id}}"><input type="radio" name="lato" value="{{lato.id}}"><span>{{lato.label}}</span><small>{{lato.passo}}</small></label>
+        {{/each}}
+    </fieldset>
+
+    {{#if usato}}
+        <p class="m6-saggezza-avviso">{{localize "M6.Wisdom.RisplendeDialog.UsatoHint"}}</p>
+        <label class="m6-saggezza-spunta"><input type="checkbox" name="concesso"><span>{{localize "M6.Wisdom.RisplendeDialog.Concedi"}}</span></label>
+    {{/if}}
+</div>

@@ -1,0 +1,43 @@
+{{!-- Passo 9 · i nove Attributi a pallini, la forma fissa e le statistiche di base. --}}
+<section class="m6-guidata-riq m6-guidata-cosa">
+    <header class="m6-guidata-riq-titolo"><span>{{localize "M6.Guidata.Cosa"}}</span><small>{{passo.sotto}}</small></header>
+    <h2 class="m6-guidata-domanda">{{passo.domanda}}</h2>
+    <div class="m6-guidata-conto-riga">
+        <span class="m6-guidata-forma">
+            {{#each corpo.forma.rows as |row|}}<span class="m6-guidata-chip fermo {{row.state}}" title="{{localize 'M6.Guidata.Attributi.NeHai' have=row.have}}">{{localize "M6.Guidata.Attributi.FormaVoce" count=row.count value=row.value}}{{#unless (eq row.state "exact")}} · {{localize "M6.Guidata.Attributi.NeHai" have=row.have}}{{/unless}}</span>{{/each}}
+        </span>
+        <span class="m6-guidata-conto {{corpo.conto.state}}">{{localize "M6.Guidata.Attributi.Segnati"}} <b>{{corpo.conto.text}}</b></span>
+    </div>
+    <div class="m6-guidata-righe">
+        {{#each corpo.gruppi as |gruppo|}}
+            <h3 class="m6-guidata-occhiello">{{gruppo.label}}</h3>
+            {{#each gruppo.attributi as |attr|}}
+                <div class="m6-guidata-riga">
+                    {{#if attr.icon}}<img class="m6-guidata-riga-icona" src="{{attr.icon}}" alt="">{{/if}}
+                    <span class="m6-guidata-riga-nome">{{attr.label}}</span>
+                    <span class="m6-guidata-pallini" role="group" aria-label="{{attr.label}}">
+                        {{#each attr.steps as |step|}}
+                            <button type="button" class="m6-guidata-pallino{{#if step.lit}} lit{{/if}}" data-action="attributoPallino" data-attribute="{{attr.id}}" data-value="{{step.value}}" title="{{step.value}}" {{#unless @root.canEdit}}disabled{{/unless}}></button>
+                        {{/each}}
+                    </span>
+                </div>
+            {{/each}}
+        {{/each}}
+    </div>
+</section>
+<aside class="m6-guidata-spiega">
+    {{> "systems/m6/templates/guidata/perche.hbs"}}
+    <section class="m6-guidata-riq m6-guidata-guadagni">
+        <header class="m6-guidata-riq-titolo"><span>{{localize "M6.Guidata.Guadagni"}}</span></header>
+        <div class="m6-guidata-voci">
+            <div class="m6-guidata-voce"><i class="fa-solid fa-heart" aria-hidden="true"></i> {{localize "M6.Guidata.Attributi.Salute"}} <b>{{localize "M6.Guidata.Attributi.Caselle" n=corpo.statistiche.salute}}</b></div>
+            <div class="m6-guidata-voce"><i class="fa-solid fa-hand-fist" aria-hidden="true"></i> {{localize "M6.Guidata.Attributi.Volonta"}} <b>{{localize "M6.Guidata.Attributi.Caselle" n=corpo.statistiche.volonta}}</b></div>
+            <div class="m6-guidata-voce"><i class="fa-solid fa-scale-balanced" aria-hidden="true"></i> {{localize "M6.Guidata.Attributi.Saggezza"}} <b>{{localize "M6.Guidata.Attributi.Dadi" n=corpo.statistiche.saggezza}}</b></div>
+            <div class="m6-guidata-voce"><i class="fa-solid fa-dice-d10" aria-hidden="true"></i> {{localize "M6.Guidata.Attributi.Tiro"}} <b>{{localize "M6.Guidata.Attributi.TiroPiu"}}</b></div>
+        </div>
+    </section>
+    <section class="m6-guidata-riq m6-guidata-memo">
+        <header class="m6-guidata-riq-titolo"><span>{{localize "M6.Guidata.Memo"}}</span></header>
+        <div class="m6-guidata-voce {{corpo.conto.state}}"><i class="fa-solid fa-square-check" aria-hidden="true"></i> {{localize "M6.Riepilogo.Attributes"}} <b>{{corpo.conto.text}}</b></div>
+    </section>
+</aside>

@@ -1,0 +1,39 @@
+{{!-- La scheda di un oggetto: nome, immagine, i campi del tipo, la descrizione. --}}
+<section class="m6-oggetto-foglio">
+    <header class="m6-oggetto-capo">
+        <img src="{{oggetto.img}}" alt="" data-edit="img" data-action="editImage">
+        <div>
+            <span class="m6-riq-occhiello">{{tipo}}</span>
+            <input type="text" name="name" value="{{oggetto.name}}" aria-label="{{localize 'M6.Comuni.Name'}}">
+        </div>
+    </header>
+    <div class="m6-oggetto-campi">
+        {{#if vantaggio}}
+        <label><span>{{localize "M6.Comuni.Oggetto.Tipo"}}</span>
+            <select name="system.featuretype">{{#each vantaggio.tipi as |voce|}}<option value="{{voce.id}}" {{#if voce.selected}}selected{{/if}}>{{voce.label}}</option>{{/each}}</select>
+        </label>
+        <label><span>{{localize "M6.Comuni.Oggetto.Pallini"}}</span><input type="number" name="system.points" value="{{system.points}}" min="0" max="5" step="1"></label>
+        {{/if}}
+        {{#if arma}}
+        <label><span>{{localize "M6.Comuni.EquipmentList.WeaponType"}}</span>
+            <select name="system.weaponType">{{#each arma.tipi as |voce|}}<option value="{{voce.id}}" {{#if voce.selected}}selected{{/if}}>{{voce.label}}</option>{{/each}}</select>
+        </label>
+        <label><span>{{localize "M6.Comuni.EquipmentList.WeaponValue"}}</span><input type="number" name="system.weaponvalue" value="{{system.weaponvalue}}" min="0" step="1"></label>
+        {{/if}}
+        {{#if armatura}}
+        <label><span>{{localize "M6.Comuni.EquipmentList.ArmorValue"}}</span><input type="number" name="system.armorvalue" value="{{system.armorvalue}}" min="0" step="1"></label>
+        {{/if}}
+        {{#if quantita}}
+        <label><span>{{localize "M6.Comuni.Oggetto.Quantita"}}</span><input type="number" name="system.quantity" value="{{system.quantity}}" min="0" step="1"></label>
+        {{/if}}
+        {{#if usi}}
+        <label class="m6-oggetto-spunta"><input type="checkbox" name="system.uses.enabled" {{#if usi.enabled}}checked{{/if}}><span>{{localize "M6.Comuni.Oggetto.Usi"}}</span></label>
+        {{#if usi.enabled}}
+        <label><span>{{localize "M6.Comuni.Oggetto.UsiRimasti"}}</span><input type="number" name="system.uses.current" value="{{usi.current}}" min="0" step="1"></label>
+        <label><span>{{localize "M6.Comuni.Oggetto.UsiPieni"}}</span><input type="number" name="system.uses.max" value="{{usi.max}}" min="0" step="1"></label>
+        {{/if}}
+        {{/if}}
+    </div>
+    <span class="m6-riq-occhiello">{{localize "M6.Comuni.Oggetto.Descrizione"}}</span>
+    <prose-mirror name="system.description" value="{{system.description}}" toggled="true" compact="true">{{{descrizione}}}</prose-mirror>
+</section>

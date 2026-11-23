@@ -1,0 +1,68 @@
+{{!-- La prima pagina (16/9, ordine delle colonne del 20/9, sette riquadri
+     dal 23/9): quattro colonne, sopra Identità, Attributi, Abilità e Magick;
+     sotto le Risorse, i Tratti (a schede, col Grimorio dentro) e Il Tiro,
+     che prende due colonne (Blue, 23/9: «dove c'era il riquadro del
+     Grimorio dobbiamo espandere il riquadro del tiro»). Non è un modulo da
+     compilare, è un selettore: il giocatore clicca l'Areté, le Sfere coi
+     loro poteri, i livelli degli Ambiti, un Attributo, un'Abilità, i
+     Tratti, oppure un incantesimo del Grimorio, e il riquadro del Tiro
+     compone e tira. --}}
+<section class="tab {{tab.cssClass}} m6-stat" data-tab="{{tab.id}}" data-group="{{tab.group}}">
+    <div class="m6-stat-grid">
+        <div class="m6-stat-col m6-stat-col-1">
+            {{> "systems/m6/templates/actor/parts/stat-identita.hbs"}}
+            {{> "systems/m6/templates/actor/parts/stat-risorse.hbs"}}
+        </div>
+        <div class="m6-stat-col m6-stat-col-2">
+            {{> "systems/m6/templates/actor/parts/stat-attributi.hbs"}}
+            {{> "systems/m6/templates/actor/parts/stat-tratti.hbs"}}
+        </div>
+        <div class="m6-stat-col m6-stat-col-3">
+            {{> "systems/m6/templates/actor/parts/stat-abilita.hbs"}}
+        </div>
+        <div class="m6-stat-col m6-stat-col-4">
+            {{> "systems/m6/templates/actor/parts/stat-magick.hbs"}}
+            {{> "systems/m6/templates/actor/parts/stat-tiro.hbs"}}
+        </div>
+    </div>
+
+    {{!-- Sotto gli otto riquadri (Blue, 23/9): il memo di creazione è una
+         spunta. Da spuntata, ogni riquadro porta il suo conto a destra del
+         titolo e si colora (rosso sotto, verde pari, giallo sopra), le
+         pagine fuori dalla prima colorano la linguetta, e i tasti di reset
+         si accendono (la stessa spunta, Blue 23/9); qui restano il grado del
+         Risvegliato (decide i traguardi), la Sfida coi suoi premi e il reset
+         della scheda intera. La tendina dei Bonus scritti non c'è più (Blue,
+         25/9 sera: «va rimosso completamente da quella parte di scheda»). --}}
+    <div class="m6-stat-creazione m6-creazione-barra{{#if memo.on}} acceso{{/if}}">
+        <label class="m6-memo-spunta" title="{{localize 'M6.Riepilogo.MemoHint'}}">
+            <input type="checkbox" name="flags.m6.creazione.memo" {{#if memo.on}}checked{{/if}} {{#if locked}}disabled{{/if}}>
+            <span>{{localize "M6.Riepilogo.Label"}}</span>
+        </label>
+        {{#if memo.on}}
+            {{!-- Il grado del Risvegliato (7/9) decide i traguardi dei contatori. --}}
+            <label class="m6-memo-grado">
+                <span>{{localize "M6.Riepilogo.Grade"}}</span>
+                <select name="flags.m6.creazione.grado" {{#if locked}}disabled{{/if}}>
+                    {{#each creationSummary.grades as |grade|}}
+                        <option value="{{grade.id}}" {{#if grade.selected}}selected{{/if}}>{{localize grade.label}}</option>
+                    {{/each}}
+                </select>
+            </label>
+            {{!-- La Sfida del Concetto e i suoi premi (LIBRO 05_015): quelli presi accesi. --}}
+            <span class="m6-memo-sfida {{memo.tabs.conceptChallenge.state}}" title="{{localize 'M6.Riepilogo.SfidaHint'}}">
+                <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>
+                <b>{{localize "M6.Tabs.Short.conceptChallenge"}} {{memo.sfida.done}}/{{memo.sfida.total}}</b>
+                {{#each memo.sfida.prizes as |premio|}}
+                    <small class="m6-memo-premio{{#if premio.earned}} preso{{/if}}">+{{premio.bonus}} {{localize premio.label}}</small>
+                {{/each}}
+            </span>
+            {{!-- I tasti di reset stanno ognuno nella sua sezione (11/9) e si
+                 accendono con la stessa spunta del memo (23/9), con la X che
+                 azzera un tratto solo; qui resta il reset della scheda intera. --}}
+            <button type="button" class="m6-reset-all" data-action="resetSection" data-reset="all" title="{{resetsById.all.label}}" {{#if locked}}disabled{{/if}}>
+                <i class="fa-solid {{resetsById.all.icon}}" aria-hidden="true"></i> {{resetsById.all.label}}
+            </button>
+        {{/if}}
+    </div>
+</section>

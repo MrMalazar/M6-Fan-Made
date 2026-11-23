@@ -1,0 +1,122 @@
+import { MODULE_ID } from "./constants.js";
+import { isMageActor } from "./mage-dice.js";
+import { markRollOpen, missingSuccesses, ROLL_CARD_FLAG, rollActionsBox, rollOutcome } from "./roll-card.js";
+import { prezzoAmmesso } from "./sistema.js";
+
+/**
+ * La Vittoria a un prezzo (Sistema, 14/11): l'offerta del Narratore su un
+ * fallimento. L'azione riesce ma costa qualcosa; il prezzo lo decide lui, ed
+ * è più alto quanti più successi mancano. Vale per ogni tiro fallito, di
+ * Abilità o di Magick, ma solo per chi ha tirato almeno un dado. È il terzo
+ * tasto sotto la fascia del tiro fallito, con Ritira con Volontà e il Tira
+ * Saggezza dell'Indulgere: a zero dadi il tasto c'è ma è spento, e dice
+ * perché.
+ */
+
+export const PREZZO_FLAG = "prezzo";
+
+/**
+ * Il tasto compare sotto un tiro fallito e vergine; è acceso solo con almeno
+ * un dado tirato. `missing` sono i successi che mancano alla soglia: più
+ * sono, più alto il prezzo. Sui tiri di Saggezza non compare (l'esito è già
+ * scritto sul segno), e nemmeno sui tiri che contano i successi e basta,
+ * come il Relax.
+ */
+export function prezzoState({ total = 0, difficulty = 0, dice = 0, forced = false, priced = false, burst = false, automatic = false, saggezza = false, soloConto = false } = {}) {
+  const missing = missingSuccesses(total, difficulty);
+  if (forced || priced || burst || automatic || saggezza || soloConto || missing <= 0) return { show: false, enabled: false, missing: 0 };
+  return { show: true, enabled: prezzoAmmesso({ dadi: dice, riuscito: false }), missing, dice: Math.max(Math.trunc(Number(dice) || 0), 0) };
+}
+
+function stateInput(card) {
+  return { total: card.total, difficulty: card.difficulty, dice: card.dice, forced: card.forced, priced: card.priced, burst: card.burst || card.burstResult, automatic: card.automatic, saggezza: Boolean(card.saggezza), soloConto: Boolean(card.soloConto) };
+}
+
+function speakerActor(message) {
+  const actor = ChatMessage.getSpeakerActor?.(message.speaker) ?? game.actors?.get(message.speaker?.actor);
+  return actor ?? null;
+}
+
+/** Il tasto: «Vittoria a un prezzo», coi successi che mancano nel titolo. */
+export function renderPrezzoButton(state, dice, localize, format) {
+  const hint = state.enabled
+    ? format("M6.Prezzo.Hint", { dice, missing: state.missing })
+    : format("M6.Prezzo.HintFar", { dice });
+  return `<button type="button" class="m6-roll-action m6-prezzo-button" data-prezzo="go"${state.enabled ? "" : " disabled"} title="${hint}">${localize("M6.Prezzo.Button")}</button>`;
+}
+
+/** La riga di quel che è stato fatto, al posto del tasto. */
+export function renderPriced(used, format, localize) {
+  return `<p class="m6-roll-note m6-roll-note-prezzo"><b class="m6-prezzo-label">${localize("M6.Prezzo.Label")}</b> <span>${format("M6.Prezzo.Done", { dice: used.dice ?? 0, missing: used.missing ?? 0 })}</span></p>`;
+}
+
+/** Sotto i dadi di un tiro fallito del Mago: il tasto, o la riga di quel che si è fatto. */
+export function decoratePrezzo(message, html) {
+  if (!html?.querySelector) return false;
+  const roll = message?.rolls?.[0];
+  if (!roll && message.getFlag?.(MODULE_ID, ROLL_CARD_FLAG)?.ramo !== "C") return false;
+  const target = html.querySelector(".dice-result") ?? html.querySelector(".message-content");
+  if (!target || target.querySelector(".m6-prezzo-button, .m6-roll-note-prezzo")) return false;
+
+  const localize = game.i18n.localize.bind(game.i18n);
+  const format = game.i18n.format.bind(game.i18n);
+  const used = message.getFlag?.(MODULE_ID, PREZZO_FLAG);
+  if (used) {
+    target.insertAdjacentHTML("beforeend", renderPriced(used, format, localize));
+    return true;
+  }
+
+  const actor = speakerActor(message);
+  if (!isMageActor(actor) || !actor.isOwner) return false;
+  const card = message.getFlag?.(MODULE_ID, ROLL_CARD_FLAG) ?? {};
+  if (!Number.isFinite(Number(card.total))) return false;
+  const state = prezzoState(stateInput(card));
+  if (!state.show) return false;
+
+  const box = rollActionsBox(target);
+  box.insertAdjacentHTML("beforeend", renderPrezzoButton(state, state.dice, localize, format));
+  if (state.enabled) {
+    markRollOpen(html);
+    box.querySelector("[data-prezzo=\"go\"]")?.addEventListener("click", async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      await winAtAPrice(message, actor);
+    });
+  }
+  return true;
+}
+
+/** La finestra: riesce, e il prezzo lo decide il Narratore. */
+async function confirmPrezzo(state, dice, localize, format) {
+  return foundry.applications.api.DialogV2.confirm({
+    window: { title: localize("M6.Prezzo.Title") },
+    content: `<div class="m6-prezzo-ask"><p>${format("M6.Prezzo.Ask", { dice, missing: state.missing })}</p><p><em>${localize("M6.Prezzo.AskNote")}</em></p></div>`,
+    classes: ["m6w", "m6", "mage", "m6-prezzo-dialog"],
+    yes: { icon: "fas fa-handshake", label: localize("M6.Prezzo.Yes"), default: true },
+    no: { icon: "fas fa-times", label: localize("M6.Prezzo.No") },
+    rejectClose: false
+  });
+}
+
+/** La riuscita a un prezzo: la carta dice riuscito, e la riga ricorda che il prezzo è del Narratore. */
+export async function winAtAPrice(message, actor) {
+  if (message.getFlag(MODULE_ID, PREZZO_FLAG)) return null;
+  const card = message.getFlag(MODULE_ID, ROLL_CARD_FLAG) ?? {};
+  const state = prezzoState(stateInput(card));
+  if (!state.show || !state.enabled) return null;
+  const localize = game.i18n.localize.bind(game.i18n);
+  const format = game.i18n.format.bind(game.i18n);
+  const ok = await confirmPrezzo(state, state.dice, localize, format);
+  if (!ok) return null;
+
+  const used = { missing: state.missing, dice: state.dice };
+  const flags = { [MODULE_ID]: { [PREZZO_FLAG]: used, [ROLL_CARD_FLAG]: { symbols: [], ...card, priced: true } } };
+  await message.update({ flags });
+  const outcome = rollOutcome(card.total, card.difficulty, localize, { priced: true });
+  ui.notifications.info(`${outcome.text}. ${format("M6.Prezzo.Done", { dice: state.dice, missing: state.missing })}`);
+  return used;
+}
+
+export function registerPrezzo() {
+  Hooks.on("renderChatMessageHTML", decoratePrezzo);
+}

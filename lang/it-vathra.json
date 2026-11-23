@@ -1,0 +1,79 @@
+{
+  "M6": {
+    "Vathra": {
+      "Titolo": "Vathrâ",
+      "Controllo": "Traduttore del Vathrâ",
+      "Pagine": {
+        "traduttore": "Traduttore",
+        "radice": "Radice",
+        "alfabeto": "Alfabeto",
+        "frasario": "Frasario"
+      },
+      "ScriviItaliano": "Scrivi in italiano…",
+      "Mano": {
+        "PassaSciolta": "Passa alla mano sciolta",
+        "PassaFilata": "Torna alla mano filata"
+      },
+      "ComeSiLegge": "Come si legge",
+      "Gettoni": {
+        "testimone": {
+          "occhi": "l'ho visto",
+          "tessitura": "nella Tessitura",
+          "riferito": "me l'hanno detto",
+          "avatar": "l'ha detto l'Avatar"
+        },
+        "consenso": {
+          "coincidente": "il mondo ha acconsentito",
+          "volgare": "strappata al mondo"
+        },
+        "registro": {
+          "reale": "quello che è successo davvero"
+        },
+        "Eco": "lo dice già la tua frase"
+      },
+      "Ascolta": "Ascolta",
+      "CopiaGlifi": "Copia i glifi",
+      "Copiato": "Copiato negli appunti.",
+      "CopiaNo": "Non riesco a copiare negli appunti.",
+      "SenzaVoce": "Questo browser non ha una voce per leggere la frase.",
+      "ChiCapisce": "Capiscono",
+      "ChiCapisceNota": "Tutti vedono i glifi e la lettura. Il senso in italiano lo vedono il Narratore, chi scrive e i giocatori accesi qui.",
+      "NessunGiocatore": "Nessun altro giocatore nel mondo.",
+      "Mandato": "Frase mandata in chat.",
+      "Vuoto": "Scrivi una frase prima di mandarla.",
+      "Manopole": {
+        "modo": {
+          "Nome": "Modo",
+          "auto": "automatico",
+          "imperativo": "comando",
+          "racconto": "racconto"
+        },
+        "risvegliato": {
+          "Nome": "Chi agisce",
+          "auto": "lo decide il lessico",
+          "si": "è risvegliato: î' e -ên",
+          "no": "dorme: e' e -en"
+        },
+        "nomiPropri": {
+          "Nome": "Nomi propri",
+          "lascia": "lasciali come sono",
+          "muta": "passali per la Mutazione"
+        }
+      },
+      "Carta": {
+        "Capiscono": "Chi capisce"
+      },
+      "Radice": {
+        "Parola": "Una parola italiana",
+        "DalLessico": "dal lessico",
+        "DallaMutazione": "dalla Prima Mutazione",
+        "Regole": "Le sette regole"
+      },
+      "Frasario": {
+        "Cerca": "Cerca una frase"
+      },
+      "MandaCome": "Manda come {nome}",
+      "Particelle": "Particelle e manopole"
+    }
+  }
+}

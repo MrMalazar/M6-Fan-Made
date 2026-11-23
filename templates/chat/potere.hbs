@@ -1,0 +1,19 @@
+{{!-- La carta di un potere usato (24/9): nome, Sfera e matrice, il costo pagato,
+     gli usi che restano, il testo a blocchi. Quello che dice lo applica il Narratore.
+     Dal rifacimento (30/9): il costo scritto per esteso quando dice più della Quintessenza
+     pagata, e accanto al titolo di ogni blocco il costo dell'attivo o la cadenza del passivo. --}}
+<div class="m6-roll-card m6-potere-chat">
+    <p class="m6-incantesimo-chat-name">{{carta.name}}</p>
+    <p class="m6-potere-chat-riga">{{#if carta.sphere}}<b>{{carta.sphere}}</b>{{/if}}{{#if carta.formula}} · {{carta.formula}}{{/if}}{{#if carta.kind}} · {{carta.kind}}{{/if}}</p>
+    {{#if carta.costo}}<p class="m6-potere-chat-riga"><b>{{localize "M6.Poteri.Carta.Costo"}}</b> {{carta.costo}}</p>{{/if}}
+    {{#if carta.spent}}<p class="m6-potere-chat-riga"><b>{{localize "M6.Poteri.Carta.Pagato"}}</b> {{carta.spent}} {{#if carta.inParadosso}}{{localize "M6.MagickBalance.Paradox"}}{{else}}{{localize "M6.Poteri.QuintessenzaBreve"}}{{/if}}</p>{{/if}}
+    {{#if carta.usi}}<p class="m6-potere-chat-riga"><b>{{localize "M6.Poteri.Carta.Usi"}}</b> {{carta.usi.restanti}}/{{carta.usi.max}} ({{carta.usi.label}})</p>{{/if}}
+    {{#each carta.blocchi as |blocco|}}
+        <div class="m6-potere-chat-blocco{{#if blocco.kind}} {{blocco.kind}}{{/if}}">
+            {{#if blocco.titolo}}<b>{{blocco.titolo}}</b>{{#if blocco.misura}} <small class="m6-potere-misura">{{blocco.misura}}</small>{{/if}}{{/if}}
+            {{#each blocco.voci as |v|}}<p>{{#if v.accesso}}<strong class="m6-accesso">{{#if v.con}}{{localize "M6.Poteri.ConSfera"}}{{else}}{{localize "M6.Grimorio.Access"}}{{/if}} {{#each v.sfere as |sfera|}}<img class="m6-sfera-inline" src="systems/m6/assets/icons/sheet/{{sfera}}.png" alt="{{localize (concat 'M6.Spheres.' sfera)}}" title="{{localize (concat 'M6.Spheres.' sfera)}}">{{/each}}:</strong> {{else if v.chiave}}<strong>{{v.chiave}}:</strong> {{/if}}{{v.testo}}</p>{{/each}}
+        </div>
+    {{/each}}
+    {{#if carta.paradox}}<p class="m6-potere-chat-riga m6-potere-chat-paradosso"><b>{{localize "M6.Poteri.Carta.Paradosso"}}</b> {{carta.paradox}}</p>{{/if}}
+    {{#if carta.flavor}}<p class="m6-potere-chat-flavor"><em>{{carta.flavor}}</em></p>{{/if}}
+</div>

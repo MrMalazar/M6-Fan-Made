@@ -1,0 +1,173 @@
+{{!-- La Bussola (Blue, 25/9 sera: «come la Magick in atto»; 26/9: via lo Stato):
+     il titolo di pagina e le misure della pagina Magick, riquadri col titolo
+     d'oro, carte scure, campi trasparenti con la riga d'oro sotto, etichette in
+     oro maiuscolo a larghezza fissa così le caselle stanno in colonna. Su due
+     colonne: a sinistra Concetto e Cronaca (con Ambizione e Desiderio e il loro
+     «quando si attiva») e le Convinzioni; a destra le Ancore, che sono le carte
+     più alte. Lo Stato non c'è più: la Saggezza ha il suo stato in prima pagina
+     (Blue, 26/9). L'Appartenenza sta in testata. --}}
+<section class="tab {{tab.cssClass}} m6-personaggio" data-tab="{{tab.id}}" data-group="{{tab.group}}">
+    <header class="m6-section-title">
+        {{!-- Il reset della Bussola (Ambizione, Desiderio, Convinzioni, Ancore), 11/9. --}}
+        {{#if creazioneReset}}{{> "systems/m6/templates/actor/parts/reset-tasto.hbs" resetsById.compass}}{{/if}}
+        <span>{{localize "M6.Tabs.Short.personaggio"}}</span>
+    </header>
+
+    <div class="m6-spheres-content m6-personaggio-columns">
+        <div class="m6-personaggio-col m6-personaggio-col-left">
+            <section class="m6-riq m6-riq-pagina m6-riq-bussola-identita">
+                <header class="m6-riq-title">
+                    <span>{{localize "M6.Personaggio.IdentityLabel"}}</span>
+                </header>
+                <div class="m6-riq-body">
+                    <div class="m6-bussola-carta">
+                        <div class="m6-bussola-campo">
+                            <span>{{localize "M6.Comuni.BiographyList.Concept"}}</span>
+                            <input type="text" name="system.headers.concept" value="{{concept}}" placeholder="{{localize 'M6.Comuni.BiographyList.Concept'}}" aria-label="{{localize 'M6.Comuni.BiographyList.Concept'}}" {{#if locked}}disabled{{/if}}>
+                            <button type="button" class="m6-riq-tasto-piccolo" data-action="archivioOpen" data-kind="concetto" title="{{localize 'M6.Archivi.Open'}}" aria-label="{{localize 'M6.Archivi.Open'}}"><i class="fa-solid fa-book-open" aria-hidden="true"></i></button>
+                        </div>
+                        <label class="m6-bussola-campo">
+                            <span>{{localize "M6.Comuni.BiographyList.Chronicle"}}</span>
+                            <input type="text" name="system.headers.chronicle" value="{{chronicle}}" placeholder="{{localize 'M6.Comuni.BiographyList.Chronicle'}}" {{#if locked}}disabled{{/if}}>
+                        </label>
+                    </div>
+
+                    {{!-- Ambizione e Desiderio: il nome e, sotto, quando si attiva.
+                         Il libro apre l'archivio dei Cataloghi; il «+» dell'archivio accoda. --}}
+                    <div class="m6-bussola-carta">
+                        <div class="m6-bussola-campo">
+                            <span>{{localize "M6.Comuni.BiographyList.Ambition"}}</span>
+                            <input type="text" name="system.headers.ambition" value="{{ambition}}" placeholder="{{localize 'M6.Comuni.BiographyList.Ambition'}}" aria-label="{{localize 'M6.Comuni.BiographyList.Ambition'}}" {{#if locked}}disabled{{/if}}>
+                            <button type="button" class="m6-riq-tasto-piccolo" data-action="archivioOpen" data-kind="ambizione" title="{{localize 'M6.Archivi.Open'}}" aria-label="{{localize 'M6.Archivi.Open'}}"><i class="fa-solid fa-book-open" aria-hidden="true"></i></button>
+                        </div>
+                        <label class="m6-bussola-campo">
+                            <span>{{localize "M6.Personaggio.TriggerHint"}}</span>
+                            <textarea name="flags.m6.ambitionTrigger" rows="1" placeholder="{{localize 'M6.Personaggio.TriggerHint'}}" {{#if locked}}disabled{{/if}}>{{ambitionTrigger}}</textarea>
+                        </label>
+                    </div>
+                    <div class="m6-bussola-carta">
+                        <div class="m6-bussola-campo">
+                            <span>{{localize "M6.Comuni.BiographyList.Desire"}}</span>
+                            <input type="text" name="system.headers.desire" value="{{desire}}" placeholder="{{localize 'M6.Comuni.BiographyList.Desire'}}" aria-label="{{localize 'M6.Comuni.BiographyList.Desire'}}" {{#if locked}}disabled{{/if}}>
+                            <button type="button" class="m6-riq-tasto-piccolo" data-action="archivioOpen" data-kind="desiderio" title="{{localize 'M6.Archivi.Open'}}" aria-label="{{localize 'M6.Archivi.Open'}}"><i class="fa-solid fa-book-open" aria-hidden="true"></i></button>
+                        </div>
+                        <label class="m6-bussola-campo">
+                            <span>{{localize "M6.Personaggio.TriggerHint"}}</span>
+                            <textarea name="flags.m6.desireTrigger" rows="1" placeholder="{{localize 'M6.Personaggio.TriggerHint'}}" {{#if locked}}disabled{{/if}}>{{desireTrigger}}</textarea>
+                        </label>
+                    </div>
+                </div>
+            </section>
+
+            {{!-- Ogni Convinzione è una carta (9/9): il gruppo (o il Credo) e il testo con il
+                 cestino; sotto «La servi quando» e «La attraversi quando», con la descrizione.
+                 Dal 3/10 la carta porta l'interruttore: attiva, e allora copre gli atti della
+                 Saggezza; spenta, perché tradita, finché un atto non la fa risplendere. --}}
+            <section class="m6-riq m6-riq-pagina m6-riq-convinzioni">
+                <header class="m6-riq-title m6-riq-title-tasti">
+                    <span>{{localize "M6.Personaggio.ConvictionsLabel"}}</span>
+                    <span class="m6-riq-tasti">
+                        <button type="button" class="m6-riq-tasto-piccolo" data-action="archivioOpen" data-kind="convinzione" title="{{localize 'M6.Archivi.Open'}}" aria-label="{{localize 'M6.Archivi.Open'}}"><i class="fa-solid fa-book-open" aria-hidden="true"></i></button>
+                        <button type="button" class="m6-riq-tasto-piccolo" data-action="personaggioRowAdd" data-table="convinzioni" title="{{localize 'M6.Personaggio.ConvictionAdd'}}" aria-label="{{localize 'M6.Personaggio.ConvictionAdd'}}" {{#if locked}}disabled{{/if}}><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+                    </span>
+                </header>
+                <div class="m6-riq-body">
+                    {{#each convictions as |row|}}
+                        <div class="m6-bussola-carta m6-conviction{{#if row.spenta}} spenta{{/if}}">
+                            <div class="m6-conviction-testa">
+                                <button type="button" class="m6-conviction-stato" data-action="convinzioneToggle" data-row="{{row.id}}" aria-pressed="{{#if row.spenta}}false{{else}}true{{/if}}" title="{{#if row.spenta}}{{localize 'M6.Wisdom.Convinzione.SpentaHint'}}{{else}}{{localize 'M6.Wisdom.Convinzione.AttivaHint'}}{{/if}}" {{#if ../locked}}disabled{{/if}}><i class="fa-solid {{#if row.spenta}}fa-shield-halved{{else}}fa-shield{{/if}}" aria-hidden="true"></i><span>{{#if row.spenta}}{{localize "M6.Wisdom.Convinzione.Spenta"}}{{else}}{{localize "M6.Wisdom.Convinzione.Attiva"}}{{/if}}</span></button>
+                                <select name="flags.m6.convinzioni.{{row.id}}.group" aria-label="{{localize 'M6.Personaggio.ConvictionGroup'}}" {{#if ../locked}}disabled{{/if}}>
+                                    <option value="">{{localize "M6.Personaggio.ConvictionGroupNone"}}</option>
+                                    <optgroup label="{{localize 'M6.Personaggio.ConvictionGroupsCatalog'}}">
+                                        {{#each row.groups as |group|}}
+                                            <option value="{{group.id}}" {{#if group.selected}}selected{{/if}}>{{group.label}}</option>
+                                        {{/each}}
+                                    </optgroup>
+                                    <optgroup label="{{localize 'M6.Personaggio.ConvictionGroupsCredi'}}">
+                                        {{#each row.credos as |group|}}
+                                            <option value="{{group.id}}" {{#if group.selected}}selected{{/if}}>{{group.label}}</option>
+                                        {{/each}}
+                                    </optgroup>
+                                </select>
+                                <input type="text" name="flags.m6.convinzioni.{{row.id}}.text" value="{{row.text}}" placeholder="{{localize 'M6.Personaggio.ConvictionText'}}" aria-label="{{localize 'M6.Personaggio.ConvictionText'}}" {{#if ../locked}}disabled{{/if}}>
+                                <button type="button" class="m6-riq-tasto-piccolo" data-action="personaggioRowDelete" data-table="convinzioni" data-row="{{row.id}}" title="{{localize 'M6.Personaggio.ConvictionRemove'}}" aria-label="{{localize 'M6.Personaggio.ConvictionRemove'}}" {{#if ../locked}}disabled{{/if}}><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+                            </div>
+                            <div class="m6-bussola-campi m6-conviction-when">
+                                <label class="m6-bussola-campo largo">
+                                    <span>{{localize "M6.Personaggio.ConvictionServe"}}</span>
+                                    <textarea name="flags.m6.convinzioni.{{row.id}}.serve" rows="1" placeholder="{{localize 'M6.Personaggio.ConvictionServeHint'}}" {{#if ../locked}}disabled{{/if}}>{{row.serve}}</textarea>
+                                </label>
+                                <label class="m6-bussola-campo largo">
+                                    <span>{{localize "M6.Personaggio.ConvictionCross"}}</span>
+                                    <textarea name="flags.m6.convinzioni.{{row.id}}.cross" rows="1" placeholder="{{localize 'M6.Personaggio.ConvictionCrossHint'}}" {{#if ../locked}}disabled{{/if}}>{{row.cross}}</textarea>
+                                </label>
+                            </div>
+                        </div>
+                    {{else}}
+                        <p class="m6-bussola-vuoto">{{localize "M6.Personaggio.ConvictionsEmpty"}}</p>
+                    {{/each}}
+                </div>
+            </section>
+        </div>
+
+        <div class="m6-personaggio-col m6-personaggio-col-right">
+            {{!-- Le Ancore a sette righe (25/9): una carta per Ancora. In testa il nome, il ruolo, il
+                 mestiere, l'età, il dado che tira i campi vuoti e il cestino; sotto cosa ti dà e la
+                 Convinzione legata, cosa non sa e dove morde; in coda le note. Nel titolo il libro
+                 delle dodici montate, il dado che genera un'Ancora nuova, il + di una vuota. --}}
+            <section class="m6-riq m6-riq-pagina m6-riq-ancore">
+                <header class="m6-riq-title m6-riq-title-tasti">
+                    <span>{{localize "M6.Personaggio.AnchorsLabel"}}</span>
+                    <span class="m6-riq-tasti">
+                        <button type="button" class="m6-riq-tasto-piccolo" data-action="archivioOpen" data-kind="ancora" title="{{localize 'M6.Archivi.Open'}}" aria-label="{{localize 'M6.Archivi.Open'}}"><i class="fa-solid fa-book-open" aria-hidden="true"></i></button>
+                        <button type="button" class="m6-riq-tasto-piccolo m6-ancora-genera" data-action="ancoraGenera" title="{{localize 'M6.Personaggio.AnchorGenerateNew'}}" aria-label="{{localize 'M6.Personaggio.AnchorGenerateNew'}}" {{#if locked}}disabled{{/if}}><i class="fa-solid fa-dice" aria-hidden="true"></i></button>
+                        <button type="button" class="m6-riq-tasto-piccolo" data-action="personaggioRowAdd" data-table="ancore" title="{{localize 'M6.Personaggio.AnchorAdd'}}" aria-label="{{localize 'M6.Personaggio.AnchorAdd'}}" {{#if locked}}disabled{{/if}}><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
+                    </span>
+                </header>
+                <div class="m6-riq-body">
+                    {{#each anchors as |row|}}
+                        <div class="m6-bussola-carta m6-ancora m6-riga-apribile" data-row="{{row.id}}">
+                            <div class="m6-ancora-testa">
+                                {{!-- La freccia (Blue, 26/9): apre e chiude le note dell'Ancora; la carta ricorda com'era. --}}
+                                <button type="button" class="m6-riq-tasto-piccolo m6-ancora-apri" data-action="rigaApri" title="{{localize 'M6.Personaggio.AnchorNotesOpen'}}" aria-label="{{localize 'M6.Personaggio.AnchorNotesOpen'}}" aria-expanded="false"><i class="fa-solid fa-chevron-down" aria-hidden="true"></i></button>
+                                <input type="text" name="flags.m6.ancore.{{row.id}}.name" value="{{row.name}}" placeholder="{{localize 'M6.Personaggio.AnchorName'}}" aria-label="{{localize 'M6.Personaggio.AnchorName'}}" {{#if ../locked}}disabled{{/if}}>
+                                <select name="flags.m6.ancore.{{row.id}}.role" aria-label="{{localize 'M6.Personaggio.AnchorRole'}}" {{#if ../locked}}disabled{{/if}}>
+                                    <option value="">{{localize "M6.Personaggio.AnchorRole"}}</option>
+                                    {{#each row.roles as |ruolo|}}
+                                        <option value="{{ruolo.id}}" title="{{ruolo.definizione}}" {{#if ruolo.selected}}selected{{/if}}>{{ruolo.id}}</option>
+                                    {{/each}}
+                                </select>
+                                <input type="text" name="flags.m6.ancore.{{row.id}}.job" value="{{row.job}}" placeholder="{{localize 'M6.Personaggio.AnchorJob'}}" aria-label="{{localize 'M6.Personaggio.AnchorJob'}}" {{#if ../locked}}disabled{{/if}}>
+                                <input type="text" class="m6-ancora-eta" name="flags.m6.ancore.{{row.id}}.age" value="{{row.age}}" placeholder="{{localize 'M6.Personaggio.AnchorAge'}}" aria-label="{{localize 'M6.Personaggio.AnchorAge'}}" inputmode="numeric" {{#if ../locked}}disabled{{/if}}>
+                                <button type="button" class="m6-riq-tasto-piccolo" data-action="ancoraGenera" data-row="{{row.id}}" title="{{localize 'M6.Personaggio.AnchorGenerateHint'}}" aria-label="{{localize 'M6.Personaggio.AnchorGenerate'}}" {{#if ../locked}}disabled{{/if}}><i class="fa-solid fa-dice" aria-hidden="true"></i></button>
+                                <button type="button" class="m6-riq-tasto-piccolo" data-action="personaggioRowDelete" data-table="ancore" data-row="{{row.id}}" title="{{localize 'M6.Personaggio.AnchorRemove'}}" aria-label="{{localize 'M6.Personaggio.AnchorRemove'}}" {{#if ../locked}}disabled{{/if}}><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+                            </div>
+                            <div class="m6-bussola-campi">
+                                <label class="m6-bussola-campo"><span>{{localize "M6.Personaggio.AnchorGives"}}</span><input type="text" name="flags.m6.ancore.{{row.id}}.gives" value="{{row.gives}}" {{#if ../locked}}disabled{{/if}}></label>
+                                <label class="m6-bussola-campo"><span>{{localize "M6.Personaggio.AnchorConviction"}}</span>
+                                    <select name="flags.m6.ancore.{{row.id}}.conviction" {{#if ../locked}}disabled{{/if}}>
+                                        <option value="">{{localize "M6.Personaggio.AnchorConvictionNone"}}</option>
+                                        {{#each row.convictions as |conv|}}
+                                            <option value="{{conv.id}}" {{#if conv.selected}}selected{{/if}}>{{conv.text}}</option>
+                                        {{/each}}
+                                    </select>
+                                </label>
+                                <label class="m6-bussola-campo"><span>{{localize "M6.Personaggio.AnchorUnknown"}}</span><input type="text" name="flags.m6.ancore.{{row.id}}.unknown" value="{{row.unknown}}" {{#if ../locked}}disabled{{/if}}></label>
+                                <label class="m6-bussola-campo"><span>{{localize "M6.Personaggio.AnchorBites"}}</span><input type="text" name="flags.m6.ancore.{{row.id}}.bites" value="{{row.bites}}" {{#if ../locked}}disabled{{/if}}></label>
+                            </div>
+                            {{!-- Le note (il vecchio campo «perché conta, e cosa non sa»): un campo come gli altri,
+                                 dello stesso colore (Blue, 26/9: «non sembra importante»); chiuse due righe, aperte
+                                 con la freccia hanno spazio (26/9 sera: «più spazio alle note») e crescono col testo. --}}
+                            <label class="m6-bussola-campo largo m6-ancora-note">
+                                <span>{{localize "M6.Personaggio.AnchorNotes"}}</span>
+                                <textarea class="m6-bussola-note" name="flags.m6.ancore.{{row.id}}.description" rows="6" placeholder="{{localize 'M6.Personaggio.AnchorDescription'}}" aria-label="{{localize 'M6.Personaggio.AnchorNotes'}}" {{#if ../locked}}disabled{{/if}}>{{row.description}}</textarea>
+                            </label>
+                        </div>
+                    {{else}}
+                        <p class="m6-bussola-vuoto">{{localize "M6.Personaggio.AnchorsEmpty"}}</p>
+                    {{/each}}
+                </div>
+            </section>
+        </div>
+    </div>
+</section>

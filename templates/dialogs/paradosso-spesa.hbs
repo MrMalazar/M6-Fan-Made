@@ -1,0 +1,51 @@
+{{!-- La spesa dei punti Paradosso (ramo C, 11/9): un effetto di Magick dalla
+     Scheda del Paradosso, al prezzo della soglia. Le Sfere hanno i pallini
+     che i giocatori hanno «regalato» alla realtà; gli Ambiti i sette della
+     tavola, con l'Epicità in cima che parte da 1 (2/10). Gli interventi di scena (il menù del Paradosso) sono in progetto:
+     niente segnaposto in corsivo intanto (Blue, 25/9). --}}
+<div class="m6-arete-body m6-paradosso-spesa">
+    <div class="m6-arete-layout">
+        <div class="m6-arete-dots-column" role="group" aria-label="{{localize 'M6.Paradosso.Scheda'}}">
+            <span class="m6-arete-row-label m6-arete-dots-head">{{localize "M6.Paradosso.Scheda"}}</span>
+            {{#each spheres as |sphere|}}
+                <div class="m6-arete-dotrow" data-role="spendRow" data-kind="sphere" data-id="{{sphere.id}}">
+                    <img class="m6-arete-row-icon" src="{{sphere.icon}}" alt="">
+                    <span class="m6-arete-dot-label" title="{{sphere.from}}">{{localize sphere.label}}</span>
+                    <input type="hidden" name="sphere-{{sphere.id}}" value="0">
+                    <span class="m6-arete-sphere-dots" role="group" aria-label="{{localize sphere.label}}">
+                        {{#each sphere.steps as |step|}}<button type="button" class="m6-arete-sphere-dot" data-level="{{step.value}}" aria-label="{{step.value}}" title="{{step.value}}"></button>{{/each}}
+                    </span>
+                    <span class="m6-arete-dot-reading"><small>{{sphere.from}}</small></span>
+                </div>
+            {{else}}
+                <p class="m6-magick-type-hint">{{localize "M6.Paradosso.SchedaEmpty"}}</p>
+            {{/each}}
+            <hr class="m6-arete-rule">
+            <span class="m6-arete-row-label m6-arete-dots-head">{{localize "M6.Scopes.Label"}}</span>
+            {{#each scopes as |scope|}}
+                <div class="m6-arete-dotrow{{#if scope.base}} base{{/if}}" data-role="spendRow" data-kind="scope" data-id="{{scope.id}}">
+                    <i class="m6-arete-row-icon {{scope.faIcon}}" aria-hidden="true"></i>
+                    <span class="m6-arete-dot-label">{{localize scope.label}}</span>
+                    <input type="hidden" name="scope-{{scope.id}}" value="{{scope.min}}">
+                    <span class="m6-arete-sphere-dots" role="group" aria-label="{{localize scope.label}}">
+                        {{#each scope.steps as |step|}}<button type="button" class="m6-arete-sphere-dot" data-level="{{step.value}}" aria-label="{{step.value}}" title="{{step.value}}"></button>{{/each}}
+                    </span>
+                    <span class="m6-arete-dot-reading"></span>
+                </div>
+            {{/each}}
+        </div>
+        <div class="m6-arete-side">
+            <p class="m6-arete-difficulty m6-paradosso-prezzo" data-role="priceBox">
+                {{localize "M6.Paradosso.Price"}}: <strong data-role="price">0</strong> · {{localize "M6.Paradosso.Available"}}: <strong>{{points}}</strong>
+            </p>
+            <div class="m6-arete-goal m6-arete-goal-box">
+                <span class="m6-arete-row-label">{{localize "M6.Paradosso.What"}}</span>
+                <textarea name="text" rows="5" placeholder="{{localize 'M6.Paradosso.WhatHint'}}" aria-label="{{localize 'M6.Paradosso.What'}}"></textarea>
+            </div>
+            <label class="m6-arete-conto-row m6-paradosso-whisper">
+                <span class="m6-arete-conto-control"><input type="checkbox" name="whisper"></span>
+                <span class="m6-arete-row-label">{{localize "M6.Paradosso.Whisper"}}</span>
+            </label>
+        </div>
+    </div>
+</div>

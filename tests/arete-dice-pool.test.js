@@ -1,0 +1,95 @@
+import assert from "node:assert/strict";
+import {
+  calculateAreteSuccesses,
+  calculateAreteDicePool,
+  shiftParadoxDice
+} from "../scripts/arete-dice-pool.js";
+
+// Paradox replaces normal dice without increasing the total pool.
+assert.deepEqual(calculateAreteDicePool(7, 3), {
+  basicDice: 4,
+  paradoxDice: 3,
+  totalDice: 7
+});
+
+// As with Hunger, Paradox is capped by a pool smaller than its rating.
+assert.deepEqual(calculateAreteDicePool(2, 5), {
+  basicDice: 0,
+  paradoxDice: 2,
+  totalDice: 2
+});
+
+assert.deepEqual(calculateAreteDicePool(6, 0), {
+  basicDice: 6,
+  paradoxDice: 0,
+  totalDice: 6
+});
+
+// Manual controls transfer dice without changing the maximum pool.
+assert.deepEqual(shiftParadoxDice(5, 3, 1), {
+  basicDice: 4,
+  paradoxDice: 4,
+  totalDice: 8
+});
+
+assert.deepEqual(shiftParadoxDice(5, 3, -1), {
+  basicDice: 6,
+  paradoxDice: 2,
+  totalDice: 8
+});
+
+// Transfers stop at zero and at the current total pool.
+assert.deepEqual(shiftParadoxDice(5, 3, 20), {
+  basicDice: 0,
+  paradoxDice: 8,
+  totalDice: 8
+});
+
+assert.deepEqual(shiftParadoxDice(5, 3, -20), {
+  basicDice: 8,
+  paradoxDice: 0,
+  totalDice: 8
+});
+
+// Only Mage tens form critical pairs: 2 -> 4, 3 -> 5, 4 -> 8 successes.
+assert.equal(calculateAreteSuccesses([
+  { result: 10 },
+  { result: 10 }
+]), 4);
+assert.equal(calculateAreteSuccesses([
+  { result: 10 },
+  { result: 10 },
+  { result: 10 }
+]), 5);
+assert.equal(calculateAreteSuccesses([
+  { result: 10 },
+  { result: 10 },
+  { result: 10 },
+  { result: 10 }
+]), 8);
+
+// Paradox tens are single successes and never pair with each other.
+assert.equal(calculateAreteSuccesses([], [
+  { result: 10 },
+  { result: 10 }
+]), 2);
+
+// A Mage ten and a Paradox ten do not form a mixed critical pair.
+assert.equal(calculateAreteSuccesses(
+  [{ result: 10 }],
+  [{ result: 10 }]
+), 2);
+
+// A basic critical pair keeps its bonus and adds ordinary Paradox successes.
+assert.equal(calculateAreteSuccesses(
+  [{ result: 10 }, { result: 10 }, { result: 7 }],
+  [{ result: 10 }, { result: 8 }, { result: 2 }]
+), 7);
+
+// Discarded and inactive dice never contribute to the total.
+assert.equal(calculateAreteSuccesses(
+  [{ result: 10 }, { result: 10, discarded: true }, { result: 8, active: false }],
+  [{ result: 9 }]
+), 2);
+
+console.log("Areté Paradox dice-pool tests passed.");
