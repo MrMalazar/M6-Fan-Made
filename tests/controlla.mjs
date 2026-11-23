@@ -1,6 +1,6 @@
 /**
- * Il controllo intero, quello di `npm run check`: la sintassi di ogni file
- * e tutte le prove, una dopo l'altra. Un file o una prova in più entrano da
+ * Il controllo intero, quello di `npm run check`: la sintassi di ogni file,
+ * i nomi non dichiarati e tutte le prove, una dopo l'altra. Un file o una prova in più entrano da
  * soli, senza toccare questo elenco.
  *
  *   tests/*.test.js        le regole e le schede, senza Foundry
@@ -36,6 +36,10 @@ function gira(argomenti, cosa) {
 const file = [...sotto("scripts", [".js"]), ...sotto("tests", [".js", ".mjs"]), ...sotto("tools", [".mjs"])];
 for (const percorso of file) gira(["--check", percorso], `sintassi di ${percorso}`);
 console.log(`Sintassi: ${file.length} file a posto.`);
+
+// Nessun nome usato senza essere dichiarato o importato: un errore così, dentro Foundry, si vede solo al clic.
+gira([join("node_modules", "eslint", "bin", "eslint.js"), "scripts"], "i nomi non dichiarati negli script");
+console.log("Nomi: tutti dichiarati.");
 
 const prove = [...elenco("tests", ".test.js"), ...elenco(join("tests", "base"), ".test.js")];
 for (const prova of prove) gira([prova], prova);

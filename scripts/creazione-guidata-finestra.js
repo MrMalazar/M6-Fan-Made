@@ -26,6 +26,7 @@ import { POTERI_FLAG } from "./poteri.js";
 import { aggiungiDalCatalogo, sferePerCatalogo } from "./poteri-scheda.js";
 import { openCatalogoPoteri } from "./catalogo-poteri.js";
 import { creationTargets, dominiDellaCreazione } from "./riepilogo.js";
+import { togliSpecializzazione, wireSpecialtyInputs } from "./specializzazioni.js";
 import { SPHERES } from "./spheres.js";
 import { isChiaro, TEMA_CLASSE, TEMA_SETTING } from "./tema.js";
 import { ATTRIBUTE_KEYS } from "./tratti-icone.js";

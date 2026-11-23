@@ -8,6 +8,8 @@
     "check:templates": "node --import ./tests/finta/register.mjs tests/finta/templates.mjs"
   },
   "devDependencies": {
+    "eslint": "^9.39.5",
+    "globals": "^17.14.0",
     "handlebars": "^4.7.10"
   }
 }
