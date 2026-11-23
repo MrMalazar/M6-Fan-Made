@@ -36,7 +36,7 @@ export class SchedaAttore extends HandlebarsApplicationMixin(ActorSheetV2) {
   /** @override */
   static DEFAULT_OPTIONS = {
     classes: ["m6w", "actor", "sheet", "mortal"],
-    window: { resizable: true },
+    window: { resizable: true, icon: "fa-solid fa-dice-d10" },
     form: { submitOnChange: true, closeOnSubmit: false, handler: SchedaAttore.onSubmitActorForm },
     actions: {
       createItem: _onCreateItem,
@@ -52,8 +52,9 @@ export class SchedaAttore extends HandlebarsApplicationMixin(ActorSheetV2) {
     }
   };
 
-  /** @override Chi estende aggiunge i suoi pezzi; questo è quello per chi può solo guardare. */
+  /** @override Chi estende aggiunge i suoi pezzi; questi sono il piede col tipo e la scheda di chi può solo guardare. */
   static PARTS = {
+    banner: { template: `${MODELLI}/piede.hbs` },
     limited: { template: `${MODELLI}/limitata.hbs` }
   };
 
@@ -112,15 +113,17 @@ export class SchedaAttore extends HandlebarsApplicationMixin(ActorSheetV2) {
       settings: system.settings ?? {},
       baseActorType: actor.type,
       currentActorType: actor.type,
+      currentTypeLabel: `TYPES.Actor.${actor.type}`,
       tabs: this.getTabs(),
       sortedAttributes: vociDeiTratti(ATTRIBUTI, system.attributes, nomeAttributo, localize),
       sortedSkills: vociDeiTratti(ABILITA, system.skills, nomeAbilita, localize)
     };
   }
 
-  /** @override Ogni pezzo parte dal contesto comune. */
+  /** @override Ogni pezzo parte dal contesto comune; un pezzo che è una pagina trova in `tab` la sua linguetta. */
   async _preparePartContext(partId, context, options) {
-    return super._preparePartContext(partId, context, options);
+    const comune = await super._preparePartContext(partId, context, options);
+    return { ...comune, tab: comune.tabs?.[partId] ?? null };
   }
 
   /** I Vantaggi per gruppo: Background, Pregi, Difetti. */

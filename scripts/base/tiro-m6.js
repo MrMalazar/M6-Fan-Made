@@ -6,7 +6,7 @@
  *
  * Il tiro non conta i successi: lo fa il motore delle regole, che poi
  * scrive il totale. La carta porta i pezzi che le regole vestono dopo
- * (titolo, dadi, successi, soglia, esito), ognuno con la sua classe.
+ * (titolo, dadi, testo, successi, soglia, esito), ognuno con la sua classe.
  */
 import { EMPTY_DICE_FACE, getMageDieImage, getParadoxDieImage } from "../dice-faces.js";
 import { DadoRiserva } from "./dadi.js";
@@ -24,18 +24,27 @@ export class TiroM6 extends foundry.dice.Roll {
     return this.terms.find((termine) => termine instanceof Die && !(termine instanceof DadoRiserva)) ?? null;
   }
 
-  /** @override La carta del tiro, coi pezzi che le regole vestono. */
+  /**
+   * @override La carta del tiro, coi pezzi che le regole vestono dopo:
+   *
+   *   .roll-label                il titolo (le regole ci mettono i tratti in tiro)
+   *   .dice-icons > img.die      una faccia per dado, con `data-index` (la Volontà sceglie da lì)
+   *   .collapsible-content       il testo che il tiro porta con sé (i Dettagli, le note)
+   *   .dice-tooltip              la formula e i numeri usciti, a scomparsa (la apre Foundry al clic)
+   *   .total-and-difficulty      i successi e la soglia
+   *   .roll-result-label         l'esito, in una parola
+   */
   async render({ isPrivate = false } = {}) {
     if (!this._evaluated) await this.evaluate({ allowInteractive: !isPrivate });
-    if (isPrivate) return '<div class="dice-roll m6-tiro"><div class="dice-result"><h4 class="dice-total">?</h4></div></div>';
+    if (isPrivate) return '<div class="dice-roll"><div class="dice-result"><h4 class="dice-total">?</h4></div></div>';
 
     const opzioni = this.options ?? {};
     const riuscita = opzioni.mageSuccessFrom ? { successFrom: opzioni.mageSuccessFrom } : {};
-    const facce = (termine, classe, immagine) => (termine?.results ?? [])
-      .filter((uscito) => uscito.active !== false)
-      .map((uscito) => {
+    const facce = (termine, classi, immagine) => (termine?.results ?? [])
+      .map((uscito, indice) => {
         const faccia = immagine(uscito.result, riuscita);
-        return `<img class="die roll-img ${classe}${faccia === EMPTY_DICE_FACE ? ` ${classe}-empty` : ""}" src="${faccia}" alt="${uscito.result}">`;
+        const vuota = faccia === EMPTY_DICE_FACE ? ` ${classi.at(-1)}-empty` : "";
+        return `<img src="${faccia}" class="die roll-img ${classi.join(" ")}${vuota}" data-index="${indice}" alt="" title="">`;
       })
       .join("");
     const dice = (chiave) => game.i18n.localize(chiave);
@@ -45,16 +54,21 @@ export class TiroM6 extends foundry.dice.Roll {
     const esito = soglia > 0 ? (totale >= soglia ? "success" : "failure") : "";
 
     return [
-      '<div class="dice-roll m6-tiro">',
-      `<div class="roll-label">${sicuro(opzioni.title)}</div>`,
-      opzioni.flavor ? `<div class="roll-flavor">${opzioni.flavor}</div>` : "",
+      '<div class="collapsible-container">',
+      `<p class="roll-label uppercase collapsible">${sicuro(opzioni.title)}</p>`,
+      '<div class="dice-roll" data-action="expandRoll">',
+      '<div class="modifiers"></div>',
       '<div class="dice-result">',
-      `<div class="dice-icons">${facce(this.basicDice, "mortal-dice", getMageDieImage)}${facce(this.advancedDice, "paradox-dice", getParadoxDieImage)}</div>`,
+      `<div class="dice-icons">${facce(this.basicDice, ["rerollable", "mortal-dice"], getMageDieImage)}${facce(this.advancedDice, ["paradox-dice"], getParadoxDieImage)}</div>`,
+      `<div class="collapsible-content" style="max-height: unset;">${opzioni.flavor ? `<hr>${opzioni.flavor}` : ""}</div>`,
+      "<hr>",
+      await this.getTooltip(),
       '<div class="total-and-difficulty">',
-      `<div class="roll-total"><span class="total-title">${dice("M6.RollCard.Successes")}</span><span class="total-contents">${totale}</span></div>`,
-      soglia ? `<div class="roll-difficulty"><span class="difficulty-title">${dice("M6.RollCard.Threshold")}</span><span class="difficulty-contents">${soglia}</span></div>` : "",
+      `<div class="roll-total"><span class="total-title">${dice("M6.RollCard.Successes")}</span> <span class="total-contents">${totale}</span></div>`,
+      soglia ? `<div class="roll-difficulty"><span class="difficulty-title">${dice("M6.RollCard.Threshold")}</span> <span class="difficulty-contents">${soglia}</span></div>` : "",
       "</div>",
       esito ? `<div class="roll-result-label ${esito}">${dice(esito === "success" ? "M6.RollCard.Success" : "M6.RollCard.Failure")}</div>` : "",
+      "</div>",
       "</div>",
       "</div>"
     ].join("");

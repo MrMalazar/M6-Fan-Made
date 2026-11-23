@@ -112,26 +112,6 @@
 }
 
 /* --------------------------------------------------------------------------
-   Il lucchetto in fondo alla barra delle pagine: aperto si scrive, chiuso no.
-   -------------------------------------------------------------------------- */
-.m6w .m6-lucchetto {
-  align-items: center;
-  border-radius: 4px;
-  color: var(--m6-tenue);
-  cursor: pointer;
-  display: flex;
-  flex: none;
-  height: 34px;
-  justify-content: center;
-  width: 100%;
-}
-
-.m6w .m6-lucchetto:hover,
-.m6w .m6-lucchetto.chiuso {
-  color: var(--m6-oro);
-}
-
-/* --------------------------------------------------------------------------
    Chi può solo guardare una scheda: il ritratto e il nome.
    -------------------------------------------------------------------------- */
 .m6w .m6-limitata {

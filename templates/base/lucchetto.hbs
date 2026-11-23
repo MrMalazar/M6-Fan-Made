@@ -1,6 +1,6 @@
 {{!-- Il lucchetto in fondo alla barra delle pagine: chiude e riapre la scheda alle modifiche. --}}
 {{#if isOwner}}
-<a class="m6-lucchetto{{#if locked}} chiuso{{/if}}" data-action="toggleLock" title="{{localize (ifThen locked 'M6.Comuni.Lucchetto.Apri' 'M6.Comuni.Lucchetto.Chiudi')}}">
-    <i class="fa-solid {{#if locked}}fa-lock{{else}}fa-lock-open{{/if}}" aria-hidden="true"></i>
-</a>
+<button type="button" class="lock-btn" data-action="toggleLock" data-tooltip="{{localize (ifThen locked 'M6.Comuni.Lucchetto.Apri' 'M6.Comuni.Lucchetto.Chiudi')}}" aria-label="{{localize (ifThen locked 'M6.Comuni.Lucchetto.Apri' 'M6.Comuni.Lucchetto.Chiudi')}}">
+    <i class="fa {{#if locked}}fa-lock{{else}}fa-lock-open{{/if}}"></i>
+</button>
 {{/if}}
