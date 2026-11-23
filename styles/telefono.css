@@ -1,0 +1,323 @@
+/* ==========================================================================
+   La pagina del telefono: copre l'interfaccia di Foundry e mostra il tiro e
+   l'elenco dei tiri. Nuda: l'interfaccia dell'app arriva in una tappa sua.
+   ========================================================================== */
+
+/* Sul telefono di Foundry resta in piedi solo la nostra pagina. */
+body.m6-telefono > *:not(#m6-telefono) {
+  display: none !important;
+}
+
+#m6-telefono {
+  background: var(--m6-incavo);
+  box-sizing: border-box;
+  color: var(--m6-testo);
+  font-family: var(--font-primary, "Signika", sans-serif);
+  font-size: 16px;
+  inset: 0;
+  line-height: 1.3;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: max(12px, env(safe-area-inset-top)) 14px calc(16px + env(safe-area-inset-bottom));
+  position: fixed;
+  scrollbar-color: var(--m6-oro-scuro) transparent;
+  -webkit-overflow-scrolling: touch;
+  z-index: 10000;
+}
+
+#m6-telefono > * {
+  margin-inline: auto;
+  max-width: 520px;
+}
+
+/* L'attesa: il dado che pulsa finché Foundry non ha finito di caricare. */
+#m6-telefono .m6t-carico {
+  display: grid;
+  height: 100%;
+  margin: 0;
+  place-items: center;
+}
+
+#m6-telefono .m6t-carico .m6-dado {
+  animation: m6t-attesa 1.2s ease-in-out infinite;
+  height: 44px;
+  width: 44px;
+}
+
+@keyframes m6t-attesa {
+  50% { opacity: 0.35; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #m6-telefono .m6t-carico .m6-dado { animation: none; }
+}
+
+#m6-telefono .m6t-blocco {
+  margin-bottom: 18px;
+}
+
+/* I titoli: maiuscolo, nell'oro. */
+#m6-telefono .m6t-titolo {
+  border: 0;
+  border-bottom: 1px solid var(--m6-oro-scuro);
+  color: var(--m6-oro);
+  font-family: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  margin: 0 0 8px;
+  padding: 0 0 4px;
+  text-transform: uppercase;
+}
+
+/* Di chi è la scheda: il nome, o la tendina quando le schede sono più d'una. */
+#m6-telefono h1.m6t-chi {
+  border: 0;
+  color: var(--m6-oro-chiaro);
+  font-family: "Modesto Condensed", Georgia, serif;
+  font-size: 2rem;
+  line-height: 1.1;
+  margin: 0 0 6px;
+  padding: 0;
+}
+
+#m6-telefono select {
+  appearance: auto;
+  background: var(--m6-fondo);
+  border: 1px solid var(--m6-oro-scuro);
+  border-radius: 4px;
+  box-sizing: border-box;
+  color: var(--m6-voce);
+  font-family: inherit;
+  font-size: 16px;
+  height: 44px;
+  margin: 0;
+  padding: 0 10px;
+  width: 58%;
+}
+
+#m6-telefono select.m6t-chi {
+  color: var(--m6-oro-chiaro);
+  font-size: 18px;
+  margin-bottom: 6px;
+  width: 100%;
+}
+
+/* Una riga, una voce: il titolo a sinistra, il valore a destra. */
+#m6-telefono .m6t-campo {
+  align-items: center;
+  border-bottom: 1px solid rgb(152 119 43 / 35%);
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  min-height: 56px;
+}
+
+#m6-telefono .m6t-campo > span {
+  color: var(--m6-oro);
+  font-size: 0.86rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+#m6-telefono .m6t-dadi {
+  color: var(--m6-oro-chiaro);
+  font-size: 1.15rem;
+}
+
+#m6-telefono .m6t-campo--soglia {
+  align-items: stretch;
+  flex-direction: column;
+  gap: 8px;
+  justify-content: center;
+  padding: 10px 0 12px;
+}
+
+#m6-telefono .m6t-soglie {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+#m6-telefono button {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: center;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#m6-telefono button.m6t-soglia {
+  background: var(--m6-fondo);
+  border: 1px solid var(--m6-oro-scuro);
+  border-radius: 4px;
+  color: var(--m6-voce);
+  font-size: 1.15rem;
+  height: 46px;
+  line-height: 44px;
+}
+
+#m6-telefono button.m6t-soglia.scelta {
+  background: var(--m6-oro);
+  border-color: var(--m6-oro);
+  color: var(--m6-su-oro);
+  font-weight: 700;
+}
+
+/* Il tasto: acceso dice Tira, spento dice cosa manca. */
+#m6-telefono button.m6t-tira {
+  background: var(--m6-oro);
+  border: 1px solid var(--m6-oro);
+  border-radius: 4px;
+  color: var(--m6-su-oro);
+  display: block;
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  margin-top: 14px;
+  min-height: 54px;
+  padding: 8px 10px;
+  text-transform: uppercase;
+  width: 100%;
+}
+
+#m6-telefono button.m6t-tira:disabled {
+  background: transparent;
+  border-color: var(--m6-oro-tenue);
+  color: var(--m6-tenue);
+  cursor: default;
+  font-size: 1rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+#m6-telefono .m6t-avviso,
+#m6-telefono .m6t-vuoto {
+  color: var(--m6-tenue);
+  margin: 10px 0 0;
+}
+
+/* L'elenco dei tiri: chi e con cosa, i dadi, l'esito. */
+#m6-telefono .m6t-tiri {
+  display: grid;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+#m6-telefono .m6t-riga {
+  background: var(--m6-fondo);
+  border: 1px solid var(--m6-oro-scuro);
+  border-radius: 4px;
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 8px 10px;
+}
+
+#m6-telefono .m6t-riga__testa,
+#m6-telefono .m6t-riga__esito {
+  align-items: baseline;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+#m6-telefono .m6t-riga__testa > b {
+  color: var(--m6-oro-chiaro);
+}
+
+#m6-telefono .m6t-riga__testa > span {
+  color: var(--m6-voce);
+  font-size: 0.9rem;
+  text-align: right;
+}
+
+#m6-telefono .m6t-riga__dadi {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+#m6-telefono .m6t-riga__dadi .m6-dado {
+  height: 26px;
+  width: 26px;
+}
+
+#m6-telefono .m6t-riga__esito > b {
+  font-size: 0.9rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+#m6-telefono .m6t-riga--successo .m6t-riga__esito > b {
+  color: var(--m6-viola-chiaro);
+}
+
+#m6-telefono .m6t-riga--fallimento .m6t-riga__esito > b {
+  color: var(--m6-tenue);
+}
+
+#m6-telefono .m6t-riga__esito > span {
+  color: var(--m6-oro-chiaro);
+}
+
+/* Connessione persa: una riga in cima, col tasto per ricaricare. */
+#m6-telefono .m6t-persa {
+  align-items: center;
+  background: var(--m6-fondo);
+  border: 1px solid var(--m6-oro);
+  border-radius: 4px;
+  color: var(--m6-oro-chiaro);
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin: 0 0 12px;
+  padding: 8px 10px;
+}
+
+#m6-telefono .m6t-persa > button,
+#m6-telefono .m6t-piede > button {
+  border: 1px solid var(--m6-oro-scuro);
+  border-radius: 4px;
+  color: var(--m6-voce);
+  min-height: 44px;
+  padding: 0 14px;
+}
+
+#m6-telefono .m6t-piede {
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+
+#m6-telefono button:focus-visible,
+#m6-telefono select:focus-visible {
+  outline: 2px solid var(--m6-viola-chiaro);
+  outline-offset: 2px;
+}
+
+/* Il tasto che dal Foundry intero riporta alla pagina del telefono. */
+#m6-ritorno {
+  all: unset;
+  background: var(--m6-fondo);
+  border: 1px solid var(--m6-oro);
+  border-radius: 4px;
+  bottom: 8px;
+  box-sizing: border-box;
+  color: var(--m6-oro-chiaro);
+  cursor: pointer;
+  font-family: var(--font-primary, "Signika", sans-serif);
+  font-size: 16px;
+  left: 8px;
+  line-height: 42px;
+  min-height: 44px;
+  padding: 0 14px;
+  position: fixed;
+  z-index: 10000;
+}

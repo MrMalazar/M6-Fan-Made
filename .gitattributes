@@ -1,0 +1,5 @@
+# Dappertutto a capo di Unix: così i file sul PC e quelli del rilascio sono gli stessi, byte per byte.
+* text=auto eol=lf
+*.png binary
+*.webp binary
+*.woff2 binary

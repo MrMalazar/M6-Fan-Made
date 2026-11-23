@@ -1,0 +1,12 @@
+{
+  "name": "m6-fan-made",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node tests/controlla.mjs"
+  },
+  "devDependencies": {
+    "handlebars": "^4.7.10"
+  }
+}

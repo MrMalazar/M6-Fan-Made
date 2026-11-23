@@ -1,0 +1,116 @@
+{
+  "TYPES": {
+    "Actor": {
+      "mago": "Mago",
+      "png": "PNG"
+    },
+    "ChatMessage": {
+      "tiro": "Tiro"
+    }
+  },
+  "M6": {
+    "Scheda": {
+      "Mago": "Scheda del Mago",
+      "Png": "Scheda del PNG",
+      "Nome": "Nome"
+    },
+    "Titoli": {
+      "Attributi": "Attributi",
+      "Abilita": "Abilità",
+      "Riserve": "Riserve",
+      "Tiro": "Il Tiro",
+      "Salute": "Salute",
+      "Tiri": "Tiri"
+    },
+    "Campi": {
+      "fisico": "Fisico",
+      "sociale": "Sociale",
+      "mentale": "Mentale"
+    },
+    "Attributi": {
+      "forza": "Forza",
+      "destrezza": "Destrezza",
+      "costituzione": "Costituzione",
+      "carisma": "Carisma",
+      "persuasione": "Persuasione",
+      "autocontrollo": "Autocontrollo",
+      "intelligenza": "Intelligenza",
+      "prontezza": "Prontezza",
+      "fermezza": "Fermezza"
+    },
+    "Abilita": {
+      "allerta": "Allerta",
+      "arte": "Arte",
+      "atletica": "Atletica",
+      "conoscenze": "Conoscenze",
+      "convincere": "Convincere",
+      "criminalita": "Criminalità",
+      "investigare": "Investigare",
+      "manualita": "Manualità",
+      "medicina": "Medicina",
+      "mira": "Mira",
+      "mischia": "Mischia",
+      "sopravvivenza": "Sopravvivenza",
+      "sotterfugio": "Sotterfugio",
+      "velo": "Velo"
+    },
+    "Tiro": {
+      "Riserva": "Riserva",
+      "Soglia": "Soglia",
+      "Attributo": "Attributo",
+      "Abilita": "Abilità",
+      "Tira": "Tira",
+      "Dadi": "dadi",
+      "Dado": "dado",
+      "ScegliAttributo": "Mette l'Attributo nella riserva: uno solo.",
+      "ScegliAbilita": "Mette l'Abilità nella riserva: una sola.",
+      "ScegliRiserva": "Mette la riserva nel tiro: una sola.",
+      "MancaCoppia": "manca l'Attributo o l'Abilità",
+      "MancaRiserva": "manca la riserva",
+      "MancaSoglia": "manca la soglia",
+      "ZeroDadi": "Zero dadi: il tiro fallisce senza tirare.",
+      "NonTuo": "Questa scheda non è tua: non puoi tirare per lei.",
+      "Successo": "Successo",
+      "Fallimento": "Fallimento",
+      "Successi": "Successi",
+      "Margine": "Margine",
+      "Mancano": "Mancano",
+      "Su": "su"
+    },
+    "Salute": {
+      "Caselle": "Caselle del tracciato",
+      "Meno": "Una casella in meno",
+      "Piu": "Una casella in più",
+      "Segni": {
+        "ps": "Superficiale Fisico",
+        "pa": "Aggravato Fisico",
+        "ms": "Superficiale Mentale",
+        "ma": "Aggravato Mentale"
+      },
+      "Stati": {
+        "menomato": "Menomato: il tracciato è coperto.",
+        "ko-fisico": "KO: tutte le caselle sono aggravate e prevalgono i danni fisici. Morte.",
+        "ko-mentale": "KO: tutte le caselle sono aggravate e prevalgono i danni mentali. Coma o shock."
+      }
+    },
+    "Telefono": {
+      "Nome": "Pagina del telefono",
+      "Aiuto": "Su uno schermo stretto la mappa si spegne e al posto di Foundry compare una pagina col tiro e l'elenco dei tiri. La scelta vale per questo dispositivo.",
+      "Scelte": {
+        "auto": "Solo sugli schermi stretti",
+        "sempre": "Sempre",
+        "mai": "Mai"
+      },
+      "Scheda": "Scheda",
+      "Scegli": "scegli",
+      "NessunaScheda": "Nessuna scheda è tua in questo mondo: chiedi al Narratore di assegnartene una.",
+      "NessunTiro": "Ancora nessun tiro.",
+      "TiroFallito": "Il tiro non è partito: ricarica la pagina e riprova.",
+      "Intero": "Foundry intero",
+      "Ritorno": "Pagina del telefono",
+      "Esci": "Esci",
+      "Persa": "Connessione persa.",
+      "Ricarica": "Ricarica"
+    }
+  }
+}

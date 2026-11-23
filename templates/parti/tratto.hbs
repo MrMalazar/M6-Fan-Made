@@ -1,0 +1,7 @@
+{{!-- Una riga di tratto: il nome è il tasto che lo mette nel tiro, i pallini cambiano il valore. --}}
+<div class="m6-riga{{#if scelto}} scelta{{/if}}">
+    <button type="button" class="m6-riga__nome" data-action="sceglie" data-tipo="{{tipo}}" data-id="{{id}}" aria-pressed="{{scelto}}" title="{{localize suggerimento}}">{{nome}}</button>
+    <span class="m6-pallini" role="group" aria-label="{{nome}}: {{valore}}">
+        {{#each pallini as |pallino|}}<button type="button" class="m6-pallino{{#if pallino.pieno}} pieno{{/if}}" data-action="pallino" data-percorso="{{../percorso}}" data-valore="{{pallino.valore}}" data-minimo="{{../minimo}}" aria-label="{{../nome}} {{pallino.valore}}"></button>{{/each}}
+    </span>
+</div>

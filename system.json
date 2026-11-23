@@ -1,0 +1,67 @@
+{
+  "id": "m6",
+  "title": "Maghi 6ª Edizione - Fan Made",
+  "description": "Il sistema di gioco di Maghi 6ª Edizione per Foundry VTT. Fatto da fan, non ufficiale.",
+  "version": "0.1.0",
+  "url": "https://github.com/MrMalazar/M6-Fan-Made",
+  "manifest": "https://github.com/MrMalazar/M6-Fan-Made/releases/latest/download/system.json",
+  "download": "https://github.com/MrMalazar/M6-Fan-Made/releases/download/0.1.0/m6.zip",
+  "authors": [
+    {
+      "name": "MrMalazar"
+    }
+  ],
+  "compatibility": {
+    "minimum": "14",
+    "verified": "14.368"
+  },
+  "esmodules": [
+    "scripts/main.js"
+  ],
+  "styles": [
+    "styles/m6.css",
+    "styles/telefono.css"
+  ],
+  "languages": [
+    {
+      "lang": "it",
+      "name": "Italiano",
+      "path": "lang/it.json"
+    },
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/it.json"
+    }
+  ],
+  "documentTypes": {
+    "Actor": {
+      "mago": {},
+      "png": {}
+    },
+    "ChatMessage": {
+      "tiro": {}
+    }
+  },
+  "grid": {
+    "distance": 1,
+    "units": "m"
+  },
+  "initiative": "1d10",
+  "flags": {
+    "hotReload": {
+      "extensions": [
+        "css",
+        "hbs",
+        "json",
+        "svg"
+      ],
+      "paths": [
+        "lang",
+        "assets",
+        "styles",
+        "templates"
+      ]
+    }
+  }
+}

@@ -1,0 +1,90 @@
+# Rilascio automatico: si crea un tag semver senza "v" (es. 0.1.0) e questo
+# workflow fa il controllo intero, costruisce m6.zip e pubblica il rilascio
+# con system.json e m6.zip in allegato. Foundry installa da:
+# https://github.com/MrMalazar/M6-Fan-Made/releases/latest/download/system.json
+#
+# Parte anche a mano, dalla pagina Actions («Run workflow»), col numero di
+# versione: il rilascio crea il tag da sé sul commit scelto.
+name: Release
+
+on:
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "La versione da pubblicare (es. 0.1.0): deve combaciare con system.json"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: La versione da pubblicare (dal tag, o dall'input a mano)
+        id: versione
+        env:
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            TAG="$INPUT_VERSION"
+          else
+            TAG="$GITHUB_REF_NAME"
+          fi
+          case "$TAG" in
+            [0-9]*.[0-9]*.[0-9]*) ;;
+            *) echo "Versione non valida: «$TAG» (serve x.y.z senza v)." >&2; exit 1 ;;
+          esac
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: La versione del manifesto deve combaciare
+        env:
+          TAG: ${{ steps.versione.outputs.tag }}
+        run: |
+          VERSION=$(python3 -c "import json; print(json.load(open('system.json'))['version'])")
+          if [ "$VERSION" != "$TAG" ]; then
+            echo "system.json dice $VERSION ma la versione da pubblicare e' $TAG: aggiorna system.json prima." >&2
+            exit 1
+          fi
+          DOWNLOAD=$(python3 -c "import json; print(json.load(open('system.json'))['download'])")
+          case "$DOWNLOAD" in
+            *"/releases/download/$TAG/m6.zip") ;;
+            *) echo "Il campo download di system.json non punta al rilascio $TAG." >&2; exit 1 ;;
+          esac
+
+      - name: Il controllo intero (sintassi e prove)
+        run: |
+          npm ci
+          npm run check
+
+      - name: Costruisci lo zip
+        run: |
+          mkdir -p dist/.release-stage
+          cp system.json dist/.release-stage/
+          cp -r assets lang scripts styles templates dist/.release-stage/
+          find dist/.release-stage -name .gitkeep -delete
+          (cd dist/.release-stage && zip -qr ../m6.zip .)
+          cp system.json dist/system.json
+          unzip -l dist/m6.zip | grep -q " system.json" || { echo "system.json non e' alla radice dello zip" >&2; exit 1; }
+
+      - name: Pubblica il rilascio (a mano crea anche il tag, sul commit scelto)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.versione.outputs.tag }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Il rilascio $TAG esiste gia'." >&2
+            exit 1
+          fi
+          gh release create "$TAG" dist/m6.zip dist/system.json \
+            --target "$GITHUB_SHA" --title "$TAG" --generate-notes

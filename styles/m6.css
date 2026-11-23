@@ -1,0 +1,496 @@
+/* ==========================================================================
+   Maghi 6ª Edizione: i colori della casa, il dado, la carta del tiro in chat
+   e le due schede nude. I valori sono quelli della scheda del modulo.
+   ========================================================================== */
+
+:root {
+  --m6-oro: #d9a827;           /* titoli, pallini pieni, tasto acceso */
+  --m6-oro-scuro: #98772b;     /* cornici e righelli */
+  --m6-oro-tenue: #6b4f12;     /* bordi discreti */
+  --m6-oro-chiaro: #f5e7b2;    /* numeri e intestazioni sul fondo scuro */
+  --m6-voce: #f3e4c8;          /* le voci: bianco sporco d'arancio */
+  --m6-testo: #e6dcc2;         /* corpo del testo sul fondo scuro */
+  --m6-tenue: #ab9f85;         /* didascalie e posti vuoti */
+  --m6-incavo: #15130f;        /* fondi incassati */
+  --m6-fondo: #1f1a10;         /* fondo dei fogli */
+  --m6-riq: linear-gradient(#2a2314, #1f1a10);
+  --m6-riga-sorvolo: #3a352c;
+  --m6-scelta: #3b2a55;        /* la riga scelta, in viola */
+  --m6-su-oro: #1a140a;        /* il testo sui tasti pieni d'oro */
+  --m6-viola: #5a2b82;         /* l'arcano: il colore dei successi */
+  --m6-viola-chiaro: #b58ade;  /* cornici e segni del dado */
+  --m6-viola-dado: #2f2153;    /* corpo del dado */
+}
+
+/* --------------------------------------------------------------------------
+   Il dado: un quadrato viola, vuoto da 1 a 5, con la scintilla da 6 a 9 e la
+   stellina sul 10.
+   -------------------------------------------------------------------------- */
+.m6-dado {
+  background: var(--m6-viola-dado) center / 86% no-repeat;
+  border: 1px solid var(--m6-viola-chiaro);
+  border-radius: 4px;
+  box-sizing: border-box;
+  display: inline-block;
+  flex: none;
+  height: 32px;
+  width: 32px;
+}
+
+.m6-dado--scintilla {
+  background-image: url("../assets/dadi/scintilla.svg");
+}
+
+.m6-dado--stellina {
+  background-image: url("../assets/dadi/stellina.svg");
+}
+
+/* --------------------------------------------------------------------------
+   La carta del tiro in chat: con cosa si tira, i dadi, una riga per voce,
+   la fascia con una parola.
+   -------------------------------------------------------------------------- */
+.m6-carta {
+  background: var(--m6-fondo);
+  border: 1px solid var(--m6-oro-scuro);
+  border-radius: 4px;
+  color: var(--m6-testo);
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+}
+
+.m6-carta__coppia {
+  color: var(--m6-oro);
+  font-size: 0.86rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.m6-carta__dadi {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: center;
+}
+
+.m6-carta__riga {
+  align-items: baseline;
+  border-top: 1px solid rgb(152 119 43 / 35%);
+  color: var(--m6-voce);
+  display: flex;
+  justify-content: space-between;
+  padding-top: 4px;
+}
+
+.m6-carta__riga > b {
+  color: var(--m6-oro-chiaro);
+  font-size: 1.05rem;
+}
+
+.m6-carta__fascia {
+  border: 1px solid var(--m6-oro-tenue);
+  border-radius: 3px;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 4px 6px;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.m6-carta--successo .m6-carta__fascia {
+  background: var(--m6-viola);
+  border-color: var(--m6-viola-chiaro);
+  color: var(--m6-oro-chiaro);
+}
+
+.m6-carta--fallimento .m6-carta__fascia {
+  background: var(--m6-incavo);
+  color: var(--m6-tenue);
+}
+
+/* --------------------------------------------------------------------------
+   Le schede nude. Tutto sta sotto .window-content: i tasti della cornice di
+   Foundry restano i suoi.
+   -------------------------------------------------------------------------- */
+.m6-scheda .window-content {
+  background: var(--m6-fondo);
+  color: var(--m6-testo);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+}
+
+.m6-scheda .m6-foglio {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px;
+  scrollbar-color: var(--m6-oro-scuro) transparent;
+}
+
+.m6-scheda .m6-testa {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+}
+
+.m6-scheda .m6-ritratto {
+  border: 1px solid var(--m6-oro-scuro);
+  border-radius: 4px;
+  cursor: pointer;
+  flex: none;
+  height: 64px;
+  object-fit: cover;
+  width: 64px;
+}
+
+.m6-scheda .m6-ritratto.disabled {
+  cursor: default;
+}
+
+.m6-scheda .window-content input.m6-nome {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--m6-oro-scuro);
+  border-radius: 0;
+  color: var(--m6-oro-chiaro);
+  flex: 1;
+  font-family: "Modesto Condensed", Georgia, serif;
+  font-size: 1.9rem;
+  height: 44px;
+  min-width: 0;
+  padding: 0 4px;
+}
+
+.m6-scheda .m6-griglia {
+  align-items: start;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+}
+
+.m6-scheda .m6-colonna {
+  display: grid;
+  gap: 12px;
+}
+
+.m6-scheda .m6-riq {
+  background: var(--m6-riq);
+  border: 1px solid var(--m6-oro-scuro);
+  border-radius: 4px;
+  padding: 8px 10px;
+}
+
+/* I titoli: maiuscolo, nell'oro. */
+.m6-scheda .window-content .m6-titolo {
+  align-items: center;
+  border: 0;
+  border-bottom: 1px solid var(--m6-oro-scuro);
+  color: var(--m6-oro);
+  display: flex;
+  font-family: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  justify-content: space-between;
+  letter-spacing: 0.07em;
+  margin: 0 0 4px;
+  padding: 0 0 4px;
+  text-transform: uppercase;
+}
+
+/* Il nome del campo sopra le sue righe: Fisico, Sociale, Mentale. */
+.m6-scheda .m6-occhiello {
+  color: var(--m6-tenue);
+  display: block;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  margin: 6px 0 2px;
+  text-transform: uppercase;
+}
+
+/* Una riga, una voce: il nome a sinistra è il tasto, il valore a destra. */
+.m6-scheda .m6-riga {
+  align-items: center;
+  border-radius: 3px;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  min-height: 26px;
+  padding: 0 4px;
+}
+
+.m6-scheda .m6-riga:hover {
+  background: var(--m6-riga-sorvolo);
+}
+
+.m6-scheda .m6-riga.scelta {
+  background: var(--m6-scelta);
+}
+
+.m6-scheda .window-content button.m6-riga__nome {
+  all: unset;
+  color: var(--m6-voce);
+  cursor: pointer;
+  flex: 1;
+  font-size: 0.95rem;
+  line-height: 26px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.m6-scheda .m6-pallini {
+  display: inline-flex;
+  flex: none;
+  gap: 4px;
+}
+
+.m6-scheda .window-content button.m6-pallino {
+  all: unset;
+  background: var(--m6-incavo);
+  border: 1px solid var(--m6-oro-tenue);
+  border-radius: 50%;
+  box-sizing: border-box;
+  cursor: pointer;
+  height: 13px;
+  width: 13px;
+}
+
+.m6-scheda .window-content button.m6-pallino.pieno {
+  background: var(--m6-oro);
+  border-color: var(--m6-oro);
+}
+
+.m6-scheda .window-content input.m6-numero {
+  background: var(--m6-incavo);
+  border: 1px solid var(--m6-oro-scuro);
+  border-radius: 3px;
+  color: var(--m6-oro-chiaro);
+  flex: none;
+  height: 24px;
+  padding: 0 2px;
+  text-align: center;
+  width: 3.4em;
+}
+
+/* Il Tiro: a sinistra la Riserva, a destra la Soglia. */
+.m6-scheda .m6-tiro {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.m6-scheda .m6-tiro__voce {
+  color: var(--m6-voce);
+  display: flex;
+  justify-content: space-between;
+  line-height: 24px;
+}
+
+.m6-scheda .m6-tiro__voce.vuota {
+  color: var(--m6-tenue);
+  font-style: italic;
+}
+
+.m6-scheda .m6-tiro__voce > b {
+  color: var(--m6-oro-chiaro);
+}
+
+.m6-scheda .m6-tiro__totale {
+  border-top: 1px solid var(--m6-oro-scuro);
+  color: var(--m6-oro-chiaro);
+  font-weight: 700;
+  margin-top: 4px;
+  min-height: 26px;
+  padding-top: 4px;
+  text-align: right;
+}
+
+.m6-scheda .m6-soglie {
+  display: grid;
+  gap: 4px;
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.m6-scheda .window-content button.m6-soglia {
+  all: unset;
+  background: var(--m6-incavo);
+  border: 1px solid var(--m6-oro-scuro);
+  border-radius: 3px;
+  box-sizing: border-box;
+  color: var(--m6-voce);
+  cursor: pointer;
+  height: 24px;
+  line-height: 22px;
+  text-align: center;
+}
+
+.m6-scheda .window-content button.m6-soglia.scelta {
+  background: var(--m6-oro);
+  border-color: var(--m6-oro);
+  color: var(--m6-su-oro);
+  font-weight: 700;
+}
+
+/* Il tasto: acceso dice Tira, spento dice cosa manca. */
+.m6-scheda .window-content button.m6-tira {
+  all: unset;
+  background: var(--m6-oro);
+  border: 1px solid var(--m6-oro);
+  border-radius: 3px;
+  box-sizing: border-box;
+  color: var(--m6-su-oro);
+  cursor: pointer;
+  display: block;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  margin-top: 8px;
+  padding: 6px 8px;
+  text-align: center;
+  text-transform: uppercase;
+  width: 100%;
+}
+
+.m6-scheda .window-content button.m6-tira:disabled {
+  background: transparent;
+  border-color: var(--m6-oro-tenue);
+  color: var(--m6-tenue);
+  cursor: default;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* La Salute: un tracciato solo, quattro segni. */
+.m6-scheda .m6-caselle {
+  align-items: center;
+  display: inline-flex;
+  gap: 6px;
+}
+
+.m6-scheda .m6-caselle > b {
+  color: var(--m6-oro-chiaro);
+  min-width: 1.4em;
+  text-align: center;
+}
+
+.m6-scheda .m6-tracciato {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: center;
+  margin: 8px 0;
+}
+
+.m6-casella {
+  --m6-segno: var(--m6-oro-chiaro);
+  border: 1px solid var(--m6-oro-scuro);
+  box-sizing: border-box;
+  display: inline-block;
+  flex: none;
+  height: 22px;
+  width: 22px;
+}
+
+/* / fisico superficiale */
+.m6-casella[data-stato="ps"] {
+  background: linear-gradient(135deg, transparent 0%, transparent 43%, var(--m6-segno) 45%, var(--m6-segno) 55%, transparent 57%, transparent 100%);
+}
+
+/* X fisico aggravato */
+.m6-casella[data-stato="pa"] {
+  background:
+    linear-gradient(45deg, transparent 0%, transparent 43%, var(--m6-segno) 45%, var(--m6-segno) 55%, transparent 57%, transparent 100%),
+    linear-gradient(135deg, transparent 0%, transparent 43%, var(--m6-segno) 45%, var(--m6-segno) 55%, transparent 57%, transparent 100%);
+}
+
+/* o mentale superficiale: un anello */
+.m6-casella[data-stato="ms"] {
+  background: radial-gradient(circle, transparent 0%, transparent 32%, var(--m6-segno) 36%, var(--m6-segno) 48%, transparent 52%, transparent 100%);
+}
+
+/* ◎ mentale aggravato: due anelli */
+.m6-casella[data-stato="ma"] {
+  background: radial-gradient(circle, var(--m6-segno) 0%, var(--m6-segno) 18%, transparent 22%, transparent 34%, var(--m6-segno) 38%, var(--m6-segno) 50%, transparent 54%, transparent 100%);
+}
+
+.m6-scheda .m6-stato {
+  color: var(--m6-oro-chiaro);
+  font-size: 0.86rem;
+  margin: 0 0 6px;
+  text-align: center;
+}
+
+/* Una riga per segno: il meno a sinistra, il più a destra, poi il nome. */
+.m6-scheda .m6-segno {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+  min-height: 28px;
+}
+
+.m6-scheda .m6-segno > b {
+  color: var(--m6-oro-chiaro);
+  min-width: 1.4em;
+  text-align: center;
+}
+
+.m6-scheda .m6-segno > .m6-casella {
+  height: 16px;
+  margin-left: 2px;
+  width: 16px;
+}
+
+.m6-scheda .m6-segno__nome {
+  color: var(--m6-voce);
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.m6-scheda .window-content button.m6-passo {
+  all: unset;
+  border: 1px solid var(--m6-oro-scuro);
+  border-radius: 3px;
+  box-sizing: border-box;
+  color: var(--m6-oro-chiaro);
+  cursor: pointer;
+  flex: none;
+  font-size: 1rem;
+  font-weight: 700;
+  height: 22px;
+  letter-spacing: 0;
+  line-height: 20px;
+  text-align: center;
+  width: 22px;
+}
+
+.m6-scheda .window-content button.m6-passo:hover:not(:disabled),
+.m6-scheda .window-content button.m6-soglia:hover:not(:disabled) {
+  border-color: var(--m6-oro);
+}
+
+.m6-scheda .window-content button:disabled {
+  cursor: default;
+}
+
+.m6-scheda .window-content button:focus-visible,
+.m6-scheda .window-content input:focus-visible {
+  outline: 2px solid var(--m6-viola-chiaro);
+  outline-offset: 1px;
+}
+
+/* --------------------------------------------------------------------------
+   Gli oggetti arrivano alla loro tappa: fino ad allora il tasto di Foundry
+   che ne crea uno non avrebbe niente da creare, e resta nascosto.
+   -------------------------------------------------------------------------- */
+#items [data-action="createEntry"] {
+  display: none;
+}
