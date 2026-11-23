@@ -59,6 +59,13 @@ agganci.once.ready();
   assert.deepEqual(Object.keys(mago.headers.fields), ["concept", "chronicle", "ambition", "desire"]);
   assert.equal(mago.gamesystem.options.initial, "mortal");
 
+  // I tratti per campo, col nome: li calcola la scheda, e li leggono la pagina e il tiro.
+  const viva = Object.assign(new MagoData(), { attributes: { strength: { value: 3 } }, skills: { occult: { value: 2, bonuses: [] } } });
+  viva.prepareDerivedData();
+  assert.deepEqual(viva.sortedAttributes.physical[0], { value: 3, id: "strength", displayName: "M6.Comuni.Attributi.strength" });
+  assert.deepEqual(viva.sortedSkills.mental.at(-1), { value: 2, bonuses: [], id: "occult", displayName: "M6.Comuni.Abilita.occult" });
+  assert.equal(viva.sortedSkills.physical.length, 6);
+
   // Una scheda della 0.1.0: i tratti coi nomi di allora passano a quelli di oggi.
   const vecchia = MagoData.migrateData({ attributi: { forza: { valore: 4 }, fermezza: { valore: 2 } }, abilita: { velo: { valore: 3 }, mischia: { valore: 1 } } });
   assert.deepEqual(vecchia.attributes, { strength: { value: 4 }, resolve: { value: 2 } });

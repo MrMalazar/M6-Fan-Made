@@ -3,6 +3,7 @@
  *
  *   Mago     system.attributes.<id>.value        gli Attributi
  *            system.skills.<id>.{value,bonuses}  le Abilità, con le Specializzazioni
+ *            system.sortedAttributes, sortedSkills   gli stessi per campo, col nome (calcolati)
  *            system.headers.{concept,…}          concetto, cronaca, Ambizione, Desiderio
  *            system.locked                       il lucchetto della scheda
  *   PNG      system.standarddicepools.<campo>.value   le tre riserve
@@ -17,7 +18,7 @@
  * I limiti qui sono larghi apposta: i numeri giusti li tengono le regole.
  */
 import { CASELLE_PNG_MAX, RISERVA_PNG_MAX } from "./costanti.js";
-import { CAMPI, DALLA_PRIMA, TUTTE_ABILITA, TUTTI_ATTRIBUTI } from "./tratti.js";
+import { ABILITA, ATTRIBUTI, CAMPI, DALLA_PRIMA, nomeAbilita, nomeAttributo, TUTTE_ABILITA, TUTTI_ATTRIBUTI, vociDeiTratti } from "./tratti.js";
 
 const { ArrayField, BooleanField, HTMLField, NumberField, ObjectField, SchemaField, StringField } = foundry.data.fields;
 const { TypeDataModel } = foundry.abstract;
@@ -44,6 +45,16 @@ export class MagoData extends TypeDataModel {
       gamesystem: parola({ blank: false, initial: "mortal" }),
       settings: new SchemaField({ skillAttributeInputs: new BooleanField({ initial: false }) })
     };
+  }
+
+  /**
+   * @override I tratti per campo, col nome letto: `sortedAttributes` e
+   * `sortedSkills`, quello che la scheda disegna e che il tiro compone.
+   */
+  prepareDerivedData() {
+    const localize = (chiave) => globalThis.game?.i18n?.localize(chiave) ?? chiave;
+    this.sortedAttributes = vociDeiTratti(ATTRIBUTI, this.attributes, nomeAttributo, localize);
+    this.sortedSkills = vociDeiTratti(ABILITA, this.skills, nomeAbilita, localize);
   }
 
   /** @override Le schede nate con la 0.1.0 avevano i tratti coi nomi italiani. */

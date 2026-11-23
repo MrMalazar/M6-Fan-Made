@@ -10,7 +10,6 @@
  */
 import { _onCreateItem, _onExpendItemUse, _onItemChat, _onItemDelete, _onRestoreItemUses, _onSearchItem, _onToggleLock, perGruppi } from "./oggetti.js";
 import { _onDotCounterChange, _onDotCounterEmpty, accendiPallini } from "./pallini.js";
-import { ABILITA, ATTRIBUTI, nomeAbilita, nomeAttributo, vociDeiTratti } from "./tratti.js";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ActorSheetV2 } = foundry.applications.sheets;
@@ -98,7 +97,6 @@ export class SchedaAttore extends HandlebarsApplicationMixin(ActorSheetV2) {
     const base = await super._prepareContext(options);
     const actor = this.actor;
     const system = actor.system;
-    const localize = game.i18n.localize.bind(game.i18n);
     await this.prepareItems(actor);
     return {
       ...base,
@@ -115,8 +113,8 @@ export class SchedaAttore extends HandlebarsApplicationMixin(ActorSheetV2) {
       currentActorType: actor.type,
       currentTypeLabel: `TYPES.Actor.${actor.type}`,
       tabs: this.getTabs(),
-      sortedAttributes: vociDeiTratti(ATTRIBUTI, system.attributes, nomeAttributo, localize),
-      sortedSkills: vociDeiTratti(ABILITA, system.skills, nomeAbilita, localize)
+      sortedAttributes: system.sortedAttributes ?? {},
+      sortedSkills: system.sortedSkills ?? {}
     };
   }
 
@@ -150,9 +148,10 @@ export class SchedaAttore extends HandlebarsApplicationMixin(ActorSheetV2) {
     options.parts = options.parts.filter((parte) => (parte === "limited") === limitata);
   }
 
-  /** @override */
+  /** @override A ogni disegno: i pallini si accendono, e la finestra sa se la scheda è chiusa dal lucchetto. */
   _onRender(context, options) {
     super._onRender?.(context, options);
+    this.element.classList.toggle("locked", Boolean(context?.locked));
     accendiPallini(this.element);
   }
 }

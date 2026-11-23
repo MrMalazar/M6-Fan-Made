@@ -22,6 +22,164 @@
   --m6-viola-dado: #2f2153;    /* corpo del dado */
 }
 
+/* ==========================================================================
+   La cornice delle schede. Sta in uno strato suo, sotto il foglio delle
+   schede (m6.css): qualunque regola scritta là vince su queste, a parità di
+   elemento, senza gare di specificità. I colori vengono dalle quattro tinte
+   della scheda (--mortal-color-1…4), che m6.css dichiara per il tema scuro
+   e per quello chiaro: cambiando quelle cambia tutto.
+   ========================================================================== */
+@layer base {
+  /* La finestra. */
+  .m6w.sheet {
+    border-radius: 0;
+    min-height: 300px;
+  }
+
+  .m6w.sheet.mortal {
+    box-shadow: 0 0 10px var(--mortal-color-1);
+  }
+
+  .m6w.sheet .window-header {
+    flex: 0 0 25px;
+    line-height: 20px;
+    padding-top: 2px;
+  }
+
+  .m6w.sheet .window-header button.header-control {
+    background-color: #686767;
+    color: #fff;
+  }
+
+  .m6w.actor.sheet .window-content {
+    color: #fff;
+    padding: 0 0 20px;
+  }
+
+  /* La barra delle pagine: in piedi sul bordo sinistro, il lucchetto in fondo. */
+  .m6w.actor.sheet .tabs-container {
+    height: 100%;
+    left: -2px;
+    overflow: hidden;
+    position: absolute;
+  }
+
+  .m6w.actor.sheet.mortal .tabs-container {
+    background-color: var(--mortal-color-2);
+  }
+
+  .m6w.actor.sheet .sheet-tabs {
+    align-items: flex-start;
+    border-bottom: 0;
+    border-top: 0;
+    flex-direction: column;
+    height: calc(100% - 30px);
+    justify-content: flex-start;
+    overflow: hidden;
+  }
+
+  .m6w.actor.sheet .sheet-tabs .lock-btn {
+    max-width: 40px;
+  }
+
+  .m6w.actor.sheet .sheet-tabs .lock-btn i {
+    margin: 10.56px 1.9px;
+  }
+
+  /* Le pagine. */
+  .m6w.sheet section .tab {
+    align-items: flex-start;
+    padding: 8px;
+  }
+
+  /* Il piede: che scheda è, in una parola. */
+  .m6w.sheet .sheet-banner {
+    background-color: var(--mortal-color-1);
+    bottom: 0;
+    color: var(--mortal-color-3);
+    font-size: 14pt;
+    left: 0;
+    padding: 3px;
+    position: absolute;
+    text-align: center;
+    width: 100%;
+  }
+
+  /* I campi e i tasti dentro una scheda. */
+  .m6w.sheet button {
+    background-color: #686767;
+    color: #fff;
+  }
+
+  .m6w.sheet input,
+  .m6w.sheet .resource {
+    background-color: #1d1d1d;
+    display: flex;
+  }
+
+  .m6w.sheet.mortal input,
+  .m6w.sheet.mortal .resource {
+    border: 1px solid var(--mortal-color-2);
+  }
+
+  .m6w.sheet input[type="number"] {
+    max-width: 35px;
+    min-width: 35px;
+  }
+
+  .m6w.sheet .resource {
+    position: relative;
+  }
+
+  .m6w.sheet prose-mirror {
+    min-width: 100%;
+  }
+
+  .m6w.sheet prose-mirror .editor-content {
+    max-width: 100%;
+  }
+
+  .m6w.sheet prose-mirror button.toggle {
+    background-color: rgb(0 0 0 / 94%);
+  }
+
+  /* I pallini: un cerchio per punto, pieno fino al valore; la crocetta
+     davanti li azzera. Con la scheda chiusa dal lucchetto la crocetta e la
+     lente dei compendi spariscono, e i pallini non si lasciano cliccare. */
+  .m6w .resource-value .resource-value-step,
+  .m6w .resource-value .resource-value-empty {
+    border: 1px solid #686767;
+    border-radius: 50%;
+    cursor: pointer;
+    display: inline-block;
+    height: 14px;
+    width: 14px;
+  }
+
+  .m6w .resource-value .resource-value-step {
+    background-color: #686767;
+  }
+
+  .m6w.sheet.mortal .resource-value .resource-value-step.active {
+    background-color: var(--mortal-color-1);
+  }
+
+  .m6w .resource-value .resource-value-empty {
+    background:
+      linear-gradient(45deg, transparent 0%, transparent 43%, #a5a5a5 45%, #a5a5a5 55%, transparent 57%, transparent 100%),
+      linear-gradient(135deg, transparent 0%, transparent 43%, #a5a5a5 45%, #a5a5a5 55%, transparent 57%, transparent 100%);
+  }
+
+  .m6w.locked .resource-value-empty,
+  .m6w.locked .search-data-item {
+    display: none;
+  }
+
+  .m6w.locked .resource-value-step {
+    cursor: default;
+  }
+}
+
 /* --------------------------------------------------------------------------
    Il dado: un quadrato viola, vuoto da 1 a 5, con la scintilla da 6 a 9 e la
    stellina sul 10.
