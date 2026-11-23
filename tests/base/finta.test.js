@@ -16,7 +16,7 @@ await import("../../scripts/base/avvio.js");
 assert.equal(typeof agganci.once.init, "function");
 assert.equal(typeof agganci.once.setup, "function");
 assert.equal(typeof agganci.once.ready, "function");
-assert.equal(agganci.on.renderChatMessageHTML?.length, 1);
+assert.equal(agganci.on.renderChatMessageHTML?.length, 2, "la carta del tiro semplice e il ritratto di chi parla");
 
 agganci.once.init();
 assert.deepEqual(Object.keys(CONFIG.Actor.dataModels), ["mago", "png"]);

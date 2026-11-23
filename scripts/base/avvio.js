@@ -5,11 +5,13 @@
  *   i dati       i due tipi di scheda (Mago e PNG), i cinque tipi di oggetto, il tiro della 0.1.0
  *   i dadi       il dado della riserva e il tiro con la sua carta in chat
  *   gli oggetti  una scheda sola per tutti i tipi
+ *   la chat      il ritratto di chi parla accanto al nome
  *   il telefono  la pagina stretta al posto di Foundry intero
  *
  * Le schede del Mago e del PNG, con tutte le regole, le registra main.js.
  */
 import { PEZZI_COMUNI, registraAiuti } from "./aiuti.js";
+import { vestiChiParla } from "./chi-parla.js";
 import { ID } from "./costanti.js";
 import { registraDadi } from "./dadi.js";
 import { MagoData, OGGETTI, PngData, TiroData } from "./dati.js";
@@ -55,3 +57,5 @@ Hooks.once("ready", telefonoAlPronto);
 
 // La carta del tiro semplice si veste a ogni disegno del messaggio.
 Hooks.on("renderChatMessageHTML", vestiCarta);
+// Chi parla ha il suo ritratto accanto al nome.
+Hooks.on("renderChatMessageHTML", vestiChiParla);

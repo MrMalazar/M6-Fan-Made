@@ -178,6 +178,134 @@
   .m6w.locked .resource-value-step {
     cursor: default;
   }
+
+  /* I messaggi in chat: la pergamena scurita, il testo chiaro, il nome di
+     chi parla in evidenza col suo ritratto accanto. */
+  .chat-message {
+    background-blend-mode: multiply;
+    background-color: #333;
+    border-radius: 0;
+    color: #fff;
+    gap: 3px;
+    margin: 3px;
+    padding: 0;
+  }
+
+  .chat-message .message-header {
+    color: #fff;
+  }
+
+  .chat-message .message-header .message-sender {
+    color: #fff;
+    font-family: "Amarante", serif;
+    font-size: 1.2em;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .chat-message .message-header .m6-chi-parla {
+    flex: none;
+    padding: 2px;
+  }
+
+  .chat-message .message-header .m6-chi-parla > img {
+    border: 1px solid #fff;
+    display: block;
+    max-height: 50px;
+    max-width: 50px;
+  }
+
+  .chat-message .message-content {
+    color: #fff;
+    padding: 4px;
+  }
+
+  .chat-message hr {
+    border: 0;
+    margin: 0.5em 0;
+  }
+
+  /* La carta del tiro: il titolo, i dadi in fila, il testo del tiro, i
+     successi accanto alla soglia, la fascia dell'esito. */
+  .chat-message .roll-label {
+    font-family: "Vollkorn", serif;
+    font-size: 1.4em;
+    font-weight: 700;
+    letter-spacing: 0.48px;
+    line-height: 1.2;
+    margin: 0.4em 0.1em 0.3em;
+    text-align: center;
+    text-transform: uppercase;
+  }
+
+  .chat-message .dice-roll {
+    cursor: pointer;
+    display: flex;
+  }
+
+  .chat-message .dice-roll .modifiers {
+    display: flex;
+    flex-wrap: wrap;
+    margin-bottom: 2px;
+  }
+
+  .chat-message .dice-icons {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .chat-message .dice-icons .roll-img {
+    border: 1px solid #fff;
+    border-radius: 4px;
+    cursor: pointer;
+    margin: 2px;
+    max-width: 40px;
+  }
+
+  .chat-message .collapsible-content {
+    font-family: "Vollkorn", serif;
+    font-size: 1.1em;
+    line-height: 1.6em;
+    overflow: hidden;
+  }
+
+  .chat-message .total-and-difficulty {
+    border: 1px solid #000;
+    display: flex;
+  }
+
+  .chat-message .roll-total,
+  .chat-message .roll-difficulty {
+    display: flex;
+    flex-grow: 1;
+    justify-content: space-evenly;
+    text-align: center;
+  }
+
+  .chat-message .total-title,
+  .chat-message .difficulty-title {
+    font-weight: 700;
+  }
+
+  .chat-message .roll-result-label {
+    background: #222;
+    border: 1px solid #000;
+    font-size: 18px;
+    font-weight: 700;
+    text-align: center;
+    text-shadow: 0 0 5px #000;
+  }
+
+  .chat-message .roll-result-label.success {
+    background-color: #065200;
+    color: #dbd6d6;
+  }
+
+  .chat-message .roll-result-label.failure {
+    background-color: #900;
+    color: #dbdbdb;
+  }
 }
 
 /* --------------------------------------------------------------------------

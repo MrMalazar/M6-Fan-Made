@@ -8,7 +8,7 @@
  * scrive il totale. La carta porta i pezzi che le regole vestono dopo
  * (titolo, dadi, testo, successi, soglia, esito), ognuno con la sua classe.
  */
-import { EMPTY_DICE_FACE, getMageDieImage, getParadoxDieImage } from "../dice-faces.js";
+import { getMageDieImage, getParadoxDieImage } from "../dice-faces.js";
 import { DadoRiserva } from "./dadi.js";
 
 const { Die } = foundry.dice.terms;
@@ -43,8 +43,7 @@ export class TiroM6 extends foundry.dice.Roll {
     const facce = (termine, classi, immagine) => (termine?.results ?? [])
       .map((uscito, indice) => {
         const faccia = immagine(uscito.result, riuscita);
-        const vuota = faccia === EMPTY_DICE_FACE ? ` ${classi.at(-1)}-empty` : "";
-        return `<img src="${faccia}" class="die roll-img ${classi.join(" ")}${vuota}" data-index="${indice}" alt="" title="">`;
+        return `<img src="${faccia}" class="die roll-img ${classi.join(" ")}" data-index="${indice}" alt="" title="">`;
       })
       .join("");
     const dice = (chiave) => game.i18n.localize(chiave);

@@ -88,4 +88,35 @@ import { _onDotCounterChange, _onDotCounterEmpty, accendiPallini } from "../../s
   assert.equal(hb.compile("{{#if (isNotEmpty d)}}pieno{{else}}vuoto{{/if}}")({}), "vuoto");
 }
 
+/* ---------- chi parla, in chat ---------- */
+{
+  const { ritrattoDiChiParla, vestiChiParla } = await import("../../scripts/base/chi-parla.js");
+  const marco = { img: "marco.webp", prototypeToken: { texture: { src: "marco-segnalino.webp" } } };
+  const senza = { img: "leo.webp", prototypeToken: { texture: { src: "" } } };
+  const sulCampo = { texture: { src: "marco-in-scena.webp" }, actor: marco };
+  globalThis.game = {
+    actors: { get: (id) => ({ a1: marco, a2: senza })[id] ?? null },
+    scenes: { get: (id) => (id === "s1" ? { tokens: { get: (t) => (t === "t1" ? sulCampo : null) } } : null) }
+  };
+  assert.equal(ritrattoDiChiParla({ speaker: { scene: "s1", token: "t1", actor: "a1" } }), "marco-in-scena.webp", "prima il segnalino sulla scena");
+  assert.equal(ritrattoDiChiParla({ speaker: { actor: "a1" } }), "marco-segnalino.webp", "poi il segnalino di serie");
+  assert.equal(ritrattoDiChiParla({ speaker: { actor: "a2" } }), "leo.webp", "poi il ritratto");
+  assert.equal(ritrattoDiChiParla({ speaker: { alias: "Narratore" } }), "", "senza scheda niente ritratto");
+  assert.equal(ritrattoDiChiParla({}), "");
+
+  // Il ritratto entra in testa al messaggio, una volta sola.
+  const figli = [];
+  const testa = { querySelector: (sel) => (sel === ".m6-chi-parla" ? figli.find((f) => f.classi.has("m6-chi-parla")) ?? null : null), prepend: (nodo) => figli.unshift(nodo) };
+  const html = { querySelector: (sel) => (sel === ".message-header" ? testa : null) };
+  globalThis.document = { createElement: (tag) => ({ tag, classi: new Set(), classList: { add(nome) { this.owner.classi.add(nome); }, owner: null }, figli: [], append(nodo) { this.figli.push(nodo); } }) };
+  const crea = globalThis.document.createElement;
+  globalThis.document.createElement = (tag) => { const nodo = crea(tag); nodo.classList.owner = nodo; return nodo; };
+  vestiChiParla({ speaker: { actor: "a1" } }, html);
+  vestiChiParla({ speaker: { actor: "a1" } }, html);
+  assert.equal(figli.length, 1);
+  assert.equal(figli[0].figli[0].src, "marco-segnalino.webp");
+  vestiChiParla({ speaker: { alias: "Narratore" } }, { querySelector: () => ({ querySelector: () => null, prepend: () => assert.fail("niente ritratto senza scheda") }) });
+  vestiChiParla({ speaker: { actor: "a1" } }, { querySelector: () => null });
+}
+
 console.log("Pezzi della base: test passati.");
