@@ -185,17 +185,9 @@ function utentiDi(actor) {
     .map((user) => ({ name: user.name, active: Boolean(user.active) }));
 }
 
-function volonta(actor) {
-  const w = actor?.system?.willpower ?? {};
-  const max = count(w.max);
-  const danni = count(w.superficial) + count(w.aggravated);
-  return { max, resta: Math.max(max - danni, 0) };
-}
-
 export function statusMago(actor, { localize = (key) => key, aperto = false, scena = 0, riserva = null } = {}) {
   const salute = getSalute(actor);
   const balance = getMagickBalance(actor);
-  const vol = volonta(actor);
   // Le Condizioni accese col grado in numeri romani (29/9): «Offuscato II», «Contuso».
   const condizioni = [...activeCondizioni(actor.items ?? []).entries()]
     .map(([id, item]) => {
@@ -226,7 +218,6 @@ export function statusMago(actor, { localize = (key) => key, aperto = false, sce
     utenti,
     collegato: utenti.some((user) => user.active),
     salute: { resta: Math.max(salute.max - salute.total, 0), max: salute.max },
-    volonta: vol,
     quintessenza: count(balance.quintessence),
     ruota: count(balance.paradox),
     condizioni,

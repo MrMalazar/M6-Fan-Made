@@ -1156,9 +1156,9 @@
     },
     "Creation": {
       "Nemico": {
-        "Gruppo": "PNG di M6",
-        "Voce": "PNG M6 · {natura}",
-        "Hint": "Nasce con la Scheda del nemico (M6) e con questa Natura."
+        "Gruppo": "PNG per Natura",
+        "Voce": "PNG · {natura}",
+        "Hint": "Nasce già con questa Natura."
       }
     },
     "Settings": {
@@ -1932,7 +1932,6 @@
       "ApriScheda": "Apri la scheda",
       "Togli": "Togli",
       "Salute": "Salute",
-      "Volonta": "Volontà",
       "Quintessenza": "Quintessenza",
       "Ruota": "Ruota",
       "Attivi": "Attivi",

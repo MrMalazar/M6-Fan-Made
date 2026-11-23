@@ -224,22 +224,35 @@ function initializeDialog(dialog, options) {
 }
 
 /**
+ * I modi con cui un tiro va in chat (pubblico, al Narratore, alla cieca, per sé):
+ * quelli di Foundry, per la tendina della finestra del lancio. «In personaggio»
+ * resta fuori: per un tiro Foundry lo tratta da pubblico.
+ */
+function modiDelMessaggio() {
+  const modi = {};
+  for (const [id, modo] of Object.entries(CONFIG.ChatMessage?.modes ?? {})) {
+    if (id !== "ic") modi[id] = modo?.label ?? id;
+  }
+  return modi;
+}
+
+/**
  * Un messaggio senza dadi: la riuscita comprata con la Quintessenza (niente
  * rossi da tirare) oppure il lancio senza nessun dado (fallito). Porta la
  * carta del Mago come un tiro, così i tasti sotto sanno cosa fare.
  */
-async function postDicelessMessage(actor, title, { flavor, cardData, banner = "", rollMode }) {
+async function postDicelessMessage(actor, title, { flavor, cardData, banner = "", messageMode }) {
   const localize = game.i18n.localize.bind(game.i18n);
   const content = [
     banner ? renderAutoVictoryBanner(localize, banner) : "",
     flavor
   ].join("");
-  return ChatMessage.create(ChatMessage.applyRollMode({
+  return ChatMessage.create(ChatMessage.applyMode({
     speaker: ChatMessage.getSpeaker({ actor }),
     flavor: title,
     content,
     flags: { [MODULE_ID]: { [ROLL_CARD_FLAG]: cardData } }
-  }, rollMode));
+  }, messageMode));
 }
 
 /**
@@ -303,8 +316,8 @@ export async function rollAreteWithParadox({
       onlyParadox,
       bought,
       showReds: !skill,
-      rollMode: game.settings.get("core", "rollMode"),
-      rollModes: CONFIG.Dice.rollModes,
+      messageMode: game.settings.get("core", "messageMode"),
+      messageModes: modiDelMessaggio(),
       situationalModifiers
     }
   );
@@ -342,8 +355,8 @@ export async function rollAreteWithParadox({
             basicInput.value = String(Math.max((basicInput.valueAsNumber || 0) - (excess - alreadyRemoved), 0));
           }
           const conto = readDialogDice(form, options);
-          const rollMode = form.querySelector('[name="rollMode"]')?.value
-            || game.settings.get("core", "rollMode");
+          const messageMode = form.querySelector('[name="messageMode"]')?.value
+            || game.settings.get("core", "messageMode");
           return executeRamoCRoll({
             actor,
             data,
@@ -352,7 +365,7 @@ export async function rollAreteWithParadox({
             card,
             conto,
             activeModifiers,
-            rollMode,
+            messageMode,
             paradoxRating: reds,
             bought,
             onlyParadox,
@@ -393,7 +406,7 @@ export async function executeRamoCRoll({
   card = null,
   conto,
   activeModifiers = [],
-  rollMode = null,
+  messageMode = null,
   paradoxRating = 0,
   bought = false,
   onlyParadox = false,
@@ -409,7 +422,7 @@ export async function executeRamoCRoll({
 }) {
   const format = game.i18n.format.bind(game.i18n);
   const localize = game.i18n.localize.bind(game.i18n);
-  const mode = rollMode || game.settings.get("core", "rollMode");
+  const mode = messageMode || game.settings.get("core", "messageMode");
   // Si riesce dal 6, sempre: sulla carta resta scritto per le facce dei dadi e per il ritiro.
   const successFrom = RIUSCITA_DA;
   const modifier = successModifier(successFrom);
@@ -474,7 +487,7 @@ export async function executeRamoCRoll({
       flavor: flavorOut,
       cardData,
       banner: bought ? (banner || localize("M6.RamoC.BoughtBanner")) : "",
-      rollMode: mode
+      messageMode: mode
     });
   }
 
@@ -484,7 +497,7 @@ export async function executeRamoCRoll({
     title,
     flavor: rollFlavor,
     difficulty: soglia,
-    rollMode: mode,
+    messageMode: mode,
     activeModifiers,
     mageArete: true,
     mageSuccessFrom: successFrom,
@@ -535,7 +548,7 @@ export async function executeRamoCRoll({
   const flags = { [MODULE_ID]: { [ROLL_CARD_FLAG]: cardData } };
   const message = await roll.toMessage(
     { speaker: ChatMessage.getSpeaker({ actor }), flags },
-    { rollMode: mode }
+    { messageMode: mode }
   );
   return message;
 }
@@ -562,7 +575,7 @@ export async function rollRamoCDirect({
   flavor = "",
   card = null,
   activeModifiers = [],
-  rollMode = null,
+  messageMode = null,
   notes = [],
   banner = ""
 }) {
@@ -576,7 +589,7 @@ export async function rollRamoCDirect({
     card,
     conto,
     activeModifiers,
-    rollMode,
+    messageMode,
     paradoxRating: reds,
     bought,
     onlyParadox: false,

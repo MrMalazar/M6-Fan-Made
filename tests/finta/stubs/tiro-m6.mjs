@@ -12,7 +12,7 @@ export class TiroM6 {
     return this;
   }
   async toMessage(data, opts) {
-    const message = { ...data, rollMode: opts.rollMode, total: this._total, flavor: this.options.flavor, rolls: [this], getFlag: (scope, key) => data.flags?.[scope]?.[key] };
+    const message = { ...data, messageMode: opts.messageMode, total: this._total, flavor: this.options.flavor, rolls: [this], getFlag: (scope, key) => data.flags?.[scope]?.[key] };
     globalThis.__sim.messages.push(message);
     return message;
   }

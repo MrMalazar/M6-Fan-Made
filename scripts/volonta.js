@@ -90,6 +90,17 @@ function diceTerms(roll) {
   return { basic, advanced };
 }
 
+/** La sigla dei dadi della riserva (`dm`) e di quelli rossi (`dp`): gli unici tiri che la Volontà ritira. */
+const DADI_DEL_TIRO = Object.freeze(["m", "p"]);
+
+/**
+ * Il tiro è un tiro di riserva? Un tiro d'iniziativa (`1d10`) o un dado tirato
+ * a mano in chat non lo sono: lì la Volontà non c'entra e il tasto non compare.
+ */
+export function tiroDiRiserva(roll) {
+  return (roll?.terms ?? []).some((term) => Array.isArray(term?.results) && DADI_DEL_TIRO.includes(term?.denomination));
+}
+
 function speakerActor(message) {
   const actor = ChatMessage.getSpeakerActor?.(message.speaker) ?? game.actors?.get(message.speaker?.actor);
   return actor ?? null;
@@ -123,6 +134,7 @@ export function renderUsed(used, format) {
 export function decorateVolonta(message, html) {
   const roll = message?.rolls?.[0];
   if (!roll || !html?.querySelector) return false;
+  if (!tiroDiRiserva(roll)) return false;
   const target = html.querySelector(".dice-result");
   if (!target || target.querySelector(".m6-volonta-reroll, .m6-roll-note-volonta")) return false;
 

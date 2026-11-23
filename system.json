@@ -283,6 +283,7 @@
     "units": "m"
   },
   "initiative": "1d10",
+  "primaryTokenAttribute": "salute",
   "flags": {
     "hotReload": {
       "extensions": [

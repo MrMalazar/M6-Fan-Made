@@ -3,13 +3,13 @@ globalThis.__sim = { rolls: [], messages: [], faces: [], situational: [] };
 const strings = { "M6.RamoC.NoDice": "Nessun dado: fallito", "M6.Arete.BacklashLabel": "Contraccolpo", "M6.Arete.BacklashEyesOne": "un occhio", "M6.Arete.BacklashEyes": "{eyes} occhi" };
 globalThis.game = {
   i18n: { lang: "it", localize: (k) => strings[k] ?? k, format: (k, d = {}) => Object.entries(d).reduce((t, [a, b]) => t.replace(`{${a}}`, String(b)), strings[k] ?? k) },
-  settings: { get: () => "publicroll" }
+  settings: { get: () => "public" }
 };
-globalThis.CONFIG = { Dice: { terms: {}, rollModes: {} } };
+globalThis.CONFIG = { Dice: { terms: {} }, ChatMessage: { modes: { public: { label: "CHAT.MODES.public" }, gm: { label: "CHAT.MODES.gm" }, blind: { label: "CHAT.MODES.blind" }, self: { label: "CHAT.MODES.self" }, ic: { label: "CHAT.MODES.ic" } } } };
 globalThis.Hooks = { once() {} };
 globalThis.ChatMessage = {
   getSpeaker: ({ actor }) => ({ alias: actor.name }),
-  applyRollMode: (data) => data,
+  applyMode: (data) => data,
   create: async (data) => { const m = { ...data, getFlag: (s, k) => data.flags?.[s]?.[k] }; globalThis.__sim.messages.push(m); return m; }
 };
 globalThis.foundry = { applications: { api: { DialogV2: {} }, handlebars: {} } };

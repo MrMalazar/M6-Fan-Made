@@ -62,7 +62,7 @@ function attore(id, name, { isMage = true, owner = null, flags = {} } = {}) {
   const dati = { flags: { [MODULE]: { isMage, ...flags } } };
   const actor = {
     id, name, type: isMage ? "mago" : "altro", img: `${id}.png`, items: [], hasPlayerOwner: Boolean(owner),
-    system: { willpower: { max: 6, superficial: 1, aggravated: 0 }, attributes: { stamina: { value: 2 }, resolve: { value: 2 } } },
+    system: { attributes: { stamina: { value: 2 }, resolve: { value: 2 } } },
     getFlag: (scope, key) => (scope === MODULE ? dati.flags[MODULE][key] : undefined),
     setFlag: async (scope, key, value) => { dati.flags[MODULE][key] = value; Hooks.callAll("updateActor", actor, { flags: { [MODULE]: { [key]: value } } }); return actor; },
     update: async (changes) => {
@@ -395,7 +395,8 @@ assert.equal(getOrologi()[0].pieni, 1, "la Carica avanza col Volgare");
   assert.equal(g.name, "Guendalina");
   assert.ok(g.aperto && !l.aperto);
   assert.deepEqual(g.salute, { resta: 6, max: 6 }, "2 + Costituzione + Fermezza");
-  assert.deepEqual(g.volonta, { resta: 5, max: 6 });
+  // La Volontà non ha una riga sua: in M6 è parte della Salute, e il Quadro non legge più il tracciato di un altro sistema.
+  assert.equal("volonta" in g, false);
   assert.equal(g.quintessenza, 3);
   assert.equal(g.ruota, 4);
   assert.deepEqual(g.attivi.map((a) => a.nome), [entra.nome], "la mossa del menù circolare fra gli effetti attivi");

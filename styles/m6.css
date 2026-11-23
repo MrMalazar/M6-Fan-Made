@@ -14751,6 +14751,8 @@
   cursor: pointer;
   display: grid;
   height: 86px;
+  /* Il tasto di Foundry centra il contenuto: senza questa riga il binario della griglia va a zero e il sigillo sparisce. */
+  justify-content: stretch;
   left: -43px;
   place-items: center;
   position: absolute;

@@ -117,7 +117,7 @@ function lettaDaFoundry(form) {
 
 /* ------------------------------------------------------- la finestra montata */
 
-const parole = { "M6.Creation.Nemico.Voce": "PNG M6 · {natura}" };
+const parole = { "M6.Creation.Nemico.Voce": "PNG · {natura}" };
 const ganci = {};
 globalThis.Hooks = { on: (nome, fn) => { ganci[nome] = fn; } };
 globalThis.document = { createElement: (tag) => new Nodo(tag) };

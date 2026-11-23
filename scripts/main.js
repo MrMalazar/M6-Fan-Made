@@ -1,6 +1,7 @@
 // La base viene prima: i dati, i dadi, gli oggetti e il telefono si registrano prima delle regole.
 import "./base/avvio.js";
 import { registerActorCreationChoice } from "./actor-creation.js";
+import { registraAttore } from "./attore.js";
 import { MODULE_ID } from "./constants.js";
 import { isMageActor, registerMageDiceRendering } from "./mage-dice.js";
 import { registerParadoxDice } from "./paradox-dice.js";
@@ -75,6 +76,9 @@ function debug(message, ...data) {
 
 Hooks.once("init", () => {
   console.info(`${MODULE_ID} | Initializing`);
+
+  // L'attore del sistema: la Salute come la leggono le barre dei token.
+  registraAttore();
 
   // L'icona propria di un oggetto nella pagina Tratti (23/9): l'immagine del
   // Rifugio, la lettera solo per chi ha il segnaposto.

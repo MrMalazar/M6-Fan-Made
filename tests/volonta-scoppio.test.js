@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { burstDamage, paradoxAfterBurst } from "../scripts/paradox-burst.js";
-import { pickRerollDice, recountCard, rerollableDice, renderRerollButton, renderUsed, systemTotal, volontaState, REROLL_MAX } from "../scripts/volonta.js";
+import { pickRerollDice, recountCard, renderRerollButton, renderUsed, REROLL_MAX, rerollableDice, systemTotal, tiroDiRiserva, volontaState } from "../scripts/volonta.js";
 import { saluteWithDamage } from "../scripts/salute.js";
 import { getMagickBalance, getParadoxFloor } from "../scripts/magick-balance.js";
 
@@ -109,3 +109,13 @@ assert.match(readFileSync(new URL("../scripts/tiro-scheda.js", import.meta.url),
 }
 
 console.log("Volontà e Scoppio: test passati.");
+
+// Il tasto della Volontà sta solo sotto i tiri di riserva (dm, dp): un tiro
+// d'iniziativa o un dado tirato a mano in chat non si ritira.
+const termine = (denomination, results = [{ result: 3 }]) => ({ denomination, results });
+assert.equal(tiroDiRiserva({ terms: [termine("m"), { operator: "+" }, termine("p", [])] }), true, "un tiro della scheda");
+assert.equal(tiroDiRiserva({ terms: [termine("p")] }), true, "solo rossi");
+assert.equal(tiroDiRiserva({ terms: [termine("d")] }), false, "l'iniziativa, 1d10");
+assert.equal(tiroDiRiserva({ terms: [{ number: 3 }] }), false, "un numero secco");
+assert.equal(tiroDiRiserva(null), false);
+

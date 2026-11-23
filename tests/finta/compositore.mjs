@@ -2,10 +2,10 @@ import assert from "node:assert/strict";
 globalThis.__sim = { rolls: [], messages: [], faces: [], situational: [] };
 const strings = { "M6.RamoC.NoDice": "Nessun dado", "M6.Arete.Label": "Areté", "M6.Skills.Veil": "Velo", "M6.Spheres.forces": "Forze", "M6.Scopes.potency": "Potenza", "M6.Scopes.range": "Portata", "M6.Tiro.Kinds.testimoni": "Volgare con testimoni", "M6.Tiro.KindMagick": "Tiro di Magick", "M6.Tiro.KindSkill": "Tiro di Abilità", "M6.Tiro.KindNone": "Componi", "M6.Tiro.PowerNote": "Potere: {name}.", "M6.Arete.SkillSpecialtyFlavor": "Specializzazione +{dice}", "M6.Arete.QuintessenceFlavor": "Quintessenza {points}", "M6.Arete.QuintessenceSpent": "spesa {points}", "M6.MagickBalance.ParadoxGained": "+{amount} Paradosso", "M6.Tiro.ManualDifficultyNote": "a mano {difficulty} ({computed})" };
 const fmt = (k, d = {}) => Object.entries(d).reduce((t, [a, b]) => t.replace(`{${a}}`, String(b)), strings[k] ?? k);
-globalThis.game = { i18n: { lang: "it", localize: (k) => strings[k] ?? k, format: fmt }, settings: { get: () => "publicroll" } };
-globalThis.CONFIG = { Dice: { terms: {}, rollModes: {} } };
+globalThis.game = { i18n: { lang: "it", localize: (k) => strings[k] ?? k, format: fmt }, settings: { get: () => "public" } };
+globalThis.CONFIG = { Dice: { terms: {} }, ChatMessage: { modes: { public: { label: "CHAT.MODES.public" }, gm: { label: "CHAT.MODES.gm" }, blind: { label: "CHAT.MODES.blind" }, self: { label: "CHAT.MODES.self" }, ic: { label: "CHAT.MODES.ic" } } } };
 globalThis.Hooks = { once() {} };
-globalThis.ChatMessage = { getSpeaker: ({ actor }) => ({ alias: actor.name }), applyRollMode: (d) => d, create: async (d) => { const m = { ...d, getFlag: (s, k) => d.flags?.[s]?.[k] }; globalThis.__sim.messages.push(m); return m; } };
+globalThis.ChatMessage = { getSpeaker: ({ actor }) => ({ alias: actor.name }), applyMode: (d) => d, create: async (d) => { const m = { ...d, getFlag: (s, k) => d.flags?.[s]?.[k] }; globalThis.__sim.messages.push(m); return m; } };
 globalThis.foundry = { applications: { api: { DialogV2: {} }, handlebars: {} }, utils: { randomID: () => "id" + Math.random().toString(36).slice(2, 8) } };
 const infos = []; globalThis.ui = { notifications: { info: (m) => infos.push(m), warn: (m) => infos.push("WARN " + m) } };
 

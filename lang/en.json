@@ -1156,9 +1156,9 @@
     },
     "Creation": {
       "Nemico": {
-        "Gruppo": "M6 NPC",
-        "Voce": "M6 NPC · {natura}",
-        "Hint": "Born with the Enemy sheet (M6) and this Nature."
+        "Gruppo": "NPC by Nature",
+        "Voce": "NPC · {natura}",
+        "Hint": "Born with this Nature already set."
       }
     },
     "Settings": {
@@ -1932,7 +1932,6 @@
       "ApriScheda": "Open the sheet",
       "Togli": "Remove",
       "Salute": "Health",
-      "Volonta": "Willpower",
       "Quintessenza": "Quintessence",
       "Ruota": "Wheel",
       "Attivi": "Active",
