@@ -31,7 +31,22 @@ HERE = Path(__file__).resolve().parent
 SRC = Path(sys.argv[1]) if len(sys.argv) > 1 else HERE / "dati" / "equipaggiamento.md"
 OUT = HERE.parent / "packs"
 PACK = "mage-equipaggiamento"
+# Le icone sono quelle di serie di Foundry, una per genere: la stessa tavola di
+# scripts/base/icone-tipo.js, che veste gli oggetti creati a mano.
 IMG = "icons/svg/item-bag.svg"
+IMG_MISCHIA = "icons/svg/sword.svg"
+IMG_DISTANZA = "icons/svg/target.svg"
+IMG_FISICA = "icons/svg/shield.svg"
+IMG_MENTALE = "icons/svg/mage-shield.svg"
+
+
+def icona(kind, system, flags):
+    if kind == "weapon":
+        return IMG_DISTANZA if system.get("weaponType") == "ranged" else IMG_MISCHIA
+    if kind == "armor":
+        return IMG_MENTALE if flags.get("armatura") == "mentale" else IMG_FISICA
+    return IMG
+
 SOURCE = {"book": "M6 · L'equipaggiamento", "page": ""}
 
 # Il Tipo della lista porta al tipo di oggetto del sistema (e, per le armi, al tipo d'arma).
@@ -169,7 +184,7 @@ def build(md):
             "_id": doc_id("equip", tipo, name),
             "name": name,
             "type": kind,
-            "img": IMG,
+            "img": icona(kind, system, flags),
             "system": system,
             "effects": [],
             "folder": None,

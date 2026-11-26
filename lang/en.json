@@ -3225,7 +3225,19 @@
         "Usi": "Has uses",
         "UsiRimasti": "Uses left",
         "UsiPieni": "Full uses",
-        "Descrizione": "Description"
+        "Descrizione": "Description",
+        "Rarita": "Rarity",
+        "SenzaRarita": "none",
+        "Grado": "Background rank",
+        "GradoNota": "The Background rank needed to own it. No dots, none needed.",
+        "Portata": "Range",
+        "ArmaturaPiena": "Full points",
+        "ArmaturaPienaNota": "The armor's points when intact: repairs bring it back up to here.",
+        "Genere": "Kind",
+        "Modificatori": "On rolls",
+        "ModDadi": "dice",
+        "ModNuovo": "Add a modifier",
+        "ModVuoto": "This Condition neither removes nor adds dice."
       }
     },
     "Base": {

@@ -15,6 +15,7 @@ import { vestiChiParla } from "./chi-parla.js";
 import { ID } from "./costanti.js";
 import { registraDadi } from "./dadi.js";
 import { MagoData, OGGETTI, PngData, TiroData } from "./dati.js";
+import { registraIconeDelTipo } from "./icone-tipo.js";
 import { SchedaOggetto } from "./scheda-oggetto.js";
 import { registraTelefono, telefonoAlPronto, telefonoAlSetup } from "./telefono.js";
 import { registraTiro } from "./tiro-m6.js";
@@ -38,6 +39,9 @@ Hooks.once("init", () => {
 
   // La scheda degli oggetti.
   foundry.applications.apps.DocumentSheetConfig.registerSheet(Item, ID, SchedaOggetto, { label: "M6.Comuni.Oggetto.Scheda", makeDefault: true });
+
+  // Armi e armature create senza immagine prendono quella del loro genere.
+  registraIconeDelTipo();
 
   // L'ingresso dal telefono: impostazioni, e la scelta fra pagina e Foundry intero.
   registraTelefono();

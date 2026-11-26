@@ -3116,8 +3116,6 @@
     },
     "Comuni": {
       "RollList": {
-        "SuccessBy": "Successo di {string}",
-        "FailureBy": "Fallimento di {string}",
         "CustomModifiers": "Modificatore",
         "Label": "Tira",
         "RollMode": "Chi vede il tiro",
@@ -3227,7 +3225,19 @@
         "Usi": "Ha degli usi",
         "UsiRimasti": "Usi rimasti",
         "UsiPieni": "Usi a pieno",
-        "Descrizione": "Descrizione"
+        "Descrizione": "Descrizione",
+        "Rarita": "Rarità",
+        "SenzaRarita": "nessuna",
+        "Grado": "Grado di Background",
+        "GradoNota": "Il grado di Background che serve per averlo. Zero pallini, non ne serve.",
+        "Portata": "Portata",
+        "ArmaturaPiena": "Punti a pieno",
+        "ArmaturaPienaNota": "I punti dell'armatura quando è integra: riparandola torna fin qui.",
+        "Genere": "Genere",
+        "Modificatori": "Sui tiri",
+        "ModDadi": "dadi",
+        "ModNuovo": "Aggiungi un modificatore",
+        "ModVuoto": "Questa Condizione non toglie e non aggiunge dadi."
       }
     },
     "Base": {

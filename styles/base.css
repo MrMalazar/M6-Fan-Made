@@ -560,6 +560,72 @@
   gap: 6px;
 }
 
+/* I pallini di un campo (i pallini di un Vantaggio, il grado di Background). */
+.m6-oggetto-pallini {
+  color: var(--m6-voce);
+  display: grid;
+  gap: 2px;
+}
+
+.m6-oggetto-pallini > span {
+  color: var(--m6-tenue);
+  font-size: 0.78rem;
+}
+
+.m6-oggetto-pallini .resource-value {
+  align-items: center;
+  display: flex;
+  gap: 3px;
+  min-height: 26px;
+}
+
+/* I modificatori ai tiri di una Condizione: una riga per modificatore. */
+.m6-oggetto-modificatori {
+  display: grid;
+  gap: 6px;
+}
+
+.m6-oggetto-modificatore {
+  align-items: center;
+  color: var(--m6-voce);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+}
+
+.m6-oggetto-modificatore > input[type="number"] {
+  flex: none;
+  text-align: center;
+  width: 56px;
+}
+
+.m6-oggetto-modificatore > span {
+  color: var(--m6-tenue);
+}
+
+.m6-oggetto-modificatore .m6-oggetto-spunta {
+  align-items: center;
+  display: flex;
+  gap: 4px;
+}
+
+.m6-oggetto-modificatore > button {
+  flex: none;
+  margin-left: auto;
+  width: 28px;
+}
+
+.m6-oggetto-foglio .m6-oggetto-aggiungi {
+  justify-self: start;
+  width: auto;
+}
+
+.m6-oggetto-vuoto {
+  color: var(--m6-tenue);
+  font-style: italic;
+  margin: 0;
+}
+
 .m6-oggetto-foglio prose-mirror {
   background: var(--m6-incavo);
   border: 1px solid var(--m6-oro-tenue);
