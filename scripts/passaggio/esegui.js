@@ -218,7 +218,11 @@ export async function applica(piano, { gioco = globalThis.game, avanza = () => {
   }
 
   // I documenti aperti con qualcosa da togliere, uno per volta: prima si toglie, poi si aggiorna.
-  for (const op of operazioni.filter((voce) => !voce.invalido && voce.togli?.length)) {
+  // Le scene davanti alle schede: quando una scheda cambia, Foundry rifà i suoi segnalini non legati,
+  // e se uno porta ancora un oggetto che il sistema non conosce si ferma lì.
+  const daSvuotare = operazioni.filter((voce) => !voce.invalido && voce.togli?.length);
+  daSvuotare.sort((a, b) => Number(b.documento === "Scene") - Number(a.documento === "Scene"));
+  for (const op of daSvuotare) {
     try {
       const documento = documentoDi(op, gioco);
       if (!documento) throw new Error("manca");
@@ -323,7 +327,7 @@ export async function porta({ gioco = globalThis.game, avanza = () => {} } = {})
   errori.push(...await portaImpostazioni(piano, gioco));
   const mancanti = await fileMancanti([...new Set([...(stato.percorsi ?? []), ...piano.percorsi])]);
   const fermo = piano.aspettano;
-  const pagina = rapportoHtml({ rapporto, lasciati: piano.lasciati, impostazioni, mancanti, errori }, { localize: (chiave) => gioco.i18n.localize(chiave), format: (chiave, dati) => gioco.i18n.format(chiave, dati) });
+  const pagina = rapportoHtml({ rapporto, lasciati: piano.lasciati, impostazioni, compendi: Boolean(piano.compendi), mancanti, errori }, { localize: (chiave) => gioco.i18n.localize(chiave), format: (chiave, dati) => gioco.i18n.format(chiave, dati) });
   let diario = "";
   try {
     diario = await scriviDiario(pagina, testiHtml(rapporto, { localize: (chiave) => gioco.i18n.localize(chiave) }), quando, gioco);
@@ -384,7 +388,7 @@ export async function apri({ gioco = globalThis.game } = {}) {
   const parole = { localize: (chiave) => gioco.i18n.localize(chiave), format: (chiave, dati) => gioco.i18n.format(chiave, dati) };
   if (!nostro) {
     const mancanti = await fileMancanti(piano.percorsi);
-    const pagina = rapportoHtml({ rapporto: piano.rapporto, lasciati: piano.lasciati, impostazioni: piano.impostazioni, mancanti }, { ...parole, esame: true });
+    const pagina = rapportoHtml({ rapporto: piano.rapporto, lasciati: piano.lasciati, impostazioni: piano.impostazioni, compendi: Boolean(piano.compendi), mancanti }, { ...parole, esame: true });
     await mostraRapporto(`<p>${foundry.utils.escapeHTML(L("Esame"))}</p>${pagina}`, { gioco });
     return piano;
   }

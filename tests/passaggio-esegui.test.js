@@ -147,8 +147,9 @@ registro.aggiornati.length = 0;
 registro.mazzi.length = 0;
 const secondo = await porta({ gioco: game });
 assert.deepEqual([secondo.finito, secondo.ricarica, secondo.fermo], [true, false, false]);
-assert.deepEqual(registro.tolti, ["Ada:2", "Via - Nome:3", "Anziano:1", "segnalino Via - Nome:1"]);
-assert.deepEqual(registro.aggiornati, ["Actor:Ada", "Actor:Via - Nome", "Actor:Anziano", "Scene:Il porto"]);
+// La scena davanti alle schede: quando una scheda cambia Foundry rifà i suoi segnalini, che devono essere già a posto.
+assert.deepEqual(registro.tolti, ["segnalino Via - Nome:1", "Ada:2", "Via - Nome:3", "Anziano:1"]);
+assert.deepEqual(registro.aggiornati, ["Scene:Il porto", "Actor:Ada", "Actor:Via - Nome", "Actor:Anziano"]);
 assert.deepEqual(secondo.errori, []);
 // Le impostazioni del modulo sono passate, e le vecchie non ci sono più; quelle che il sistema non conosce restano.
 assert.deepEqual(archivio.get("m6.paradossoNarratore").value, { points: 16, visible: false, log: [{ kind: "given", amount: 6 }] });

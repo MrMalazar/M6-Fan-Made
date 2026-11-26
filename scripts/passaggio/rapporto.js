@@ -108,14 +108,15 @@ export function propostaHtml(piano, { localize = (chiave) => chiave, format = (c
  *   rapporto      quello del piano (o dei piani, uniti)
  *   lasciati      i documenti rimasti com'erano
  *   impostazioni  le mosse del piano sulle impostazioni
+ *   compendi      vero se è passata anche la disposizione dei compendi
  *   mancanti      i file del sistema che non rispondono
  *   errori        `[{ nome, documento, errore }]`
  */
-export function rapportoHtml({ rapporto = rapportoVuoto(), lasciati = [], impostazioni = [], mancanti = [], errori = [] } = {}, { localize = (chiave) => chiave, format = (chiave) => chiave, esame = false } = {}) {
+export function rapportoHtml({ rapporto = rapportoVuoto(), lasciati = [], impostazioni = [], compendi = false, mancanti = [], errori = [] } = {}, { localize = (chiave) => chiave, format = (chiave) => chiave, esame = false } = {}) {
   const r = { ...rapportoVuoto(), ...rapporto };
   const L = (chiave) => localize(`M6.Passaggio.${chiave}`);
   const pezzi = [`<div class="m6-passaggio">`];
-  const conti = contiDelPiano({ rapporto: r, impostazioni }, { localize, format });
+  const conti = contiDelPiano({ rapporto: r, impostazioni, compendi }, { localize, format });
   pezzi.push(sezione(L(esame ? "Sezioni.DaFare" : "Sezioni.Fatto"), "", conti.length ? tavola([L("Cosa"), L("Quanti")], conti.map((riga) => [protetta(riga.voce), String(riga.quanti)])) : ""));
   pezzi.push(sezione(L("Sezioni.Portati"), "", r.portati.length ? tavola([L("Nome"), L("Era"), L("Adesso")], r.portati.map((voce) => [protetta(voce.nome), protetta(nomeTipo(voce.da, localize)), protetta(nomeTipo(voce.a, localize))])) : ""));
   pezzi.push(sezione(L("Sezioni.Assorbite"), L("Note.Assorbite"), r.assorbite.length ? tavola([L("DiChi"), L("Abilita")], r.assorbite.map((voce) => [protetta(voce.di), protetta(voce.voci.map((riga) => `${riga.nome} ${riga.pallini}`).join(", "))])) : ""));
