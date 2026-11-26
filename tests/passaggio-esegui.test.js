@@ -38,11 +38,14 @@ function monta(mondo) {
           const segnalino = voce.fonte.tokens?.find((riga) => riga._id === id);
           if (!segnalino) return undefined;
           return {
-            actor: {
+            // Il delta si tocca dal suo documento: dalla scheda che il segnalino mostra Foundry non toglie davvero.
+            get actor() { throw new Error("il delta non si tocca dalla scheda del segnalino"); },
+            delta: {
               async deleteEmbeddedDocuments(tipo, ids) {
                 assert.equal(tipo, "Item");
-                segnalino.delta.items = segnalino.delta.items.filter((oggetto) => !ids.includes(oggetto._id));
-                registro.tolti.push(`segnalino ${segnalino.name}:${ids.length}`);
+                const segnato = voce.fonte.tokens.find((riga) => riga._id === id);
+                segnato.delta.items = segnato.delta.items.filter((oggetto) => !ids.includes(oggetto._id));
+                registro.tolti.push(`segnalino ${segnato.name}:${ids.length}`);
               }
             }
           };
@@ -139,6 +142,7 @@ assert.deepEqual(primo.errori, []);
   assert.equal(stato.rapporto.portati.length, 4);
   assert.ok(stato.percorsi.includes("systems/m6/assets/icons/sheet/forces.png"));
   assert.ok(archivio.has("wod5e-mage.guidaTesti"), "le impostazioni passano solo alla fine");
+  assert.equal(registro.diari.length, 0);
 }
 
 // ----------------------------------------------------------- il secondo giro
@@ -146,11 +150,21 @@ ricarica();
 registro.aggiornati.length = 0;
 registro.mazzi.length = 0;
 const secondo = await porta({ gioco: game });
-assert.deepEqual([secondo.finito, secondo.ricarica, secondo.fermo], [true, false, false]);
-// La scena davanti alle schede: quando una scheda cambia Foundry rifà i suoi segnalini, che devono essere già a posto.
+assert.deepEqual([secondo.finito, secondo.ricarica, secondo.giro], [false, true, 2]);
+// La scena davanti alle schede, e nella scena prima i dati nuovi poi il togliere; nelle schede prima il togliere.
 assert.deepEqual(registro.tolti, ["segnalino Via - Nome:1", "Ada:2", "Via - Nome:3", "Anziano:1"]);
 assert.deepEqual(registro.aggiornati, ["Scene:Il porto", "Actor:Ada", "Actor:Via - Nome", "Actor:Anziano"]);
 assert.deepEqual(secondo.errori, []);
+assert.ok(archivio.has("wod5e-mage.guidaTesti"), "le impostazioni aspettano ancora");
+
+// ------------------------------------------------- la fine, a pagina fresca
+ricarica();
+registro.aggiornati.length = 0;
+registro.tolti.length = 0;
+const fine = await porta({ gioco: game });
+assert.deepEqual([fine.finito, fine.ricarica, fine.fermo], [true, false, false]);
+assert.deepEqual([registro.aggiornati, registro.tolti], [[], []], "l'ultimo giro è solo un esame: non trova più niente");
+assert.deepEqual(fine.errori, []);
 // Le impostazioni del modulo sono passate, e le vecchie non ci sono più; quelle che il sistema non conosce restano.
 assert.deepEqual(archivio.get("m6.paradossoNarratore").value, { points: 16, visible: false, log: [{ kind: "given", amount: 6 }] });
 assert.equal(archivio.get("m6.condizioniVersione").value, "2026-09-29");
@@ -158,15 +172,20 @@ assert.equal(archivio.get("m6.guidaTesti").value.controllo.perche, "<p class=\"m
 assert.ok(!archivio.has("wod5e-mage.paradossoNarratore") && !archivio.has("wod5e-mage.guidaTesti"));
 assert.ok(archivio.has("wod5e-mage.nonPiuUsata") && archivio.has("wod5e.worldVersion"));
 assert.deepEqual(Object.keys(archivio.get("core.compendiumConfiguration").value), ["wod5e.macros", "m6.mage-pregi", "world.grimorio-comune"]);
-// Il rapporto: nel diario e nello stato, con tutti e due i giri dentro.
+// Il rapporto: nel diario, con tutti i giri dentro e ogni cosa detta una volta.
 assert.equal(registro.diari.length, 1);
 const pagina = registro.diari[0].pages[0].text.content;
-for (const parola of ["Ada", "Sgherro", "Via - Nome", "Anziano", "Il gruppo", "Mano fasciata", "Mischia (armi) 2", "Guardia del corpo", "Dominazione", "Scorta", "wod5e-mage.nonPiuUsata"]) assert.ok(pagina.includes(parola), `nel rapporto c'è ${parola}`);
+for (const parola of ["Ada", "Sgherro", "Via - Nome", "Anziano", "Il gruppo", "Mano fasciata", "Mischia (armi) 2", "Guardia del corpo (6)", "Dominazione", "Scorta (4)", "wod5e-mage.nonPiuUsata"]) assert.ok(pagina.includes(parola), `nel rapporto c'è ${parola}`);
+assert.equal(pagina.split("Mano fasciata").length, 2, "una volta sola");
 assert.ok(!pagina.includes("M6.Passaggio.Sezioni.Errori"), "senza errori la sezione non c'è");
+assert.ok(!pagina.includes("M6.Passaggio.Sezioni.Rimasti"));
 assert.ok(!pagina.includes("M6.Passaggio.Sezioni.Mancanti"));
+// I testi rimasti fuori dalle schede hanno la loro pagina.
+assert.equal(registro.diari[0].pages.length, 2);
+assert.ok(registro.diari[0].pages[1].text.content.includes("Scritta sulla scheda di wod5e."));
 {
   const stato = leggiStato(game);
-  assert.deepEqual([stato.inCorso, stato.giro, stato.mostra], [false, 0, false]);
+  assert.deepEqual([stato.inCorso, stato.giro, stato.fermo], [false, 0, false]);
   assert.equal(stato.diario, registro.diari[0].name);
 }
 
@@ -213,9 +232,14 @@ assert.ok(!pagina.includes("M6.Passaggio.Sezioni.Mancanti"));
     finto.ricarica();
     finto.registro.finestre.length = 0;
     await passaggioAlPronto(finto.game);
+    assert.equal(leggiStato(finto.game).inCorso, true, "dopo il secondo giro si ricarica ancora, per guardare a pagina fresca");
+    assert.equal(finto.registro.finestre.length, 0);
+    finto.ricarica();
+    await passaggioAlPronto(finto.game);
     assert.equal(leggiStato(finto.game).inCorso, false);
     assert.equal(finto.registro.finestre.length, 1, "alla fine si apre il rapporto");
     assert.ok(finto.registro.finestre[0].content.includes("Mano fasciata"));
+    assert.ok(finto.registro.finestre[0].content.includes("M6.Passaggio.Finito"));
   } finally {
     globalThis.setTimeout = originale;
   }
@@ -233,17 +257,21 @@ assert.ok(!pagina.includes("M6.Passaggio.Sezioni.Mancanti"));
   finto.ricarica();
   // La scheda resta chiusa: i giri continuano finché non sono troppi, poi il passaggio si ferma e lo dice.
   let ultimo = uno;
-  for (let giro = 0; giro < 6 && !ultimo.finito; giro += 1) {
+  let giri = 1;
+  for (; giri < 8 && !ultimo.finito; giri += 1) {
     ultimo = await porta({ gioco: finto.game });
     finto.ricarica();
   }
   assert.equal(ultimo.finito, true);
   assert.equal(ultimo.fermo, true);
-  assert.ok(ultimo.giro <= 4);
-  assert.ok(ultimo.errori.length >= 2);
-  assert.ok(finto.registro.diari[0].pages[0].text.content.includes("il server non accetta"));
+  assert.equal(giri, 5, "quattro giri di lavoro, poi quello che si ferma");
+  assert.deepEqual(ultimo.errori, [{ nome: "Anziano", documento: "Actor", errore: "il server non accetta" }], "gli errori dell'ultimo giro, non di tutti");
+  const fermata = finto.registro.diari[0].pages[0].text.content;
+  assert.ok(fermata.includes("il server non accetta"));
+  assert.ok(fermata.includes("M6.Passaggio.Sezioni.Rimasti"));
   assert.equal(altro.raccolte.actors[3].fonte.type, "vampire", "la scheda rifiutata è rimasta com'era");
   assert.equal(altro.raccolte.actors[0].fonte.type, "mago");
+  assert.equal(leggiStato(finto.game).fermo, true);
 }
 
 // Chi non è il Narratore non porta niente.

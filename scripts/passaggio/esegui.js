@@ -11,9 +11,11 @@
  *                 diari, le macro e gli oggetti del mondo passano; poi la
  *                 pagina si ricarica, perché Foundry non sa aggiornare a
  *                 schermo una scheda che non aveva aperto
- *   secondo giro  a schede aperte si tolgono gli oggetti che non hanno un
- *                 posto, passano le scene coi segnalini, e per ultime le
- *                 impostazioni; il rapporto finisce in un diario
+ *   secondo giro  a schede aperte passano le scene coi segnalini e si
+ *                 tolgono gli oggetti che non hanno un posto; la pagina si
+ *                 ricarica ancora
+ *   alla fine     un esame a pagina fresca non trova più niente: passano le
+ *                 impostazioni e il rapporto finisce in un diario
  *
  * Lo stato sta nell'impostazione `passaggio` del mondo: un passaggio
  * interrotto riprende da dove era. `esamina` non scrive niente, e gira anche
@@ -28,7 +30,7 @@ import { GERARCHIA, RACCOLTE, VECCHIO_MODULO } from "./regole.js";
 
 export const PASSAGGIO_SETTING = "passaggio";
 
-/** Dopo tanti giri senza finire ci si ferma: qualcosa non si lascia portare, e lo dice il rapporto. */
+/** Dopo tanti giri senza finire ci si ferma: qualcosa non si lascia portare, e lo dice il rapporto. Di solito ne bastano due. */
 export const GIRI_MAX = 4;
 
 /** Quanti documenti aperti si aggiornano in una volta. */
@@ -150,9 +152,10 @@ function cammina(documento, nome, strada) {
   let tipo = nome;
   for (const passo of strada) {
     if (passo.uno) {
-      // Il delta di un segnalino si tocca dalla sua scheda (quella che il segnalino mostra).
+      // Il delta di un segnalino si tocca dal suo documento. Dalla scheda che il segnalino mostra no:
+      // lì Foundry 14 toglie a schermo un oggetto che non conosce e sul server lo lascia.
       tipo = GERARCHIA[tipo]?.[passo.uno]?.uno ?? "";
-      dove = passo.uno === "delta" ? dove?.actor : dove?.[passo.uno];
+      dove = dove?.[passo.uno];
     } else {
       tipo = GERARCHIA[tipo]?.[passo.raccolta] ?? "";
       dove = dove?.[passo.raccolta]?.get(passo.id);
@@ -189,7 +192,7 @@ async function aggiornaChiuso(documento, cambia) {
  * Fa le operazioni di un giro. Torna quante ne ha fatte, quante schede chiuse
  * ha toccato e gli errori. `avanza(fatte, tutte)` viene chiamata man mano.
  *
- * L'ordine dentro un documento conta: prima si toglie quello che va tolto,
+ * L'ordine dentro una scheda conta: prima si toglie quello che va tolto,
  * poi si aggiorna (l'aggiornamento cancella dal registro la lista di chi
  * andava tolto: se il togliere non riesce, la lista deve restare).
  */
@@ -226,8 +229,14 @@ export async function applica(piano, { gioco = globalThis.game, avanza = () => {
     try {
       const documento = documentoDi(op, gioco);
       if (!documento) throw new Error("manca");
-      await togliDa(documento, op);
-      if (op.cambia) await documento.update(staccata(op.cambia), { render: false });
+      if (op.documento === "Scene") {
+        // Una scena: prima i segnalini prendono i dati nuovi, poi dai loro delta esce quello che non ha un posto.
+        if (op.cambia) await documento.update(staccata(op.cambia), { render: false });
+        await togliDa(documento, op);
+      } else {
+        await togliDa(documento, op);
+        if (op.cambia) await documento.update(staccata(op.cambia), { render: false });
+      }
     } catch (errore) {
       sbaglio(op, errore);
     }
@@ -302,40 +311,50 @@ async function scriviDiario(html, testi, quando, gioco) {
 }
 
 /**
- * Fa un giro del passaggio. Se dopo serve ricaricare la pagina (schede
- * chiuse toccate, o cose che aspettano le schede) lo dice in `ricarica`: lo
- * stato è già salvato e all'avvio dopo si riprende da soli.
+ * Fa un giro del passaggio.
+ *
+ * Finché l'esame trova qualcosa da fare lo fa, salva lo stato e chiede di
+ * ricaricare la pagina (`ricarica`): Foundry tiene in memoria quello che ha
+ * letto all'avvio, e su una scheda che non aveva aperto o su un oggetto che
+ * non conosce quella memoria non dice più il vero. All'avvio dopo si riprende
+ * da soli. Il passaggio finisce quando un esame a pagina fresca non trova più
+ * niente: allora passano le impostazioni e il rapporto va nel diario. Dopo
+ * GIRI_MAX giri ci si ferma comunque, e il rapporto dice che cosa è rimasto.
  */
 export async function porta({ gioco = globalThis.game, avanza = () => {} } = {}) {
   if (!gioco.user?.isGM) throw new Error(gioco.i18n.localize("M6.Passaggio.SoloNarratore"));
   const stato = leggiStato(gioco);
   const quando = stato.quando || oggi();
-  const giro = (Number(stato.giro) || 0) + 1;
+  const fatti = Number(stato.giro) || 0;
   const mondo = await fotografa(gioco);
-  const piano = pianoDelPassaggio(mondo, { quando, inCorso: stato.inCorso || haSchedeDiPrima(mondo) });
-  const esito = await applica(piano, { gioco, avanza });
-  const rapporto = unisciRapporti(stato.rapporto, piano.rapporto);
-  const errori = [...(stato.errori ?? []), ...esito.errori];
-  const impostazioni = piano.impostazioni;
+  const piano = pianoDelPassaggio(mondo, { quando, inCorso: Boolean(stato.inCorso) || haSchedeDiPrima(mondo) });
+  const daFare = operazioniDelGiro(piano).length > 0 || piano.aspettano;
+  const percorsi = [...new Set([...(stato.percorsi ?? []), ...piano.percorsi])];
 
-  // Qualcosa aspetta le schede: si salva e si ricarica, a meno che i giri siano già troppi.
-  if (piano.aspettano && giro < GIRI_MAX) {
-    await scriviStato({ inCorso: true, giro, quando, rapporto, errori, percorsi: [...new Set([...(stato.percorsi ?? []), ...piano.percorsi])] }, gioco);
-    return { finito: false, ricarica: true, giro, rapporto, errori };
+  if (daFare && fatti < GIRI_MAX) {
+    const esito = await applica(piano, { gioco, avanza });
+    const rapporto = unisciRapporti(stato.rapporto, piano.rapporto);
+    await scriviStato({ inCorso: true, giro: fatti + 1, quando, rapporto, errori: esito.errori, percorsi }, gioco);
+    return { finito: false, ricarica: true, giro: fatti + 1, rapporto, errori: esito.errori };
   }
 
+  // Niente più da fare, o troppi giri: le impostazioni, il controllo dei file, il rapporto.
+  const fermo = daFare;
+  const rapporto = unisciRapporti(stato.rapporto, piano.rapporto);
+  const errori = fermo ? [...(stato.errori ?? [])] : [];
   errori.push(...await portaImpostazioni(piano, gioco));
-  const mancanti = await fileMancanti([...new Set([...(stato.percorsi ?? []), ...piano.percorsi])]);
-  const fermo = piano.aspettano;
-  const pagina = rapportoHtml({ rapporto, lasciati: piano.lasciati, impostazioni, compendi: Boolean(piano.compendi), mancanti, errori }, { localize: (chiave) => gioco.i18n.localize(chiave), format: (chiave, dati) => gioco.i18n.format(chiave, dati) });
+  const rimasti = fermo ? piano.operazioni.map((op) => ({ nome: op.nome || op.id, documento: op.documento })) : [];
+  const mancanti = await fileMancanti(percorsi);
+  const parole = { localize: (chiave) => gioco.i18n.localize(chiave), format: (chiave, dati) => gioco.i18n.format(chiave, dati) };
+  const pagina = rapportoHtml({ rapporto, lasciati: piano.lasciati, impostazioni: [...(stato.impostazioni ?? []), ...piano.impostazioni], compendi: Boolean(piano.compendi), mancanti, errori, rimasti }, parole);
   let diario = "";
   try {
-    diario = await scriviDiario(pagina, testiHtml(rapporto, { localize: (chiave) => gioco.i18n.localize(chiave) }), quando, gioco);
+    diario = await scriviDiario(pagina, testiHtml(rapporto, parole), quando, gioco);
   } catch (errore) {
     console.warn(`${MODULE_ID} | Passaggio: il diario del rapporto non si è scritto.`, errore);
   }
-  await scriviStato({ inCorso: false, giro: 0, fatto: quando, fermo, diario, mostra: esito.chiuse > 0, pagina: esito.chiuse > 0 ? pagina : "" }, gioco);
-  return { finito: true, ricarica: esito.chiuse > 0, giro, rapporto, errori, mancanti, fermo, diario, pagina };
+  await scriviStato({ inCorso: false, giro: 0, fatto: quando, fermo, diario }, gioco);
+  return { finito: true, ricarica: false, giro: fatti, rapporto, errori, mancanti, fermo, diario, pagina };
 }
 
 /* ----------------------------------------------------------------- le finestre */
@@ -419,9 +438,8 @@ export function registraPassaggio(gioco = globalThis.game) {
 }
 
 /**
- * Al pronto, dal primo Narratore: un passaggio a metà riprende; un rapporto
- * rimasto da mostrare dopo la ricarica si mostra; un mondo che viene dal
- * modulo trova la finestra che propone il passaggio.
+ * Al pronto, dal primo Narratore: un passaggio a metà riprende, e un mondo
+ * che viene dal modulo trova la finestra che propone il passaggio.
  */
 export async function passaggioAlPronto(gioco = globalThis.game) {
   if (!gioco.user?.isGM || gioco.users?.activeGM?.id !== gioco.user.id) return;
@@ -429,11 +447,6 @@ export async function passaggioAlPronto(gioco = globalThis.game) {
   try {
     if (stato.inCorso) {
       await eseguiDallaFinestra(gioco);
-      return;
-    }
-    if (stato.mostra) {
-      await scriviStato({ ...stato, mostra: false, pagina: "" }, gioco);
-      await mostraRapporto(stato.pagina, { gioco, diario: stato.diario, fermo: stato.fermo });
       return;
     }
     if (!haTracce(gioco)) return;

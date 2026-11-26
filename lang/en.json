@@ -3358,7 +3358,8 @@
         "Lasciati": "Left as they were",
         "Impostazioni": "Settings left behind",
         "Mancanti": "Files that do not answer",
-        "Errori": "Errors"
+        "Errori": "Errors",
+        "Rimasti": "Not moved yet"
       },
       "Note": {
         "Assorbite": "These Skills no longer have a box. Their dots must be poured by hand into today's fourteen.",
@@ -3370,7 +3371,8 @@
         "Lasciati": "The system has no place for them. They stay in the world, unseen.",
         "Impostazioni": "Nobody reads them any more. They stay where they are.",
         "Mancanti": "Images or sounds the world looks for in the system and cannot find.",
-        "Errori": "These documents did not move."
+        "Errori": "What Foundry said during the last pass.",
+        "Rimasti": "The move stopped before them. It can be tried again from the move window."
       },
       "Testi": {
         "biography": "Biography",

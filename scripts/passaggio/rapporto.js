@@ -111,8 +111,9 @@ export function propostaHtml(piano, { localize = (chiave) => chiave, format = (c
  *   compendi      vero se è passata anche la disposizione dei compendi
  *   mancanti      i file del sistema che non rispondono
  *   errori        `[{ nome, documento, errore }]`
+ *   rimasti       i documenti ancora da portare, se il passaggio si è fermato prima
  */
-export function rapportoHtml({ rapporto = rapportoVuoto(), lasciati = [], impostazioni = [], compendi = false, mancanti = [], errori = [] } = {}, { localize = (chiave) => chiave, format = (chiave) => chiave, esame = false } = {}) {
+export function rapportoHtml({ rapporto = rapportoVuoto(), lasciati = [], impostazioni = [], compendi = false, mancanti = [], errori = [], rimasti = [] } = {}, { localize = (chiave) => chiave, format = (chiave) => chiave, esame = false } = {}) {
   const r = { ...rapportoVuoto(), ...rapporto };
   const L = (chiave) => localize(`M6.Passaggio.${chiave}`);
   const pezzi = [`<div class="m6-passaggio">`];
@@ -126,9 +127,10 @@ export function rapportoHtml({ rapporto = rapportoVuoto(), lasciati = [], impost
   pezzi.push(sezione(L("Sezioni.Scarti"), L("Note.Scarti"), r.scarti.length ? tavola([L("DiChi"), L("Oggetto"), L("Tipo")], r.scarti.map((voce) => [protetta(voce.di), protetta(voce.dadi ? `${voce.nome} (${voce.dadi})` : voce.nome), protetta(nomeTipo(voce.tipo, localize))])) : ""));
   pezzi.push(sezione(L("Sezioni.Testi"), L("Note.Testi"), r.testi.length ? `<p>${protetta(r.testi.map((voce) => voce.di).join(", "))}</p>` : ""));
   pezzi.push(sezione(L("Sezioni.Lasciati"), L("Note.Lasciati"), lasciati.length ? tavola([L("Nome"), L("Tipo")], lasciati.map((voce) => [protetta(voce.nome), protetta(nomeTipo(voce.tipo, localize))])) : ""));
-  const restano = impostazioni.filter((voce) => voce.mossa === "resta").map((voce) => voce.da);
+  const restano = [...new Set(impostazioni.filter((voce) => voce.mossa === "resta").map((voce) => voce.da))];
   pezzi.push(sezione(L("Sezioni.Impostazioni"), L("Note.Impostazioni"), restano.length ? `<p>${protetta(restano.join(", "))}</p>` : ""));
   pezzi.push(sezione(L("Sezioni.Mancanti"), L("Note.Mancanti"), mancanti.length ? `<ul>${mancanti.map((percorso) => `<li>${protetta(percorso)}</li>`).join("")}</ul>` : ""));
+  pezzi.push(sezione(L("Sezioni.Rimasti"), L("Note.Rimasti"), rimasti.length ? `<p>${protetta(rimasti.map((voce) => voce.nome).join(", "))}</p>` : ""));
   pezzi.push(sezione(L("Sezioni.Errori"), L("Note.Errori"), errori.length ? tavola([L("Nome"), L("Errore")], errori.map((voce) => [protetta(voce.nome), protetta(voce.errore)])) : ""));
   pezzi.push("</div>");
   return pezzi.join("");

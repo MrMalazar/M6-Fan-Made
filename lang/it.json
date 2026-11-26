@@ -3358,7 +3358,8 @@
         "Lasciati": "Rimasti com'erano",
         "Impostazioni": "Impostazioni rimaste",
         "Mancanti": "File che non rispondono",
-        "Errori": "Errori"
+        "Errori": "Errori",
+        "Rimasti": "Non ancora portati"
       },
       "Note": {
         "Assorbite": "Queste Abilità non hanno più una casella. I pallini vanno travasati a mano nelle quattordici di adesso.",
@@ -3370,7 +3371,8 @@
         "Lasciati": "Il sistema non ha un posto per loro. Restano nel mondo, ma non si vedono.",
         "Impostazioni": "Non le legge più nessuno. Restano dove sono.",
         "Mancanti": "Immagini o suoni che il mondo cerca nel sistema e non trova.",
-        "Errori": "Questi documenti non sono passati."
+        "Errori": "Che cosa ha detto Foundry nell'ultimo giro.",
+        "Rimasti": "Il passaggio si è fermato prima di loro. Si può riprovare dalla finestra del passaggio."
       },
       "Testi": {
         "biography": "Biografia",
