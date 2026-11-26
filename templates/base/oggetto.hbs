@@ -44,6 +44,7 @@
     {{#if conModificatori}}
     <div class="m6-oggetto-modificatori">
         <span class="m6-riq-occhiello">{{localize "M6.Comuni.Oggetto.Modificatori"}}</span>
+        <p class="m6-oggetto-vuoto">{{localize "M6.Comuni.Oggetto.ModNota"}}</p>
         {{#each modificatori as |riga|}}
         <div class="m6-oggetto-modificatore">
             <input type="number" name="modificatori.{{riga.indice}}.value" value="{{riga.valore}}" min="-99" max="99" step="1" aria-label="{{localize 'M6.Comuni.Oggetto.ModDadi'}}">

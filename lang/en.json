@@ -3234,10 +3234,11 @@
         "ArmaturaPiena": "Full points",
         "ArmaturaPienaNota": "The armor's points when intact: repairs bring it back up to here.",
         "Genere": "Kind",
-        "Modificatori": "On rolls",
+        "Modificatori": "Written dice",
         "ModDadi": "dice",
-        "ModNuovo": "Add a modifier",
-        "ModVuoto": "This Condition neither removes nor adds dice."
+        "ModNuovo": "Add",
+        "ModVuoto": "No dice written.",
+        "ModNota": "Shown on the Condition's row. They do not enter the roll by themselves: whoever rolls counts them, or the Storyteller from their box."
       }
     },
     "Base": {

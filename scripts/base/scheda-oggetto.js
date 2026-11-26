@@ -1,9 +1,9 @@
 /**
  * La scheda di un oggetto: una per tutti i tipi. I campi di ogni tipo stanno
  * nella tavola di `campi-oggetto.js`, la scheda li disegna e li salva. Le
- * Condizioni hanno in più i modificatori ai tiri.
+ * Condizioni fuori lista hanno in più i dadi scritti.
  */
-import { CON_MODIFICATORI, modificatoreNuovo, modificatoriDalModulo, modificatoriPerLaScheda, valoriDeiCampi } from "./campi-oggetto.js";
+import { haDadiScritti, modificatoreNuovo, modificatoriDalModulo, modificatoriPerLaScheda, valoriDeiCampi } from "./campi-oggetto.js";
 import { accendiPallini } from "./pallini.js";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
@@ -29,12 +29,18 @@ export class SchedaOggetto extends HandlebarsApplicationMixin(ItemSheetV2) {
     foglio: { template: "systems/m6/templates/base/oggetto.hbs", scrollable: [""] }
   };
 
+  /**
+   * Dice se una Condizione è della lista: di suo guarda la bandiera. Le regole
+   * (main.js) ci mettono la loro, che riconosce anche le voci vecchie dal nome.
+   */
+  static diLista = (oggetto) => Boolean(oggetto?.flags?.m6?.condizione);
+
   /** @override */
   async _prepareContext(options) {
     const base = await super._prepareContext(options);
     const oggetto = this.document;
     const dice = (chiave) => game.i18n.localize(chiave);
-    const conModificatori = CON_MODIFICATORI.includes(oggetto.type);
+    const conModificatori = haDadiScritti(oggetto, this.constructor.diLista);
     return {
       ...base,
       oggetto,
@@ -65,7 +71,7 @@ export class SchedaOggetto extends HandlebarsApplicationMixin(ItemSheetV2) {
     const dati = super._processFormData(event, form, formData);
     const righe = dati.modificatori;
     delete dati.modificatori;
-    if (righe && CON_MODIFICATORI.includes(this.document.type)) {
+    if (righe && haDadiScritti(this.document, this.constructor.diLista)) {
       dati.system = { ...(dati.system ?? {}), bonuses: modificatoriDalModulo(righe, this.document.system.bonuses, this.document.name) };
     }
     return dati;

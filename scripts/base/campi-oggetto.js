@@ -59,8 +59,17 @@ export const CAMPI_OGGETTO = Object.freeze({
   ])
 });
 
-/** I tipi di oggetto che portano modificatori ai tiri: per ora le Condizioni. */
-export const CON_MODIFICATORI = Object.freeze(["condition"]);
+/**
+ * I dadi scritti: i dadi in più o in meno che una Condizione fuori lista porta
+ * con sé. Le Condizioni della lista prendono il loro peso dalla lista, e sulla
+ * scheda non lo ripetono. `diLista` dice se un oggetto è della lista: di suo
+ * guarda la bandiera, le regole possono dargliene uno più fine.
+ */
+export const CON_DADI_SCRITTI = Object.freeze(["condition"]);
+
+export function haDadiScritti(oggetto, diLista = (voce) => Boolean(voce?.flags?.m6?.condizione)) {
+  return CON_DADI_SCRITTI.includes(oggetto?.type) && !diLista(oggetto);
+}
 
 export function campiDi(tipo) {
   return CAMPI_OGGETTO[tipo] ?? [];

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { CAMPI_OGGETTO, CON_MODIFICATORI, RARITA, TIRI, campiDi, modificatoreNuovo, modificatoriDalModulo, modificatoriPerLaScheda, valoriDeiCampi } from "../../scripts/base/campi-oggetto.js";
+import { CAMPI_OGGETTO, RARITA, TIRI, campiDi, haDadiScritti, modificatoreNuovo, modificatoriDalModulo, modificatoriPerLaScheda, valoriDeiCampi } from "../../scripts/base/campi-oggetto.js";
 
 const it = JSON.parse(readFileSync(new URL("../../lang/it.json", import.meta.url), "utf8"));
 const en = JSON.parse(readFileSync(new URL("../../lang/en.json", import.meta.url), "utf8"));
@@ -53,8 +53,12 @@ assert.equal(strana.find((c) => c.nome === "flags.m6.armatura").scelte.find((s) 
 assert.deepEqual(valoriDeiCampi({ type: "condition", system: {} }, dice), [], "la Condizione non ha campi suoi");
 assert.deepEqual(valoriDeiCampi(null, dice), []);
 
-// I modificatori: solo le Condizioni li portano. Dal catalogo alla scheda e ritorno.
-assert.deepEqual(CON_MODIFICATORI, ["condition"]);
+// I dadi scritti: li porta solo una Condizione fuori lista. Quelle della lista prendono il peso dalla lista.
+assert.equal(haDadiScritti({ type: "condition", flags: {} }), true, "scritta a mano");
+assert.equal(haDadiScritti({ type: "condition", flags: { m6: { condizione: "abbagliato" } } }), false, "della lista");
+assert.equal(haDadiScritti({ type: "condition", name: "Abbagliato", flags: {} }, (o) => o.name === "Abbagliato"), false, "le regole la riconoscono dal nome");
+assert.equal(haDadiScritti({ type: "weapon", flags: {} }), false);
+assert.equal(haDadiScritti(null), false);
 const abbagliato = [{ source: "Abbagliato", value: "-2", paths: ["physical", "mental"], displayWhenInactive: false, activeWhen: { check: "always", path: "", value: "" } }];
 const righe = modificatoriPerLaScheda(abbagliato, dice);
 assert.deepEqual(righe, [{ indice: 0, valore: -2, tiri: [{ id: "physical", label: "Fisico", acceso: true }, { id: "social", label: "Sociale", acceso: false }, { id: "mental", label: "Mentale", acceso: true }] }]);

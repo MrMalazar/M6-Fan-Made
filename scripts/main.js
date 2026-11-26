@@ -8,7 +8,8 @@ import { registerParadoxDice } from "./paradox-dice.js";
 import { registerLineageSpheres } from "./famiglie.js";
 import { registerRollCardRendering } from "./roll-card.js";
 import { assignCondizione, listCondizioni, openCondizioniMaster, selectedActors } from "./condizioni-master.js";
-import { CONDIZIONI_VERSIONE, CONDIZIONI_VERSIONE_SETTING, findCondizione, riallineaCondizioni } from "./condizioni.js";
+import { CONDIZIONI_VERSIONE, CONDIZIONI_VERSIONE_SETTING, definizioneDi, findCondizione, riallineaCondizioni } from "./condizioni.js";
+import { SchedaOggetto } from "./base/scheda-oggetto.js";
 import { registerVolonta } from "./volonta.js";
 import { registerRossi } from "./rossi.js";
 import { registerDanni } from "./danni.js";
@@ -79,6 +80,10 @@ Hooks.once("init", () => {
 
   // L'attore del sistema: la Salute come la leggono le barre dei token.
   registraAttore();
+
+  // La scheda degli oggetti chiede alle regole se una Condizione è della lista:
+  // quelle fuori lista mostrano i loro dadi scritti.
+  SchedaOggetto.diLista = (oggetto) => Boolean(definizioneDi(oggetto));
 
   // L'icona propria di un oggetto nella pagina Tratti (23/9): l'immagine del
   // Rifugio, la lettera solo per chi ha il segnaposto.

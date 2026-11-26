@@ -3234,10 +3234,11 @@
         "ArmaturaPiena": "Punti a pieno",
         "ArmaturaPienaNota": "I punti dell'armatura quando è integra: riparandola torna fin qui.",
         "Genere": "Genere",
-        "Modificatori": "Sui tiri",
+        "Modificatori": "Dadi scritti",
         "ModDadi": "dadi",
-        "ModNuovo": "Aggiungi un modificatore",
-        "ModVuoto": "Questa Condizione non toglie e non aggiunge dadi."
+        "ModNuovo": "Aggiungi",
+        "ModVuoto": "Nessun dado scritto.",
+        "ModNota": "Si leggono nella riga della Condizione. Sul tiro non entrano da soli: li conta chi tira, o il Narratore dal suo riquadro."
       }
     },
     "Base": {
