@@ -46,8 +46,9 @@
     box-shadow: 0 0 10px var(--mortal-color-1);
   }
 
-  /* La testata è la stessa per ogni finestra del sistema: schede, Quadro,
-     Vathrâ, finestre di dialogo. Bassa, coi tasti quadrati e grigi. */
+  /* La testata è bassa per ogni finestra del sistema: schede, Quadro, Vathrâ,
+     finestre di dialogo. I tasti quadrati e grigi li hanno le schede e le
+     finestre di dialogo; Quadro e Vathrâ tengono quelli di Foundry. */
   .application.m6 > .window-header,
   .application.m6w > .window-header {
     flex: 0 0 25px;
@@ -55,7 +56,7 @@
     padding-top: 2px;
   }
 
-  .application.m6w > .window-header button.header-control,
+  .application.m6w.sheet > .window-header button.header-control,
   .application.dialog.m6 > .window-header button.header-control {
     background-color: #686767;
     color: #fff;
@@ -64,6 +65,10 @@
   /* Le finestre di dialogo del sistema (il verdetto sul tiro, le Condizioni
      dal Master, i danni): il contenuto fitto, i tasti grigi, i campi scuri.
      Quello che una finestra vuole diverso lo dice nel suo blocco di m6.css. */
+  .application.dialog.m6 {
+    background-color: rgba(43, 43, 43, 0.5);
+  }
+
   .application.dialog.m6 .dialog-content.standard-form {
     gap: 0.5px;
   }
