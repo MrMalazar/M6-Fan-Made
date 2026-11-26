@@ -396,6 +396,7 @@ assert.ok(registro.diari[0].pages[1].text.content.includes("Scritta sulla scheda
   assert.ok(finestra.content.includes("Qui non si scrive niente."));
   assert.ok(finestra.content.includes("Abilità da travasare a mano") && finestra.content.includes("Mano fasciata"));
   assert.ok(!finestra.content.includes("M6.Passaggio."), "nessuna chiave nuda");
+  assert.ok(finestra.content.includes("Il rapporto del passaggio li riporta per intero.") && !finestra.content.includes("di questo diario"), "nell'esame il diario non c'è ancora");
   assert.deepEqual(finestra.buttons.map((tasto) => tasto.action), ["chiudi"], "si può solo chiudere");
   assert.deepEqual([finto.registro.aggiornati.length, finto.registro.mazzi.length, finto.registro.delta.length], [0, 0, 0]);
   assert.equal(vecchio.raccolte.actors[0].fonte.type, "mortal");

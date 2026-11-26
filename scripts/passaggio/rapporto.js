@@ -125,7 +125,7 @@ export function rapportoHtml({ rapporto = rapportoVuoto(), lasciati = [], impost
   pezzi.push(sezione(L("Sezioni.Casi"), L("Note.Casi"), r.casi.length ? tavola([L("DiChi"), L("Casi")], r.casi.map((voce) => [protetta(voce.di), protetta(voce.nomi.join(", "))])) : ""));
   pezzi.push(sezione(L("Sezioni.Domini"), L("Note.Domini"), r.domini.length ? tavola([L("DiChi"), L("Sfere")], r.domini.map((voce) => [protetta(voce.di), protetta(voce.sfere.map((id) => localize(`M6.Spheres.${id}`)).join(", "))])) : ""));
   pezzi.push(sezione(L("Sezioni.Scarti"), L("Note.Scarti"), r.scarti.length ? tavola([L("DiChi"), L("Oggetto"), L("Tipo")], r.scarti.map((voce) => [protetta(voce.di), protetta(voce.dadi ? `${voce.nome} (${voce.dadi})` : voce.nome), protetta(nomeTipo(voce.tipo, localize))])) : ""));
-  pezzi.push(sezione(L("Sezioni.Testi"), L("Note.Testi"), r.testi.length ? `<p>${protetta(r.testi.map((voce) => voce.di).join(", "))}</p>` : ""));
+  pezzi.push(sezione(L("Sezioni.Testi"), L(esame ? "Note.TestiEsame" : "Note.Testi"), r.testi.length ? `<p>${protetta(r.testi.map((voce) => voce.di).join(", "))}</p>` : ""));
   pezzi.push(sezione(L("Sezioni.Lasciati"), L("Note.Lasciati"), lasciati.length ? tavola([L("Nome"), L("Tipo")], lasciati.map((voce) => [protetta(voce.nome), protetta(nomeTipo(voce.tipo, localize))])) : ""));
   const restano = [...new Set(impostazioni.filter((voce) => voce.mossa === "resta").map((voce) => voce.da))];
   pezzi.push(sezione(L("Sezioni.Impostazioni"), L("Note.Impostazioni"), restano.length ? `<p>${protetta(restano.join(", "))}</p>` : ""));
