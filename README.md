@@ -6,9 +6,10 @@ Qui dati, schede, dado e tiro sono di M6 da cima a fondo.
 
 ## Stato
 
-Quarta tappa, gli oggetti. La scheda e le regole del modulo sono nel sistema,
+Quinta tappa, il telefono. La scheda e le regole del modulo sono nel sistema,
 su una base scritta da capo; gli strumenti del Narratore sono stati provati
-con due utenti collegati insieme; gli oggetti hanno la loro scheda.
+con due utenti collegati insieme; gli oggetti hanno la loro scheda; il
+telefono ha la porta dove entra un'interfaccia fatta a parte.
 
 | Pezzo | Cosa c'è |
 | :--- | :--- |
@@ -19,13 +20,13 @@ con due utenti collegati insieme; gli oggetti hanno la loro scheda.
 | Compendi | Quindici, dai Vantaggi all'Equipaggiamento alla Bussola |
 | PNG | La scheda del nemico, con le tre riserve, i casi, la Salute e la Natura |
 | Narratore | Il Quadro col menù circolare, il verdetto sui tiri dei giocatori, le Condizioni dal Master, il Vathrâ e la Salute sulle barre dei token |
-| Telefono | Su uno schermo stretto una pagina sola prende il posto di Foundry |
+| Telefono | Su uno schermo stretto una pagina sola prende il posto di Foundry: il tiro della scheda, i tiri di tutti, e la porta per un'interfaccia fatta a parte |
 
 Il dado ha la faccia vuota da 1 a 5, la scintilla da 6 a 9 e la stellina sul 10.
 La scintilla vale un successo. Le stelline contano a coppie, 4 successi la
 coppia e 1 la spaiata.
 
-La prossima tappa è l'interfaccia dell'app sul telefono.
+La prossima tappa è la prova del passaggio: un mondo del modulo convertito al sistema.
 
 ## Installazione
 
@@ -44,12 +45,31 @@ Poi si crea un mondo che usa il sistema «Maghi 6ª Edizione - Fan Made».
 Chi entra da un telefono usa lo stesso indirizzo e lo stesso utente di
 sempre. Il sistema riconosce lo schermo stretto, spegne la mappa e al posto
 dell'interfaccia di Foundry mostra una pagina sola, con la scheda da cui
-tirare, la soglia, il tasto e l'elenco dei tiri.
+tirare, la soglia, il tasto e l'elenco dei tiri di tutti, dadi rossi compresi.
+Il Mago tira col tiro della scheda: contano le Condizioni e il Narratore ha i
+suoi cinque secondi per ritoccarlo.
 
 In fondo alla pagina «Foundry intero» riporta all'interfaccia di Foundry per
 quella visita. La scelta fissa sta nelle impostazioni del sistema, alla voce
 «Pagina del telefono», e vale per il dispositivo. Le voci sono tre, cioè
 solo sugli schermi stretti, sempre e mai.
+
+La pagina di serie è nuda apposta. Un pacchetto a parte, cioè un modulo di
+Foundry, può mettere al suo posto la propria interfaccia: la registra alla
+porta `game.m6.telefono` e riceve la pagina intera, le schede di chi è
+entrato, i tiri e il tiro. Il sistema non sa chi si registra, e se
+l'interfaccia non si monta resta la pagina di serie.
+
+```js
+Hooks.once("setup", () => game.m6.telefono.registra({
+  id: "il-mio-modulo",
+  monta(radice, porta) {
+    // disegna dentro `radice`; `porta.schede()`, `porta.tiri()`, `porta.tira(attore, scelta)`,
+    // `porta.ascolta((cosa) => …)` dicono cosa c'è e quando cambia
+    return () => { /* smonta */ };
+  }
+}));
+```
 
 ## Impianto
 
