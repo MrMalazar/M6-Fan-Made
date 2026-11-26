@@ -6474,7 +6474,7 @@
 }
 
 .chat-message .roll-result-label.failure.m6-roll-open {
-  background-color: #c99a1e;
+  background-color: var(--m6-avviso, #c99a1e);
   color: #1c1710;
   text-shadow: none;
 }
@@ -19847,7 +19847,7 @@
 /* Il verdetto del Narratore: le Condizioni del tiro, e la casella per dire che non contano. */
 .m6-verdetto-condizioni {
   border: 1px solid var(--mage-oro-scuro, #98772b);
-  border-left: 3px solid var(--mage-rosso-chiaro, #e2a79e);
+  border-left: 3px solid var(--mage-tenue, #ab9f85);
   border-radius: 6px;
   display: flex;
   flex-direction: column;
@@ -19859,8 +19859,13 @@
   margin: 0;
 }
 
+/* Le Condizioni che fanno fallire il tiro si dicono in ambra: il rosso è solo del Paradosso (Blue, 26/11). */
+.m6-verdetto-condizioni.fallisce {
+  border-left-color: var(--m6-avviso, #c99a1e);
+}
+
 .m6-verdetto-condizioni.fallisce > p {
-  color: var(--mage-rosso-chiaro, #e2a79e);
+  color: var(--m6-avviso, #c99a1e);
 }
 
 .m6-verdetto-condizioni > label {
@@ -20510,7 +20515,7 @@
   white-space: nowrap;
 }
 
-/* Senza tratti o senza soglia l'esito è spento; con zero dadi il numero è rosso. */
+/* Senza tratti o senza soglia l'esito è spento; con zero dadi il numero è in ambra (il rosso è solo del Paradosso). */
 .m6.m6w.actor.sheet .m6-tiro-esito.spento,
 .m6.m6w.actor.sheet .m6-tiro-esito.spento > span {
   color: var(--mage-tenue);
@@ -20518,7 +20523,7 @@
 }
 
 .m6.m6w.actor.sheet .m6-tiro-esito.impossibile > b {
-  color: var(--mage-rosso-vivo);
+  color: var(--m6-avviso, #c99a1e);
 }
 
 /* La riuscita senza tirare in oro; il tiro che fallisce spento, come la fascia in chat: il rosso è solo del Paradosso (Blue, 26/11). */

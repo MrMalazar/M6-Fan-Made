@@ -137,6 +137,13 @@ export const IMMAGINE_OGGETTO = "icons/svg/item-bag.svg";
 
 /** Le classi dei tiri salvati in chat: quella di prima e la nostra. */
 export const CLASSI_TIRO = Object.freeze({ WOD5eRoll: "TiroM6" });
+/**
+ * I dadi che fanno di un tiro salvato un tiro del modulo. Un tiro di wod5e
+ * senza nessuno di questi (un'iniziativa, il tiro di un'altra creatura) non è
+ * una riserva nostra: diventa un tiro semplice di Foundry, col suo totale.
+ */
+export const DADI_DEL_MODULO = Object.freeze(["MortalDie", "ParadoxDie"]);
+export const TIRO_SEMPLICE = "Roll";
 export const CLASSI_DADO = Object.freeze({
   MortalDie: "DadoRiserva",
   VampireDie: "Die",

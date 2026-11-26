@@ -365,6 +365,12 @@ assert.equal(sferaDalNome("Forza"), "");
   assert.deepEqual(salvato.terms[0].results, JSON.parse(tiroSalvato()).terms[0].results, "i dadi usciti non si toccano");
   assert.equal(convertiTiro(t.rolls[0]), t.rolls[0], "ripetere non cambia");
   assert.equal(convertiTiro("non è un tiro"), "non è un tiro");
+  // Un tiro di wod5e senza i dadi del modulo (un'iniziativa) non è una riserva: diventa un tiro semplice.
+  const iniziativaDiPrima = JSON.stringify({ class: "WOD5eRoll", options: {}, dice: [], formula: "1d10", terms: [{ class: "Die", options: {}, evaluated: true, number: 1, faces: 10, modifiers: [], results: [{ result: 2, active: true }] }], total: 2, evaluated: true });
+  assert.equal(JSON.parse(convertiTiro(iniziativaDiPrima)).class, "Roll");
+  const diUnVampiro = JSON.stringify({ class: "WOD5eRoll", options: {}, dice: [], formula: "3dv", terms: [{ class: "VampireDie", number: 3, faces: 10, results: [] }], total: 0, evaluated: true });
+  assert.deepEqual([JSON.parse(convertiTiro(diUnVampiro)).class, JSON.parse(convertiTiro(diUnVampiro)).terms[0].class], ["Roll", "Die"]);
+  assert.equal(convertiTiro(convertiTiro(iniziativaDiPrima)), convertiTiro(iniziativaDiPrima), "ripetere non cambia");
   // La carta di un oggetto di wod5e stava nelle bandiere: diventa una carta scritta.
   const c = convertiMessaggio(carta);
   assert.deepEqual(c.flags, {});

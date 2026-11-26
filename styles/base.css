@@ -27,6 +27,7 @@
   --m6-esito-fallimento: #222;
   --m6-esito-fallimento-filo: #3a3a3a;
   --m6-esito-fallimento-testo: var(--m6-tenue);
+  --m6-avviso: #c99a1e;        /* l'ambra: il fallimento ancora aperto, e quello che va saputo prima di tirare */
 }
 
 /* ==========================================================================

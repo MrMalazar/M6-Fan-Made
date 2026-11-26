@@ -18,6 +18,8 @@ import {
   CHIAVI_DI_FOUNDRY,
   CLASSI_DADO,
   CLASSI_TIRO,
+  DADI_DEL_MODULO,
+  TIRO_SEMPLICE,
   DATI_SISTEMA,
   GERARCHIA,
   IMMAGINE_ATTORE,
@@ -601,7 +603,19 @@ function classiNuove(valore) {
   return esito;
 }
 
-/** Un tiro salvato in chat (il testo JSON che Foundry tiene nel messaggio). */
+/** Vero se dentro un tiro salvato c'è almeno un dado del modulo. */
+function haDadiDelModulo(valore) {
+  if (Array.isArray(valore)) return valore.some(haDadiDelModulo);
+  if (!valore || typeof valore !== "object") return false;
+  return DADI_DEL_MODULO.includes(valore.class) || Object.values(valore).some(haDadiDelModulo);
+}
+
+/**
+ * Un tiro salvato in chat (il testo JSON che Foundry tiene nel messaggio).
+ * Un tiro di wod5e fatto coi dadi del modulo diventa un tiro nostro; uno
+ * senza (un'iniziativa) diventa un tiro semplice, perché la nostra carta lo
+ * mostrerebbe come una riserva e conterebbe il totale per successi.
+ */
 export function convertiTiro(testo) {
   if (typeof testo !== "string") return testo;
   let letto;
@@ -611,6 +625,7 @@ export function convertiTiro(testo) {
     return testo;
   }
   const nuovo = classiNuove(letto);
+  if (nuovo && typeof nuovo === "object" && CLASSI_TIRO[letto?.class] && !haDadiDelModulo(letto)) nuovo.class = TIRO_SEMPLICE;
   return uguali(letto, nuovo) ? testo : JSON.stringify(nuovo);
 }
 

@@ -144,7 +144,12 @@ assert.match(css, /\.m6-roll-victory\s*\{[^}]*text-transform:\s*uppercase;/s);
 // La carta: le righe in griglia, la fascia gialla, la fila dei tasti.
 assert.match(css, /\.m6-roll-card\s*\{[^}]*grid-template-columns: max-content minmax\(0, 1fr\);/s);
 assert.match(css, /\.m6-roll-row\s*\{\s*display: contents;/);
-assert.match(css, /\.chat-message \.roll-result-label\.failure\.m6-roll-open\s*\{[^}]*background-color: #c99a1e;/s);
+assert.match(css, /\.chat-message \.roll-result-label\.failure\.m6-roll-open\s*\{[^}]*background-color: var\(--m6-avviso, #c99a1e\);/s);
+// Il rosso è solo del Paradosso (Blue, 26/11): il tiro impossibile e le Condizioni che fanno fallire si dicono in ambra.
+assert.match(readFileSync(new URL("../styles/base.css", import.meta.url), "utf8"), /--m6-avviso: #c99a1e;/);
+assert.match(css, /\.m6-tiro-esito\.impossibile > b\s*\{\s*color: var\(--m6-avviso, #c99a1e\);/);
+assert.match(css, /\.m6-verdetto-condizioni\.fallisce > p\s*\{\s*color: var\(--m6-avviso, #c99a1e\);/);
+assert.doesNotMatch(css.slice(css.indexOf(".m6-verdetto-condizioni {"), css.indexOf(".m6-verdetto-condizioni > label")), /--mage-rosso/);
 assert.match(css, /\.m6-roll-actions > \.m6-roll-action\s*\{/);
 assert.doesNotMatch(css, /\.m6-volonta > button|\.m6-sforzo > button|m6-volonta-aggravato|roll-note-onestep/);
 
