@@ -4,8 +4,9 @@
  * mappa, nasconde l'interfaccia di Foundry e mette al suo posto una pagina
  * sola, col tiro e l'elenco dei tiri di tutti.
  *
- * In questa tappa la pagina è nuda e serve a provare che la strada regge;
- * l'interfaccia dell'app arriva in una tappa sua.
+ * La pagina di serie è nuda apposta. Un pacchetto a parte può mettere al suo
+ * posto la propria interfaccia: la registra alla porta (`game.m6.telefono`,
+ * più sotto) e riceve la pagina intera, le schede, i tiri e il tiro.
  *
  * Come si spegne la mappa senza ricaricare: l'impostazione di Foundry
  * «core.noCanvas» sta nel browser e si scrive subito; la mappa la legge
@@ -15,7 +16,7 @@ import { innocuo, rigaTiro } from "./carta-semplice.js";
 import { ID } from "./costanti.js";
 import { modoTelefono, mossaMappa } from "./modo.js";
 import { SOGLIA_ABILITA_MAX, SOGLIA_MIN } from "../sistema.js";
-import { cosaManca, datiCarta, paroleCarta, tira } from "./tiro-semplice.js";
+import { cosaManca, paroleCarta, tira, tiroDelMessaggio } from "./tiro-semplice.js";
 import { ABILITA, ATTRIBUTI, CAMPI, nomeAbilita, nomeAttributo, nomeCampo } from "./tratti.js";
 
 /** Il Foundry intero chiesto per questa visita: dura finché la scheda del browser resta aperta. */
@@ -37,6 +38,15 @@ const stato = {
 };
 
 let radice = null;
+
+/** Il tiro che la pagina usa: quello semplice, finché le regole non danno il loro. */
+let tiratore = tira;
+/** L'interfaccia di un pacchetto a parte, se qualcuno l'ha registrata. */
+let vista = null;
+let montata = false;
+let smonta = null;
+/** Chi vuole sapere quando cambiano i tiri o le schede. */
+const ascoltatori = new Set();
 
 function interoChiesto() {
   try {
@@ -115,6 +125,25 @@ export function telefonoAlPronto() {
     if (stato.sarebbe) tastoRitorno();
     return;
   }
+  for (const aggancio of ["createChatMessage", "updateChatMessage", "deleteChatMessage"]) Hooks.on(aggancio, () => avvisa("tiri"));
+  for (const aggancio of ["createActor", "updateActor", "deleteActor", "updateUser", "createItem", "updateItem", "deleteItem"]) Hooks.on(aggancio, () => avvisa("schede"));
+  // Il telefono si addormenta e perde il filo: al ritorno si ricarica, così l'elenco non resta indietro.
+  game.socket?.on("disconnect", () => {
+    stato.persa = true;
+    disegnaStato();
+    avvisa("rete");
+  });
+  game.socket?.io?.on("reconnect", () => window.location.reload());
+
+  if (vista && montaVista()) return;
+  pronta = true;
+  disegnaPagina();
+}
+
+/** La pagina di serie: il tiro, l'elenco dei tiri, i due tasti in fondo. */
+let pronta = false;
+
+function disegnaPagina() {
   stato.attore = attori().find((actor) => actor.id === game.user.character?.id)?.id ?? attori()[0]?.id ?? "";
   radice.innerHTML = `<div class="m6t-stato" data-m6t-zona="stato"></div>`
     + `<section class="m6t-blocco" data-m6t-zona="tiro"></section>`
@@ -125,16 +154,126 @@ export function telefonoAlPronto() {
   disegnaTiro();
   disegnaTiri();
 
-  for (const aggancio of ["createChatMessage", "updateChatMessage", "deleteChatMessage"]) Hooks.on(aggancio, disegnaTiri);
-  for (const aggancio of ["createActor", "updateActor", "deleteActor", "updateUser"]) Hooks.on(aggancio, disegnaTiro);
-
-  // Il telefono si addormenta e perde il filo: al ritorno si ricarica, così l'elenco non resta indietro.
-  game.socket?.on("disconnect", () => {
-    stato.persa = true;
-    disegnaStato();
-  });
-  game.socket?.io?.on("reconnect", () => window.location.reload());
+  ascoltatori.add(alCambiamento);
 }
+
+/** La pagina di serie si ridisegna quando cambiano i tiri o le schede. */
+function alCambiamento(cosa) {
+  if (cosa === "tiri") disegnaTiri();
+  else if (cosa === "schede") disegnaTiro();
+}
+
+function avvisa(cosa) {
+  for (const ascoltatore of ascoltatori) {
+    try {
+      ascoltatore(cosa);
+    } catch (errore) {
+      console.error(`${ID} | Chi ascolta la porta del telefono ha sbagliato.`, errore);
+    }
+  }
+}
+
+/* -------------------------------------------- */
+/*  La porta                                     */
+/* -------------------------------------------- */
+
+/**
+ * Monta l'interfaccia registrata al posto della pagina di serie. Se sbaglia,
+ * la pagina di serie resta: chi gioca non rimane davanti a uno schermo vuoto.
+ */
+function montaVista() {
+  if (!stato.attivo || !radice || !vista || montata) return montata;
+  try {
+    radice.innerHTML = "";
+    radice.classList.add("m6t-ospite");
+    const ritorno = vista.monta(radice, porta);
+    smonta = typeof ritorno === "function" ? ritorno : null;
+    montata = true;
+  } catch (errore) {
+    console.error(`${ID} | L'interfaccia «${vista?.id ?? "?"}» non si è montata: resta la pagina di serie.`, errore);
+    radice.classList.remove("m6t-ospite");
+    montata = false;
+  }
+  return montata;
+}
+
+/**
+ * La porta del telefono, `game.m6.telefono`. Un pacchetto a parte (un modulo
+ * di Foundry) ci mette la sua interfaccia, senza che il sistema ne sappia
+ * niente:
+ *
+ *   Hooks.once("setup", () => game.m6.telefono.registra({
+ *     id: "il-mio-modulo",
+ *     monta(radice, porta) { … disegna dentro `radice` …; return () => { … smonta … }; }
+ *   }));
+ *
+ * `monta` riceve la pagina intera (un elemento che copre lo schermo) e la
+ * porta stessa. Da `init` a `setup` la registrazione arriva in tempo per il
+ * primo disegno; più tardi, l'interfaccia prende il posto della pagina di serie.
+ */
+export const porta = Object.freeze({
+  /** Vero se in questo browser è accesa la pagina del telefono. */
+  get attivo() {
+    return stato.attivo;
+  },
+
+  /** Registra l'interfaccia di un pacchetto a parte. L'ultima registrata vince. */
+  registra(nuova) {
+    if (typeof nuova?.monta !== "function") throw new Error(`${ID} | La porta del telefono vuole un oggetto con «monta(radice, porta)».`);
+    if (montata) {
+      try {
+        smonta?.();
+      } catch (errore) {
+        console.error(`${ID} | L'interfaccia di prima non si è smontata bene.`, errore);
+      }
+      montata = false;
+      smonta = null;
+    }
+    vista = nuova;
+    if (game.ready) {
+      if (pronta) {
+        ascoltatori.delete(alCambiamento);
+        radice?.removeEventListener("click", alClic);
+        radice?.removeEventListener("change", alCambio);
+        pronta = false;
+      }
+      // Se la nuova interfaccia non si monta, torna la pagina di serie.
+      if (stato.attivo && !montaVista()) {
+        pronta = true;
+        disegnaPagina();
+      }
+    }
+    return porta;
+  },
+
+  /** Le regole danno alla porta il loro tiro: `(attore, scelta, { avvisa }) => { messaggio } | { manca } | { avviso }`. */
+  usa(nuovo) {
+    if (typeof nuovo === "function") tiratore = nuovo;
+    return porta;
+  },
+
+  /** Le schede che chi è entrato può giocare: prima i Maghi, poi i PNG. */
+  schede: () => attori(),
+
+  /** I tiri che chi è entrato può vedere, dal più recente: chi, con cosa, dadi, rossi, successi, soglia, esito. */
+  tiri: () => tiri().map(({ message, dati }) => ({ ...dati, id: message.id, quando: message.timestamp })),
+
+  /** Tira per una scheda: `scelta` è `{ attributo, abilita, soglia }`, o `{ campo, soglia }` per un PNG. */
+  tira: (actor, scelta = {}, opzioni = {}) => tiratore(actor, scelta, opzioni),
+
+  /** Chiama `ascoltatore("tiri" | "schede" | "rete")` a ogni cambiamento (`rete`: il filo con Foundry è caduto). Torna la funzione che lo ferma. */
+  ascolta(ascoltatore) {
+    if (typeof ascoltatore !== "function") return () => {};
+    ascoltatori.add(ascoltatore);
+    return () => ascoltatori.delete(ascoltatore);
+  },
+
+  /** Passa al Foundry intero per questa visita. */
+  intero: () => chiediIntero(true),
+
+  /** Esce dal mondo. */
+  esci: () => game.logOut()
+});
 
 /** Dove si è chiesto il Foundry intero da un telefono, un tasto riporta alla pagina. */
 function tastoRitorno() {
@@ -164,7 +303,9 @@ function attore() {
 /** I tiri che chi guarda può vedere, dal più recente. */
 function tiri() {
   return game.messages.contents
-    .filter((message) => message.type === "tiro" && message.visible && message.isContentVisible)
+    .filter((message) => message.visible && message.isContentVisible)
+    .map((message) => ({ message, dati: tiroDelMessaggio(message) }))
+    .filter((voce) => voce.dati)
     .slice(-TIRI_MAX)
     .reverse();
 }
@@ -237,7 +378,7 @@ function disegnaTiri() {
   const posto = zona("tiri");
   if (!posto) return;
   const parole = paroleCarta();
-  const righe = tiri().map((message) => rigaTiro(datiCarta(message), parole)).join("");
+  const righe = tiri().map(({ dati }) => rigaTiro(dati, parole)).join("");
   posto.innerHTML = righe || `<li class="m6t-vuoto">${innocuo(dice("M6.Base.Telefono.NessunTiro"))}</li>`;
 }
 
@@ -292,9 +433,13 @@ async function alTira() {
   stato.avviso = "";
   disegnaTiro();
   try {
-    const esito = await tira(actor, stato.scelta);
+    // Gli avvisi che il tiro dà strada facendo (il tiro mandato al Narratore) si leggono subito.
+    const esito = await tiratore(actor, { ...stato.scelta }, { avvisa: (testo) => { stato.avviso = String(testo ?? ""); disegnaTiro(); } }) ?? {};
     if (esito.manca) stato.avviso = dice(esito.manca);
-    else stato.scelta.soglia = null;
+    else if (esito.messaggio) {
+      stato.avviso = "";
+      stato.scelta.soglia = null;
+    } else stato.avviso = esito.avviso || dice("M6.Base.Telefono.TiroFallito");
   } catch (errore) {
     console.error(`${ID} | Il tiro dal telefono non è partito.`, errore);
     stato.avviso = dice("M6.Base.Telefono.TiroFallito");

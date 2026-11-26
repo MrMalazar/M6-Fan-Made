@@ -377,6 +377,25 @@
   background-image: url("../assets/dadi/stellina.svg");
 }
 
+/* Il dado rosso del Paradosso: corpo nero, bordo e segno rossi. L'occhio
+   sull'1, l'occhio pieno sul 10, la scintilla dal 6 al 9. */
+.m6-dado--rosso {
+  background-color: var(--mage-nero-dado, #17120f);
+  border-color: var(--mage-rosso, #b5433c);
+}
+
+.m6-dado--rosso-scintilla {
+  background-image: url("../assets/icons/dice/chat/paradosso-scintilla.svg");
+}
+
+.m6-dado--rosso-occhio {
+  background-image: url("../assets/icons/dice/chat/paradosso-occhio-vuoto.svg");
+}
+
+.m6-dado--rosso-occhio-pieno {
+  background-image: url("../assets/icons/dice/chat/paradosso-occhio-completo.svg");
+}
+
 /* --------------------------------------------------------------------------
    La carta del tiro in chat: con cosa si tira, i dadi, una riga per voce,
    la fascia con una parola.

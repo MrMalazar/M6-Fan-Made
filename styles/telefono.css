@@ -262,6 +262,22 @@ body.m6-telefono > *:not(#m6-telefono) {
   color: var(--m6-tenue);
 }
 
+/* Un tiro senza soglia: solo il conto dei successi, senza esito. */
+#m6-telefono .m6t-riga--conto .m6t-riga__esito > b {
+  color: var(--m6-tenue);
+}
+
+/* L'interfaccia di un pacchetto a parte prende la pagina intera, senza i margini di quella di serie. */
+#m6-telefono.m6t-ospite {
+  padding: 0;
+}
+
+#m6-telefono.m6t-ospite > * {
+  margin-inline: 0;
+  max-width: none;
+}
+
+
 #m6-telefono .m6t-riga__esito > span {
   color: var(--m6-oro-chiaro);
 }

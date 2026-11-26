@@ -27,6 +27,51 @@ export function datiCarta(message) {
   return { ...leggiTiro(dati.risultati, dati.soglia), coppia: coppiaDelTiro(dati), chi: message?.alias ?? "" };
 }
 
+/** La faccia di un dado rosso: l'occhio sull'1, l'occhio pieno sul 10, la scintilla dal 6, vuota il resto. */
+export function facciaRossa(numero) {
+  const valore = Math.trunc(Number(numero) || 0);
+  if (valore === 1) return "occhio";
+  if (valore === 10) return "occhio-pieno";
+  return valore >= 6 ? "scintilla" : "vuota";
+}
+
+/** I numeri usciti da un gruppo di dadi: un dado ritirato lascia il posto a quello nuovo. */
+function numeriUsciti(termini) {
+  return termini.flatMap((termine) => termine.results
+    .filter((uscito) => uscito?.active !== false && !uscito?.discarded)
+    .map((uscito) => Math.trunc(Number(uscito.result) || 0)));
+}
+
+/**
+ * Un messaggio di chat letto come tiro, qualunque strada abbia fatto: il tiro
+ * semplice (tipo `tiro`) o quello della scheda, coi dadi della riserva (`dm`)
+ * e i rossi (`dp`). Torna `null` se il messaggio non è un tiro di riserva
+ * (un'iniziativa, un dado tirato a mano). Lo leggono l'elenco del telefono e
+ * chi mette la sua interfaccia alla porta.
+ */
+export function tiroDelMessaggio(message) {
+  if (message?.type === "tiro") return { ...datiCarta(message), rossi: [] };
+  const roll = message?.rolls?.[0];
+  const termini = (roll?.terms ?? []).filter((termine) => Array.isArray(termine?.results));
+  const riserva = termini.filter((termine) => termine.denomination === "m");
+  const rossi = termini.filter((termine) => termine.denomination === "p");
+  if (!riserva.length && !rossi.length) return null;
+  const usciti = numeriUsciti(riserva);
+  const soglia = Math.max(Math.trunc(Number(roll.options?.difficulty) || 0), 0);
+  const successi = Math.max(Math.trunc(Number(roll.total) || 0), 0);
+  return {
+    chi: message.alias ?? "",
+    coppia: String(roll.options?.title ?? ""),
+    risultati: usciti,
+    facce: leggiTiro(usciti, soglia || 1).facce,
+    rossi: numeriUsciti(rossi).map((numero) => ({ numero, faccia: facciaRossa(numero) })),
+    successi,
+    soglia,
+    // Senza soglia scritta il tiro conta i successi e basta: né riuscito né fallito.
+    riuscito: soglia > 0 ? successi >= soglia : null
+  };
+}
+
 /** Le parole della carta, tradotte. */
 export function paroleCarta() {
   return {

@@ -2,6 +2,7 @@
 import "./base/avvio.js";
 import { registerActorCreationChoice } from "./actor-creation.js";
 import { registraAttore } from "./attore.js";
+import { tiraDalTelefono } from "./telefono-tiro.js";
 import { MODULE_ID } from "./constants.js";
 import { isMageActor, registerMageDiceRendering } from "./mage-dice.js";
 import { registerParadoxDice } from "./paradox-dice.js";
@@ -80,6 +81,9 @@ Hooks.once("init", () => {
 
   // L'attore del sistema: la Salute come la leggono le barre dei token.
   registraAttore();
+
+  // Dal telefono il Mago tira col tiro della scheda: Condizioni, verdetto del Narratore, carta intera.
+  game.m6.telefono.usa(tiraDalTelefono);
 
   // La scheda degli oggetti chiede alle regole se una Condizione è della lista:
   // quelle fuori lista mostrano i loro dadi scritti.

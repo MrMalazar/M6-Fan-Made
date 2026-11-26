@@ -17,7 +17,7 @@ import { registraDadi } from "./dadi.js";
 import { MagoData, OGGETTI, PngData, TiroData } from "./dati.js";
 import { registraIconeDelTipo } from "./icone-tipo.js";
 import { SchedaOggetto } from "./scheda-oggetto.js";
-import { registraTelefono, telefonoAlPronto, telefonoAlSetup } from "./telefono.js";
+import { porta, registraTelefono, telefonoAlPronto, telefonoAlSetup } from "./telefono.js";
 import { registraTiro } from "./tiro-m6.js";
 import { tira, vestiCarta } from "./tiro-semplice.js";
 
@@ -47,7 +47,8 @@ Hooks.once("init", () => {
   registraTelefono();
 
   // Per le macro e per la console: game.m6.tira(attore, { attributo, abilita, soglia }).
-  game.m6 = { tira };
+  // `game.m6.telefono` è la porta dove un pacchetto a parte mette la sua interfaccia.
+  game.m6 = { tira, telefono: porta };
 });
 
 // Il segnalino di un Mago è il Mago stesso: quello che gli succede sulla mappa resta sulla scheda.

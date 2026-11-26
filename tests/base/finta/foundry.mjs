@@ -49,9 +49,12 @@ class FintaScheda {
 function nodo(tag = "div") {
   const zone = new Map();
   const ascolti = {};
+  const classi = new Set();
   return {
-    tag, id: "", innerHTML: "", textContent: "", type: "", zone, ascolti,
+    tag, id: "", innerHTML: "", textContent: "", type: "", zone, ascolti, classi,
+    classList: { add: (nome) => classi.add(nome), remove: (nome) => classi.delete(nome), contains: (nome) => classi.has(nome) },
     addEventListener: (tipo, funzione) => { ascolti[tipo] = funzione; },
+    removeEventListener: (tipo, funzione) => { if (ascolti[tipo] === funzione) delete ascolti[tipo]; },
     querySelector(selettore) {
       const nome = /^\[data-m6t-zona="(\w+)"\]$/.exec(selettore)?.[1];
       if (!nome || !this.innerHTML.includes(`data-m6t-zona="${nome}"`)) return null;
