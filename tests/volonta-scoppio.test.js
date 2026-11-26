@@ -117,5 +117,11 @@ assert.equal(tiroDiRiserva({ terms: [termine("m"), { operator: "+" }, termine("p
 assert.equal(tiroDiRiserva({ terms: [termine("p")] }), true, "solo rossi");
 assert.equal(tiroDiRiserva({ terms: [termine("d")] }), false, "l'iniziativa, 1d10");
 assert.equal(tiroDiRiserva({ terms: [{ number: 3 }] }), false, "un numero secco");
+// In Foundry la sigla sta sulla classe del dado; l'oggetto dice solo «d10», uguale per tutti.
+class DadoFinto { static DENOMINATION = "d"; constructor(results) { this.results = results; } get denomination() { return "d10"; } }
+class RiservaFinta extends DadoFinto { static DENOMINATION = "m"; }
+class RossoFinto extends DadoFinto { static DENOMINATION = "p"; }
+assert.equal(tiroDiRiserva({ terms: [new RiservaFinta([{ result: 3 }]), { operator: "+" }, new RossoFinto([])] }), true, "il tiro della scheda, come lo salva Foundry");
+assert.equal(tiroDiRiserva({ terms: [new DadoFinto([{ result: 7 }])] }), false, "l'iniziativa, come la salva Foundry");
 assert.equal(tiroDiRiserva(null), false);
 

@@ -8,6 +8,7 @@
 import { cartaTiro } from "./carta-semplice.js";
 import { DALLA_PRIMA, nomeAbilita, nomeAttributo, nomeCampo } from "./tratti.js";
 import { leggiTiro, riservaAbilita, riservaPng, sogliaValida } from "./riserva.js";
+import { siglaDelDado } from "./sigla-dado.js";
 
 const dice = (chiave) => game.i18n.localize(chiave);
 
@@ -53,8 +54,8 @@ export function tiroDelMessaggio(message) {
   if (message?.type === "tiro") return { ...datiCarta(message), rossi: [] };
   const roll = message?.rolls?.[0];
   const termini = (roll?.terms ?? []).filter((termine) => Array.isArray(termine?.results));
-  const riserva = termini.filter((termine) => termine.denomination === "m");
-  const rossi = termini.filter((termine) => termine.denomination === "p");
+  const riserva = termini.filter((termine) => siglaDelDado(termine) === "m");
+  const rossi = termini.filter((termine) => siglaDelDado(termine) === "p");
   if (!riserva.length && !rossi.length) return null;
   const usciti = numeriUsciti(riserva);
   const soglia = Math.max(Math.trunc(Number(roll.options?.difficulty) || 0), 0);

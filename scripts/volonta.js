@@ -1,4 +1,5 @@
 import { calculateAreteSuccesses } from "./arete-dice-pool.js";
+import { dadoDelGioco } from "./base/sigla-dado.js";
 import { MODULE_ID } from "./constants.js";
 import { isMageActor } from "./mage-dice.js";
 import { calculateRamoCSuccesses, RAMO, resolveSuccessFrom, successModifier, SUCCESS_FROM } from "./ramo-c.js";
@@ -90,15 +91,13 @@ function diceTerms(roll) {
   return { basic, advanced };
 }
 
-/** La sigla dei dadi della riserva (`dm`) e di quelli rossi (`dp`): gli unici tiri che la Volontà ritira. */
-const DADI_DEL_TIRO = Object.freeze(["m", "p"]);
-
 /**
- * Il tiro è un tiro di riserva? Un tiro d'iniziativa (`1d10`) o un dado tirato
- * a mano in chat non lo sono: lì la Volontà non c'entra e il tasto non compare.
+ * Il tiro è un tiro di riserva, cioè coi dadi della riserva (`dm`) o coi rossi
+ * (`dp`)? Un tiro d'iniziativa (`1d10`) o un dado tirato a mano in chat non lo
+ * sono: lì la Volontà non c'entra e il tasto non compare.
  */
 export function tiroDiRiserva(roll) {
-  return (roll?.terms ?? []).some((term) => Array.isArray(term?.results) && DADI_DEL_TIRO.includes(term?.denomination));
+  return (roll?.terms ?? []).some((term) => Array.isArray(term?.results) && dadoDelGioco(term));
 }
 
 function speakerActor(message) {

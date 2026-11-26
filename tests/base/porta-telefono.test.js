@@ -31,6 +31,13 @@ assert.equal(tiroDelMessaggio({ alias: "x", rolls: [{ total: 2, options: {}, ter
 assert.equal(tiroDelMessaggio({ alias: "x", rolls: [{ total: 7, options: {}, terms: [termine("d", [7])] }] }), null);
 assert.equal(tiroDelMessaggio({ alias: "x", rolls: [] }), null);
 assert.equal(tiroDelMessaggio(null), null);
+// In Foundry la sigla sta sulla classe del dado; l'oggetto dice solo «d10», uguale per tutti.
+class DadoFinto { static DENOMINATION = "d"; constructor(numeri) { this.results = numeri.map((result) => ({ result, active: true })); } get denomination() { return "d10"; } }
+class RiservaFinta extends DadoFinto { static DENOMINATION = "m"; }
+class RossoFinto extends DadoFinto { static DENOMINATION = "p"; }
+const vero = tiroDelMessaggio({ alias: "Marco", rolls: [{ total: 2, options: { difficulty: 1, title: "Forza + Atletica" }, terms: [new RiservaFinta([3, 9, 8]), { operator: "+" }, new RossoFinto([1])] }] });
+assert.deepEqual([vero.risultati, vero.rossi.map((r) => r.faccia), vero.riuscito], [[3, 9, 8], ["occhio"], true], "il tiro della scheda, come lo salva Foundry");
+assert.equal(tiroDelMessaggio({ alias: "x", rolls: [{ total: 7, options: {}, terms: [new DadoFinto([7])] }] }), null, "l'iniziativa, come la salva Foundry");
 // Il tiro semplice della 0.1.0 si legge ancora, e non ha rossi.
 const semplice = tiroDelMessaggio({ type: "tiro", alias: "Leo", system: { attributo: "dexterity", abilita: "athletics", soglia: 2, risultati: [6, 2] } });
 assert.deepEqual([semplice.chi, semplice.successi, semplice.riuscito, semplice.rossi], ["Leo", 1, false, []]);
