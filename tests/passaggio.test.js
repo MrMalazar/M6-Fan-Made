@@ -262,35 +262,90 @@ assert.equal(sferaDalNome("Forza"), "");
 {
   const prima = scena();
   const tipi = (id) => ({ mago000000000001: { prima: "mortal", dopo: "mago" }, png0000000000001: { prima: "spc", dopo: "png" } })[id] ?? null;
-  const { dati, note } = convertiScena(prima, tipi, { inCorso: true });
+  const { dati, note, rifai } = convertiScena(prima, tipi, { inCorso: true });
   assert.deepEqual(dati.flags, prima.flags, "le bandiere degli altri moduli non si toccano");
   assert.deepEqual(dati.walls, prima.walls);
   const [legato, slegato] = dati.tokens;
   assert.deepEqual([legato.bar1.attribute, legato.bar2.attribute, legato.texture.src], ["salute", null, "worlds/prova/ada.webp"]);
-  assert.deepEqual(legato.delta, prima.tokens[0].delta, "un delta vuoto resta com'è");
+  assert.deepEqual(legato.delta, prima.tokens[0].delta, "il delta di un segnalino legato resta com'è");
   assert.equal(slegato.texture.src, "icons/svg/mystery-man.svg");
-  assert.deepEqual(slegato.flags, { m6: { nota: "sul segnalino" } });
+  // Il delta porta un tratto, che il sistema non conosce: non si ritocca, si rifà. Quello vecchio resta
+  // com'è, quello nuovo va al sicuro nelle bandiere del segnalino, e la scena dice chi è da rifare.
+  assert.deepEqual(slegato.delta, prima.tokens[1].delta);
+  assert.deepEqual(rifai, [{ id: "segn000000000002", nome: "Via - Nome" }]);
+  assert.deepEqual(Object.keys(slegato.flags.m6), ["nota", "passaggio"]);
+  assert.equal(slegato.flags.m6.nota, "sul segnalino");
+  const nuovo = slegato.flags.m6.passaggio.delta;
   // Quello che il segnalino porta di suo: le riserve scritte restano, i danni di wod5e vanno nel registro,
   // la Condizione resta, il tratto diventa un caso e sparisce, la lapide resta.
-  assert.deepEqual(slegato.delta.system, { standarddicepools: { physical: { value: 5 } } });
-  assert.deepEqual(slegato.delta.items.map((voce) => voce._id), ["ogg0000000000041", "ogg0000000000024"]);
-  assert.deepEqual(slegato.delta.items[0].flags, { m6: { grado: 1 } });
-  assert.equal(slegato.delta.items[0].img, "icons/svg/item-bag.svg");
-  assert.deepEqual(slegato.delta.flags.m6.nemico, { fazione: "Scritta sul segnalino", casi: { tratto_ogg0000000000042: { nome: "Scorta", campo: "", dadi: 4, skill: "", sort: 1 } } });
-  assert.deepEqual(slegato.delta.flags.m6.passaggio, { resto: { health: { superficial: 3 } }, oggetti: [{ _id: "ogg0000000000042", name: "Scorta", type: "trait", img: "systems/wod5e/assets/icons/items/item-default.svg", system: { dice: 4 } }] });
-  assert.deepEqual(note, [{ segnalino: "Via - Nome", scarti: slegato.delta.flags.m6.passaggio.oggetti, condizioni: [], casi: ["Scorta"], domini: [] }]);
-  // L'aggiornamento scende fino al delta e dice da dove togliere.
+  assert.deepEqual(nuovo.system, { standarddicepools: { physical: { value: 5 } } });
+  assert.deepEqual(nuovo.items.map((voce) => voce._id), ["ogg0000000000041", "ogg0000000000024"]);
+  assert.deepEqual(nuovo.items[0].flags, { m6: { grado: 1 } });
+  assert.equal(nuovo.items[0].img, "icons/svg/item-bag.svg");
+  assert.deepEqual(nuovo.flags.m6.nemico, { fazione: "Scritta sul segnalino", casi: { tratto_ogg0000000000042: { nome: "Scorta", campo: "", dadi: 4, skill: "", sort: 1 } } });
+  assert.deepEqual(nuovo.flags.m6.passaggio, { resto: { health: { superficial: 3 } }, oggetti: [{ _id: "ogg0000000000042", name: "Scorta", type: "trait", img: "systems/wod5e/assets/icons/items/item-default.svg", system: { dice: 4 } }] });
+  assert.deepEqual(note, [{ segnalino: "Via - Nome", scarti: nuovo.flags.m6.passaggio.oggetti, condizioni: [], casi: ["Scorta"], domini: [] }]);
+  // L'aggiornamento tocca i segnalini ma non il delta da rifare, e non c'è niente da togliere dentro.
   const { cambia, togli } = aggiornamento("Scene", prima, dati);
   assert.deepEqual(Object.keys(cambia), ["tokens"]);
   assert.deepEqual(Object.keys(cambia.tokens[0]).sort(), ["==bar1", "==bar2", "_id"]);
-  assert.deepEqual(Object.keys(cambia.tokens[1]).sort(), ["==bar1", "==bar2", "==flags", "==texture", "_id", "delta"]);
-  assert.deepEqual(Object.keys(cambia.tokens[1].delta).sort(), ["==flags", "==system", "items"]);
-  assert.deepEqual(togli, [{ strada: [{ raccolta: "tokens", id: "segn000000000002" }, { uno: "delta" }], raccolta: "items", ids: ["ogg0000000000042"] }]);
-  const finita = applicaTogli(applicaAggiornamento(GERARCHIA, "Scene", prima, cambia), togli);
-  assert.ok(uguali(finita, dati));
+  assert.deepEqual(Object.keys(cambia.tokens[1]).sort(), ["==bar1", "==bar2", "==flags", "==texture", "_id"]);
+  assert.deepEqual(togli, []);
+  const aMeta = applicaAggiornamento(GERARCHIA, "Scene", prima, cambia);
+  assert.ok(uguali(aMeta, dati));
+  // Un rifacimento rimasto a metà si riconosce dalla copia: ripetere l'esame lo ritrova, senza ridire le note.
+  const ripreso = convertiScena(aMeta, tipi, { inCorso: true });
+  assert.deepEqual([ripreso.rifai, ripreso.note], [rifai, []]);
+  assert.deepEqual(aggiornamento("Scene", aMeta, ripreso.dati), { cambia: null, togli: [] });
+  // Chi esegue azzera il delta e lo riscrive dalla copia, e la copia sparisce.
+  const finita = structuredClone(aMeta);
+  finita.tokens[1].delta = finita.tokens[1].flags.m6.passaggio.delta;
+  delete finita.tokens[1].flags.m6.passaggio;
   // A passaggio finito la scheda sotto è nostra e ricorda da dove viene: ripetere non cambia.
   const dopo = (id) => ({ mago000000000001: { prima: "mortal", dopo: "mago" }, png0000000000001: { prima: "spc", dopo: "png" } })[id] ?? null;
-  assert.deepEqual(aggiornamento("Scene", finita, convertiScena(finita, dopo).dati), { cambia: null, togli: [] });
+  const ripetuta = convertiScena(finita, dopo);
+  assert.deepEqual(aggiornamento("Scene", finita, ripetuta.dati), { cambia: null, togli: [] });
+  assert.deepEqual(ripetuta.rifai, []);
+
+  // A schede non ancora intere si prepara soltanto: la scena resta com'è, e la copia va al sicuro.
+  const preparata = convertiScena(prima, tipi, { inCorso: true, soloPreparare: true });
+  assert.deepEqual(preparata.rifai, rifai);
+  assert.deepEqual(preparata.dati.tokens[0], prima.tokens[0]);
+  assert.deepEqual(preparata.dati.tokens[1].flags, { "wod5e-mage": { nota: "sul segnalino" }, m6: { passaggio: { delta: nuovo } } });
+  assert.deepEqual(aggiornamento("Scene", prima, preparata.dati), { cambia: { tokens: [{ _id: "segn000000000002", "==flags": preparata.dati.tokens[1].flags }] }, togli: [] });
+  // Copia al sicuro e delta azzerato: da preparare non c'è più niente, e a schede intere resta il riscrivere.
+  const azzerata = structuredClone(preparata.dati);
+  azzerata.tokens[1].delta = null;
+  assert.deepEqual(convertiScena(azzerata, tipi, { inCorso: true, soloPreparare: true }).rifai, []);
+  const daScrivere = convertiScena(azzerata, tipi, { inCorso: true });
+  assert.deepEqual(daScrivere.rifai, rifai);
+  assert.deepEqual(daScrivere.dati.tokens[1].flags, { m6: { nota: "sul segnalino", passaggio: { delta: nuovo } } }, "le bandiere del modulo passano, la copia resta");
+
+  // Un delta senza niente da togliere si ritocca al suo posto, ma solo a schede intere.
+  const pulita = scena();
+  pulita.tokens[1].delta.items = pulita.tokens[1].delta.items.filter((voce) => voce.type !== "trait");
+  const ritoccata = convertiScena(pulita, tipi, { inCorso: true });
+  assert.deepEqual(ritoccata.rifai, []);
+  assert.deepEqual(ritoccata.dati.tokens[1].flags, { m6: { nota: "sul segnalino" } });
+  assert.deepEqual(ritoccata.dati.tokens[1].delta.flags.m6.nemico, { fazione: "Scritta sul segnalino" });
+  assert.deepEqual(Object.keys(aggiornamento("Scene", pulita, ritoccata.dati).cambia.tokens[1].delta).sort(), ["==flags", "==system", "items"]);
+  const ferma = convertiScena(pulita, tipi, { inCorso: true, soloPreparare: true });
+  assert.deepEqual([ferma.rifai, aggiornamento("Scene", pulita, ferma.dati)], [[], { cambia: null, togli: [] }]);
+  // Un delta che porta il tipo di prima si rifà anche lui.
+  const colTipo = scena();
+  colTipo.tokens[1].delta.items = [];
+  colTipo.tokens[1].delta.type = "spc";
+  const rifatta = convertiScena(colTipo, tipi, { inCorso: true });
+  assert.equal(rifatta.rifai.length, 1);
+  assert.equal(rifatta.dati.tokens[1].flags.m6.passaggio.delta.type, "png");
+  // Il delta di un segnalino legato, o senza una scheda nostra sotto, non si tocca: Foundry non lo apre.
+  const legata = scena();
+  legata.tokens[1].actorLink = true;
+  const senzaDelta = convertiScena(legata, tipi, { inCorso: true });
+  assert.deepEqual([senzaDelta.rifai, senzaDelta.dati.tokens[1].delta], [[], legata.tokens[1].delta]);
+  const senzaScheda = convertiScena(prima, () => null, { inCorso: true });
+  assert.deepEqual([senzaScheda.rifai, senzaScheda.dati.tokens[1].delta], [[], prima.tokens[1].delta]);
+  assert.deepEqual(senzaScheda.dati.tokens[1].flags, { m6: { nota: "sul segnalino" } });
   // Un segnalino senza scheda, o di una scheda rimasta com'era: solo barre, immagine e bandiere.
   const orfano = convertiSegnalino({ _id: "s", name: "Orfano", actorId: "x", bar1: { attribute: "rage" }, bar2: { attribute: "salute" }, texture: { src: "a.png" }, flags: {} }).dati;
   assert.deepEqual([orfano.bar1.attribute, orfano.bar2.attribute], [null, "salute"]);

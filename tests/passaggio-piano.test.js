@@ -4,13 +4,24 @@ import { contiDi, unisciRapporti } from "../scripts/passaggio/rapporto.js";
 import { GERARCHIA } from "../scripts/passaggio/regole.js";
 import { applicaAggiornamento, applicaTogli, mondoDelModulo } from "./passaggio-mondo.mjs";
 
-/** Fa sul mondo fotografato quello che farebbe Foundry: applica le operazioni di un giro e apre le schede passate. */
+/**
+ * Fa sul mondo fotografato quello che farebbe chi esegue: applica le operazioni che si possono fare adesso
+ * e apre le schede passate. I delta da rifare si azzerano, e si riscrivono dalla copia se l'operazione lo dice.
+ */
 function esegui(mondo, piano) {
   for (const op of operazioniDelGiro(piano)) {
     const voci = op.pacco ? mondo.pacchi.find((pacco) => pacco.id === op.pacco).voci : mondo.raccolte[op.raccolta];
     const voce = voci.find((riga) => riga.fonte._id === op.id);
     voce.fonte = applicaTogli(applicaAggiornamento(GERARCHIA, op.documento, voce.fonte, op.cambia), op.togli);
     voce.invalido = false;
+    for (const { id } of op.rifai ?? []) {
+      const segnalino = voce.fonte.tokens.find((riga) => riga._id === id);
+      const copia = segnalino.flags.m6.passaggio.delta;
+      segnalino.delta = null;
+      if (!op.riscrivi) continue;
+      segnalino.delta = copia;
+      delete segnalino.flags.m6.passaggio;
+    }
   }
   // Le impostazioni portate lasciano il posto a quelle del sistema.
   mondo.impostazioni = mondo.impostazioni.filter((voce) => !piano.impostazioni.some((mossa) => mossa.mossa === "porta" && mossa.id === voce.id));
@@ -30,10 +41,10 @@ assert.deepEqual(primo.lasciati, [
   { documento: "Actor", pacco: "", id: "gruppo0000000001", nome: "Il gruppo", tipo: "group" },
   { documento: "Item", pacco: "", id: "mondo00000000002", nome: "Potere del mondo", tipo: "power" }
 ]);
-// La scena aspetta le schede; il resto parte subito.
-const scena = primo.operazioni.find((op) => op.documento === "Scene");
-assert.equal(scena.dopoLeSchede, true);
-assert.ok(!operazioniDelGiro(primo).includes(scena));
+// La scena aspetta le schede; il resto parte subito. A schede chiuse non si prepara nemmeno il delta da rifare.
+const scene = primo.operazioni.filter((op) => op.documento === "Scene");
+assert.deepEqual(scene.map((op) => [op.dopoLeSchede, op.rifai.length]), [[true, 1]]);
+assert.ok(!operazioniDelGiro(primo).some((op) => op.documento === "Scene"));
 assert.deepEqual(contiDi(primo.rapporto), { actors: 4, items: 1, scenes: 1, messages: 3, journal: 1, macros: 2, users: 1, "world.grimorio-comune": 1 });
 assert.deepEqual(primo.operazioni.filter((op) => op.pacco).map((op) => [op.pacco, op.documento, op.nome]), [["world.grimorio-comune", "Item", "Formula"]]);
 // Le impostazioni: quelle del modulo che il sistema conosce passano, anche il timbro; le altre restano.
@@ -65,22 +76,39 @@ assert.ok(primo.percorsi.every((percorso) => percorso.startsWith("systems/m6/"))
 esegui(mondo, primo);
 assert.equal(haSchedeDiPrima(mondo), false);
 const secondo = pianoDelPassaggio(mondo, { quando: "2026-11-27", inCorso: true });
-assert.equal(secondo.aspettano, false);
-// Adesso le schede si svuotano e la scena passa; niente altro è rimasto da fare.
-assert.deepEqual(secondo.operazioni.map((op) => [op.documento, op.nome, op.invalido, op.togli.flatMap((voce) => voce.ids).length]), [
-  ["Actor", "Ada", false, 2],
-  ["Actor", "Via - Nome", false, 3],
-  ["Actor", "Anziano", false, 1],
-  ["Scene", "Il porto", false, 1]
+// Adesso le schede si svuotano. La scena aspetta che siano intere, ma il delta che porta un tratto si
+// prepara subito: la copia al sicuro e il delta azzerato, davanti alle schede.
+assert.equal(secondo.aspettano, true);
+assert.deepEqual(secondo.operazioni.map((op) => [op.documento, op.nome, op.invalido, op.togli.flatMap((voce) => voce.ids).length, Boolean(op.dopoLeSchede)]), [
+  ["Actor", "Ada", false, 2, false],
+  ["Actor", "Via - Nome", false, 3, false],
+  ["Actor", "Anziano", false, 1, false],
+  ["Scene", "Il porto", false, 0, true],
+  ["Scene", "Il porto", false, 0, false]
 ]);
-assert.ok(secondo.operazioni.every((op) => !op.dopoLeSchede));
+const preparazione = secondo.operazioni.at(-1);
+assert.deepEqual([preparazione.riscrivi, preparazione.rifai], [false, [{ id: "segn000000000002", nome: "Via - Nome" }]]);
+assert.deepEqual(Object.keys(preparazione.cambia.tokens[0]), ["_id", "==flags"], "la preparazione scrive solo la copia");
 assert.deepEqual(secondo.rapporto.portati, [], "nessuna scheda viene portata due volte");
 assert.deepEqual(secondo.rapporto.scarti.map((voce) => voce.nome), ["Scorta"], "nel secondo giro è nuovo solo quello dei segnalini");
 assert.deepEqual(secondo.impostazioni.map((voce) => voce.mossa), ["resta", "resta"]);
 assert.equal(secondo.compendi, null);
 
-// ------------------------------------------------------------ a mondo passato
+// ------------------------------------------------- il seguito, a schede intere
 esegui(mondo, secondo);
+{
+  const inMezzo = mondo.raccolte.scenes[0].fonte.tokens[1];
+  assert.equal(inMezzo.delta, null, "il delta vecchio è azzerato");
+  assert.ok(inMezzo.flags.m6.passaggio.delta, "e quello nuovo aspetta al sicuro");
+  assert.deepEqual(inMezzo.bar1, { attribute: "health" }, "il resto del segnalino aspetta le schede");
+}
+const seguito = pianoDelPassaggio(mondo, { quando: "2026-11-27", inCorso: true });
+assert.equal(seguito.aspettano, false);
+assert.deepEqual(seguito.operazioni.map((op) => [op.documento, op.nome, op.riscrivi, op.rifai, Boolean(op.dopoLeSchede)]), [["Scene", "Il porto", true, [{ id: "segn000000000002", nome: "Via - Nome" }], false]]);
+assert.deepEqual(seguito.rapporto.scarti, [], "il tratto del segnalino è già stato detto");
+
+// ------------------------------------------------------------ a mondo passato
+esegui(mondo, seguito);
 const terzo = pianoDelPassaggio(mondo);
 assert.deepEqual(terzo.operazioni, []);
 assert.equal(terzo.daFare, false, "un mondo passato non ha più niente da fare");
@@ -97,6 +125,8 @@ assert.deepEqual(Object.keys(png.flags.m6.nemico.casi), ["assorbita_intimidation
 const segnalino = mondo.raccolte.scenes[0].fonte.tokens[1];
 assert.deepEqual([segnalino.bar1.attribute, segnalino.bar2.attribute], ["salute", null]);
 assert.deepEqual(segnalino.delta.items.map((voce) => voce._id), ["ogg0000000000041", "ogg0000000000024"]);
+assert.deepEqual(segnalino.delta.flags.m6.nemico.casi.tratto_ogg0000000000042.nome, "Scorta", "il caso nato dal tratto del segnalino è arrivato");
+assert.deepEqual(segnalino.flags, { m6: { nota: "sul segnalino" } }, "la copia è sparita");
 assert.equal(mondo.raccolte.users[0].fonte.flags.m6.tema, "chiaro");
 assert.equal(mondo.pacchi[0].voci[0].fonte.flags.m6.formula.sfera, "forces");
 
@@ -125,6 +155,15 @@ assert.equal(mondo.pacchi[0].voci[0].fonte.flags.m6.formula.sfera, "forces");
   const op = piano.operazioni.find((voce) => voce.pacco === "world.bestiario");
   assert.deepEqual([op.invalido, op.togli.length, op.cambia.type], [true, 0, "png"]);
   assert.equal(piano.rapporto.nomi["world.bestiario"], "Bestiario");
+}
+
+// Una scena dentro un compendio passa come quelle del mondo, coi tipi delle schede del mondo.
+{
+  const conScena = mondoDelModulo();
+  conScena.pacchi.push({ id: "world.mappe", nome: "Mappe", documento: "Scene", voci: [{ fonte: structuredClone(conScena.raccolte.scenes[0].fonte), invalido: false }] });
+  const piano = pianoDelPassaggio(conScena);
+  const op = piano.operazioni.find((voce) => voce.pacco === "world.mappe");
+  assert.deepEqual([op.documento, op.dopoLeSchede, op.rifai.length], ["Scene", true, 1]);
 }
 
 // Il rapporto di due giri: le voci dette due volte restano una, i documenti toccati due volte si contano una.

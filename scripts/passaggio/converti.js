@@ -298,31 +298,62 @@ function prossimoPosto(tavola) {
   return Object.values(oggetto(tavola)).reduce((massimo, riga) => Math.max(massimo, Number(riga?.sort) || 0), 0) + 1;
 }
 
+/** La copia del delta nuovo che un segnalino tiene da parte finché il suo delta non è riscritto. */
+function scortaDi(bandiere) {
+  const scorta = bandiere?.[NUOVO]?.[REGISTRO]?.delta;
+  return scorta && typeof scorta === "object" ? scorta : null;
+}
+
 /**
  * Un segnalino (quello di partenza di un attore, o uno su una scena): le
  * barre, l'immagine, le bandiere e, se non è legato alla scheda, quello che
- * porta di suo (il delta). `tipo` è il tipo nostro dell'attore.
+ * porta di suo (il delta). `tipo` è il tipo nostro della scheda sotto: senza
+ * una scheda nostra sotto il delta resta com'è, perché Foundry non lo apre.
+ * Resta com'è anche il delta di un segnalino legato: Foundry lo tiene da
+ * parte e non lo lascia ritoccare.
+ *
+ * Un delta con dentro qualcosa da togliere non si ritocca: Foundry 14 non sa
+ * togliere dal delta un oggetto che non conosce, e finché c'è rifiuta ogni
+ * altro ritocco a quel delta. Si rifà: il delta nuovo e pulito va prima al
+ * sicuro nelle bandiere del segnalino (`flags.m6.passaggio.delta`), poi chi
+ * esegue azzera il delta e lo riscrive dalla copia, e la copia sparisce.
+ * `rifai` dice che il segnalino è in questo giro (e un rifacimento rimasto
+ * a metà si riconosce dalla copia ancora lì).
+ *
+ * `soloPreparare`: non si converte niente, si mette solo al sicuro la copia.
+ * Serve finché le schede non sono intere: Foundry accetta i ritocchi al
+ * delta di un segnalino solo quando la scheda sotto non ha più oggetti che
+ * non conosce, ma il delta va azzerato prima di toccare la scheda.
  */
-export function convertiSegnalino(fonte, { tipo = "", tipoPrima = "", inCorso = false, togliSubito = false } = {}) {
-  if (!fonte || typeof fonte !== "object") return { dati: fonte, note: {} };
-  const dati = convertiGenerico("Token", { ...fonte, delta: undefined });
-  delete dati.delta;
-  for (const barra of ["bar1", "bar2"]) {
-    const attributo = fonte[barra]?.attribute;
-    if (attributo === null || attributo === undefined) continue;
-    if (BARRE[attributo]) dati[barra] = { ...fonte[barra], attribute: BARRE[attributo] };
-    else if (!BARRE_NOSTRE.includes(attributo)) dati[barra] = { ...fonte[barra], attribute: null };
+export function convertiSegnalino(fonte, { tipo = "", tipoPrima = "", inCorso = false, soloPreparare = false } = {}) {
+  if (!fonte || typeof fonte !== "object") return { dati: fonte, note: {}, rifai: false };
+  let dati;
+  if (soloPreparare) dati = { ...fonte };
+  else {
+    dati = convertiGenerico("Token", { ...fonte, delta: undefined });
+    delete dati.delta;
+    for (const barra of ["bar1", "bar2"]) {
+      const attributo = fonte[barra]?.attribute;
+      if (attributo === null || attributo === undefined) continue;
+      if (BARRE[attributo]) dati[barra] = { ...fonte[barra], attribute: BARRE[attributo] };
+      else if (!BARRE_NOSTRE.includes(attributo)) dati[barra] = { ...fonte[barra], attribute: null };
+    }
+    if (fonte.texture?.src !== undefined) dati.texture = { ...dati.texture, src: convertiImmagine(fonte.texture.src, IMMAGINE_ATTORE) };
   }
-  if (fonte.texture?.src !== undefined) dati.texture = { ...dati.texture, src: convertiImmagine(fonte.texture.src, IMMAGINE_ATTORE) };
-  let note = {};
-  if (Object.hasOwn(fonte, "delta")) {
-    if (fonte.delta && typeof fonte.delta === "object") {
-      const esito = convertiDelta(fonte.delta, { tipo, tipoPrima, inCorso, togliSubito });
-      dati.delta = esito.dati;
-      note = esito.note;
-    } else dati.delta = fonte.delta;
+  if (!Object.hasOwn(fonte, "delta")) return { dati, note: {}, rifai: false };
+  dati.delta = fonte.delta;
+  // Un rifacimento già cominciato: la copia c'è. A schede non intere resta da fare solo se il delta vecchio è ancora lì.
+  if (scortaDi(dati.flags) && !fonte.actorLink) return { dati, note: {}, rifai: !soloPreparare || Boolean(fonte.delta) };
+  if (!tipo || fonte.actorLink || !fonte.delta || typeof fonte.delta !== "object") return { dati, note: {}, rifai: false };
+  const esito = convertiDelta(fonte.delta, { tipo, tipoPrima, inCorso, togliSubito: true });
+  if (esito.togli.length || TIPI_ATTORE[fonte.delta.type]) {
+    const nostre = oggetto(dati.flags?.[NUOVO]);
+    dati.flags = { ...oggetto(dati.flags), [NUOVO]: { ...nostre, [REGISTRO]: { ...oggetto(nostre[REGISTRO]), delta: esito.dati } } };
+    return { dati, note: esito.note, rifai: true };
   }
-  return { dati, note };
+  if (soloPreparare) return { dati, note: {}, rifai: false };
+  dati.delta = esito.dati;
+  return { dati, note: esito.note, rifai: false };
 }
 
 /**
@@ -530,22 +561,30 @@ export function convertiAttore(fonte, { quando = "", inCorso = true, togliSubito
  * Una scena: le sue parole e le sue bandiere, e ogni segnalino col tipo
  * della sua scheda. `tipi` dice il tipo di una scheda dal suo id:
  * `{ prima, dopo }` (quello che aveva nel mondo del modulo e il nostro), o
- * niente se la scheda non c'è.
+ * niente se la scheda non c'è. Torna anche `rifai`: i segnalini il cui delta
+ * va azzerato e riscritto, `[{ id, nome }]`. Con `soloPreparare` la scena
+ * resta com'è e i delta da rifare vanno solo al sicuro (vedi `convertiSegnalino`).
  */
-export function convertiScena(fonte, tipi = () => null, { inCorso = false, togliSubito = true } = {}) {
-  if (!fonte || typeof fonte !== "object") return { dati: fonte, note: [] };
-  const dati = convertiGenerico("Scene", { ...fonte, tokens: undefined });
-  delete dati.tokens;
+export function convertiScena(fonte, tipi = () => null, { inCorso = false, soloPreparare = false } = {}) {
+  if (!fonte || typeof fonte !== "object") return { dati: fonte, note: [], rifai: [] };
+  let dati;
+  if (soloPreparare) dati = { ...fonte };
+  else {
+    dati = convertiGenerico("Scene", { ...fonte, tokens: undefined });
+    delete dati.tokens;
+  }
   const note = [];
+  const rifai = [];
   if (Array.isArray(fonte.tokens)) {
     dati.tokens = fonte.tokens.map((segnalino) => {
       const scheda = tipi(segnalino?.actorId) ?? {};
-      const esito = convertiSegnalino(segnalino, { tipo: scheda.dopo ?? "", tipoPrima: scheda.prima ?? "", inCorso, togliSubito });
+      const esito = convertiSegnalino(segnalino, { tipo: scheda.dopo ?? "", tipoPrima: scheda.prima ?? "", inCorso, soloPreparare });
+      if (esito.rifai) rifai.push({ id: segnalino?._id, nome: String(segnalino?.name ?? "") });
       if (Object.values(esito.note).some((voce) => Array.isArray(voce) && voce.length)) note.push({ segnalino: String(segnalino?.name ?? ""), ...esito.note });
       return esito.dati;
     });
   }
-  return { dati, note };
+  return { dati, note, rifai };
 }
 
 /* ---------------------------------------------------------------- i messaggi */

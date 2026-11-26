@@ -5,15 +5,37 @@ import { applicaAggiornamento, mondoDelModulo } from "./passaggio-mondo.mjs";
 
 /**
  * Una Foundry finta per il passaggio: un mondo del modulo aperto col sistema,
- * con le schede chiuse. Fa quello che fa Foundry 14: scrive l'aggiornamento
- * di una scheda chiusa e poi inciampa nel mostrarla; alla ricarica apre le
- * schede che hanno un tipo del sistema.
+ * con le schede chiuse. Fa quello che fa Foundry 14 (visto dal vivo, 14.368):
+ *
+ *   - scrive l'aggiornamento di una scheda chiusa e poi inciampa nel
+ *     mostrarla; alla ricarica apre le schede che hanno un tipo del sistema;
+ *   - rifiuta in silenzio (torna a mani vuote, non scrive niente) un ritocco
+ *     al delta di un segnalino non legato se la scheda sotto non è intera o
+ *     se il delta porta un oggetto che il sistema non conosce;
+ *   - si ferma con un errore, dopo aver scritto, quando si svuota una scheda
+ *     e un suo segnalino non legato porta nel delta un oggetto sconosciuto;
+ *   - non sa togliere dal delta un oggetto sconosciuto: il delta si cancella
+ *     intero, e si riscrive.
  */
 const CHIAVI = { actors: (fonte) => ["mago", "png"].includes(fonte.type), items: (fonte) => TIPI_OGGETTO.includes(fonte.type) };
 
 function monta(mondo) {
-  const registro = { aggiornati: [], tolti: [], mazzi: [], avvisi: [], diari: [], finestre: [], ricariche: 0, errore: null };
+  const registro = { aggiornati: [], tolti: [], mazzi: [], delta: [], rifiuti: [], avvisi: [], diari: [], finestre: [], ricariche: 0, errore: null, muto: null };
   const archivio = new Map(mondo.impostazioni.map((voce) => [voce.key, voce]));
+
+  /** Un oggetto che il sistema non conosce (le lapidi non contano). */
+  const sconosciuto = (oggetto) => Boolean(oggetto) && !oggetto._tombstone && !TIPI_OGGETTO.includes(oggetto.type);
+  /** La scheda sotto un segnalino è intera: aperta, e senza oggetti sconosciuti. */
+  const schedaIntera = (id) => {
+    const scheda = mondo.raccolte.actors.find((riga) => riga.fonte._id === id);
+    return Boolean(scheda) && !scheda.invalido && !scheda.fonte.items.some(sconosciuto);
+  };
+  /** Il ritocco al delta di un segnalino che Foundry lascia cadere. */
+  const deltaRifiutato = (scena, cambio) => {
+    if (!Object.hasOwn(cambio, "delta")) return false;
+    const segnalino = scena.tokens.find((riga) => riga._id === cambio._id);
+    return Boolean(segnalino.actorLink) || !schedaIntera(segnalino.actorId) || (segnalino.delta?.items ?? []).some(sconosciuto);
+  };
 
   function documento(raccolta, nome, voce) {
     const doc = {
@@ -22,6 +44,10 @@ function monta(mondo) {
       get name() { return voce.fonte.name; },
       async update(cambia) {
         if (registro.errore?.(voce.fonte)) throw new Error("il server non accetta");
+        if (registro.muto?.(voce.fonte) || (nome === "Scene" && (cambia.tokens ?? []).some((cambio) => deltaRifiutato(voce.fonte, cambio)))) {
+          registro.rifiuti.push(`${nome}:${voce.fonte.name}`);
+          return undefined;
+        }
         voce.fonte = applicaAggiornamento(GERARCHIA, nome, voce.fonte, cambia);
         registro.aggiornati.push(`${nome}:${voce.fonte.name}`);
         if (voce.invalido) throw new TypeError("Cannot read properties of undefined (reading '_source')");
@@ -32,21 +58,46 @@ function monta(mondo) {
         assert.equal(tipo, "Item");
         voce.fonte = { ...voce.fonte, items: voce.fonte.items.filter((oggetto) => !ids.includes(oggetto._id)) };
         registro.tolti.push(`${voce.fonte.name}:${ids.length}`);
+        // Foundry rifà i segnalini non legati della scheda, e su un delta con un oggetto sconosciuto si ferma.
+        const segnalini = mondo.raccolte.scenes.flatMap((scena) => scena.fonte.tokens ?? []);
+        if (segnalini.some((riga) => riga.actorId === voce.fonte._id && !riga.actorLink && (riga.delta?.items ?? []).some(sconosciuto))) throw new Error("validation errors: items: type is not a valid type");
+      },
+      async updateEmbeddedDocuments(tipo, cambi) {
+        assert.equal(nome, "Scene");
+        assert.equal(tipo, "Token");
+        if (registro.muto?.(voce.fonte) || cambi.some((cambio) => deltaRifiutato(voce.fonte, cambio))) {
+          registro.rifiuti.push(`Token:${cambi.map((cambio) => cambio._id).join(",")}`);
+          return [];
+        }
+        const fatti = [];
+        for (const { _id, ...cambio } of cambi) {
+          const posto = voce.fonte.tokens.findIndex((riga) => riga._id === _id);
+          let segnalino = voce.fonte.tokens[posto];
+          // Da un delta azzerato a uno nuovo: si scrive intero.
+          if (cambio.delta && !segnalino.delta) {
+            segnalino = { ...segnalino, delta: structuredClone(cambio.delta) };
+            delete cambio.delta;
+            registro.delta.push(`scrive ${segnalino.name}`);
+          }
+          voce.fonte.tokens[posto] = applicaAggiornamento(GERARCHIA, "Token", segnalino, cambio);
+          fatti.push({ id: _id });
+        }
+        return fatti;
       },
       tokens: {
         get(id) {
-          const segnalino = voce.fonte.tokens?.find((riga) => riga._id === id);
-          if (!segnalino) return undefined;
+          if (!voce.fonte.tokens?.some((riga) => riga._id === id)) return undefined;
+          const fonte = () => voce.fonte.tokens.find((riga) => riga._id === id);
           return {
+            get _source() { return fonte(); },
             // Il delta si tocca dal suo documento: dalla scheda che il segnalino mostra Foundry non toglie davvero.
             get actor() { throw new Error("il delta non si tocca dalla scheda del segnalino"); },
             delta: {
-              async deleteEmbeddedDocuments(tipo, ids) {
-                assert.equal(tipo, "Item");
-                const segnato = voce.fonte.tokens.find((riga) => riga._id === id);
-                segnato.delta.items = segnato.delta.items.filter((oggetto) => !ids.includes(oggetto._id));
-                registro.tolti.push(`segnalino ${segnato.name}:${ids.length}`);
-              }
+              async delete() {
+                fonte().delta = null;
+                registro.delta.push(`azzera ${fonte().name}`);
+              },
+              async deleteEmbeddedDocuments() { throw new Error("un oggetto sconosciuto non si toglie dal delta: sul server resta"); }
             }
           };
         }
@@ -88,7 +139,12 @@ function monta(mondo) {
     async updateDocuments(aggiornamenti, opzioni = {}) {
       registro.mazzi.push(`${nome}${opzioni.pack ? `@${opzioni.pack}` : ""}:${aggiornamenti.length}`);
       const dove = opzioni.pack ? game.packs.get(opzioni.pack) : Object.entries(RACCOLTE).map(([chiave, documentoNome]) => (documentoNome === nome ? game[chiave] : null)).find(Boolean);
-      for (const { _id, ...cambia } of aggiornamenti) await dove.get(_id).update(cambia);
+      const fatti = [];
+      for (const { _id, ...cambia } of aggiornamenti) {
+        const fatto = await dove.get(_id).update(cambia);
+        if (fatto) fatti.push(fatto);
+      }
+      return fatti;
     }
   });
   globalThis.JournalEntry = { create: async (dati) => { registro.diari.push(dati); return { name: dati.name }; } };
@@ -151,9 +207,13 @@ registro.aggiornati.length = 0;
 registro.mazzi.length = 0;
 const secondo = await porta({ gioco: game });
 assert.deepEqual([secondo.finito, secondo.ricarica, secondo.giro], [false, true, 2]);
-// La scena davanti alle schede, e nella scena prima i dati nuovi poi il togliere; nelle schede prima il togliere.
-assert.deepEqual(registro.tolti, ["segnalino Via - Nome:1", "Ada:2", "Via - Nome:3", "Anziano:1"]);
-assert.deepEqual(registro.aggiornati, ["Scene:Il porto", "Actor:Ada", "Actor:Via - Nome", "Actor:Anziano"]);
+// Davanti alle schede il delta da rifare: la copia al sicuro (l'aggiornamento della scena) e il delta azzerato.
+// Poi le schede, prima il togliere e poi l'aggiornare. Poi, nello stesso giro, il seguito: a schede intere la
+// scena passa e il delta si riscrive dalla copia.
+assert.deepEqual(registro.aggiornati, ["Scene:Il porto", "Actor:Ada", "Actor:Via - Nome", "Actor:Anziano", "Scene:Il porto"]);
+assert.deepEqual(registro.tolti, ["Ada:2", "Via - Nome:3", "Anziano:1"]);
+assert.deepEqual(registro.delta, ["azzera Via - Nome", "scrive Via - Nome"]);
+assert.deepEqual(registro.rifiuti, [], "niente è stato chiesto a Foundry nel momento sbagliato");
 assert.deepEqual(secondo.errori, []);
 assert.ok(archivio.has("wod5e-mage.guidaTesti"), "le impostazioni aspettano ancora");
 
@@ -201,7 +261,11 @@ assert.ok(registro.diari[0].pages[1].text.content.includes("Scritta sulla scheda
   assert.equal(ada.type, "mago");
   assert.deepEqual(ada.items.map((voce) => voce.name), ["Fortunato", "Scosso", "Di cattivo umore", "Pistola"]);
   assert.equal(ada.flags.m6.passaggio.daTogliere, undefined);
-  assert.equal(mondo.raccolte.scenes[0].fonte.tokens[1].delta.items.length, 2);
+  const segnalino = mondo.raccolte.scenes[0].fonte.tokens[1];
+  assert.deepEqual(segnalino.delta.items.map((voce) => voce.name ?? "lapide"), ["Ferito", "lapide"]);
+  assert.equal(segnalino.delta.flags.m6.nemico.casi.tratto_ogg0000000000042.nome, "Scorta", "il caso nato dal tratto del segnalino è nel delta nuovo");
+  assert.deepEqual(segnalino.flags, { m6: { nota: "sul segnalino" } }, "la copia è sparita");
+  assert.deepEqual([segnalino.bar1.attribute, segnalino.bar2.attribute], ["salute", null]);
 }
 
 // --------------------------------------------- la finestra e la ripresa
@@ -272,6 +336,41 @@ assert.ok(registro.diari[0].pages[1].text.content.includes("Scritta sulla scheda
   assert.equal(altro.raccolte.actors[3].fonte.type, "vampire", "la scheda rifiutata è rimasta com'era");
   assert.equal(altro.raccolte.actors[0].fonte.type, "mago");
   assert.equal(leggiStato(finto.game).fermo, true);
+}
+
+// ------------------------------------------- quando Foundry lascia cadere un cambio
+{
+  // Un documento che Foundry non accetta e non lo dice: il silenzio diventa un errore col suo nome.
+  const altro = mondoDelModulo();
+  const finto = monta(altro);
+  registraPassaggio(finto.game);
+  finto.registro.muto = (fonte) => fonte.name === "Appunti";
+  const uno = await porta({ gioco: finto.game });
+  assert.deepEqual(uno.errori, [{ nome: "Appunti", documento: "JournalEntry", errore: "M6.Passaggio.Rifiuto" }]);
+  assert.deepEqual(finto.registro.rifiuti, ["JournalEntry:Appunti"]);
+  finto.registro.muto = null;
+
+  // Un rifacimento interrotto a metà: la scena non accetta il delta nuovo. Il delta vecchio è già azzerato,
+  // ma quello nuovo è al sicuro nelle bandiere del segnalino, e il giro dopo riprende da lì.
+  finto.ricarica();
+  finto.registro.muto = (fonte) => fonte.name === "Il porto" && fonte.tokens[1].delta === null;
+  const due = await porta({ gioco: finto.game });
+  assert.deepEqual(due.errori, [{ nome: "Il porto", documento: "Scene", errore: "M6.Passaggio.Rifiuto" }]);
+  const aMeta = altro.raccolte.scenes[0].fonte.tokens[1];
+  assert.equal(aMeta.delta, null);
+  assert.equal(aMeta.flags.m6.passaggio.delta.flags.m6.nemico.casi.tratto_ogg0000000000042.nome, "Scorta");
+  finto.registro.muto = null;
+  finto.ricarica();
+  finto.registro.delta.length = 0;
+  const tre = await porta({ gioco: finto.game });
+  assert.deepEqual([tre.finito, tre.errori], [false, []]);
+  assert.deepEqual(finto.registro.delta, ["scrive Via - Nome"], "il delta non si azzera due volte: si riscrive dalla copia");
+  const rifatto = altro.raccolte.scenes[0].fonte.tokens[1];
+  assert.deepEqual(rifatto.delta.items.map((voce) => voce.name ?? "lapide"), ["Ferito", "lapide"]);
+  assert.deepEqual(rifatto.flags, { m6: { nota: "sul segnalino" } });
+  finto.ricarica();
+  const quattro = await porta({ gioco: finto.game });
+  assert.deepEqual([quattro.finito, quattro.fermo, quattro.errori], [true, false, []]);
 }
 
 // Chi non è il Narratore non porta niente.

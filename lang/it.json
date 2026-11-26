@@ -3314,6 +3314,8 @@
       "Sfere": "Sfere",
       "Oggetto": "Oggetto",
       "Errore": "Errore",
+      "Manca": "non c'è più",
+      "Rifiuto": "Foundry non ha accettato il cambio",
       "Tutti": "tutti i tiri",
       "Conti": {
         "actors": "Schede",

@@ -49,11 +49,11 @@ export function haSchedeDiPrima(mondo) {
   return schede.some(({ fonte }) => Boolean(TIPI_ATTORE[fonte?.type]));
 }
 
-/** Un'operazione su un documento, o niente se il documento resta com'è. */
-function operazione({ raccolta, documento, pacco = "", fonte, dopo, invalido = false }) {
+/** Un'operazione su un documento, o niente se il documento resta com'è. `rifai`: i segnalini col delta da azzerare e riscrivere. */
+function operazione({ raccolta, documento, pacco = "", fonte, dopo, invalido = false, rifai = [] }) {
   const { cambia, togli } = aggiornamento(documento, fonte, dopo);
-  if (!cambia && !togli.length) return null;
-  return { raccolta, documento, pacco, id: fonte._id, nome: String(dopo?.name ?? fonte?.name ?? ""), invalido: Boolean(invalido), cambia, togli };
+  if (!cambia && !togli.length && !rifai.length) return null;
+  return { raccolta, documento, pacco, id: fonte._id, nome: String(dopo?.name ?? fonte?.name ?? ""), invalido: Boolean(invalido), cambia, togli, rifai };
 }
 
 /** Le voci del rapporto che vengono dalle note di una scheda o di un segnalino. */
@@ -87,6 +87,38 @@ function passaScheda(piano, { raccolta, pacco = "", fonte, invalido: comeLaDaFou
   piano.operazioni.push(op);
   if (esito.note.portato) piano.rapporto.portati.push({ nome, da: esito.note.da, a: esito.note.a, pacco });
   annota(piano.rapporto, nome, esito.note);
+}
+
+/**
+ * Una scena, del mondo o di un compendio, coi suoi segnalini.
+ *
+ * Foundry accetta i ritocchi al delta di un segnalino non legato solo se la
+ * scheda sotto è intera: aperta, e già senza gli oggetti che il sistema non
+ * conosce. Quindi la scena aspetta le schede (`dopoLeSchede`). Un delta che
+ * porta lui stesso un oggetto da togliere, però, ferma Foundry quando si
+ * tocca la scheda sotto: quello si mette al sicuro e si azzera prima delle
+ * schede (l'operazione di preparazione), e si riscrive insieme al resto
+ * della scena quando le schede sono intere (`riscrivi`).
+ */
+function passaScena(piano, { raccolta, pacco = "", fonte, invalido }, tipi, { inCorso, schedeAperte, schedeIntere }) {
+  const piena = convertiScena(fonte, tipi, { inCorso });
+  const op = operazione({ raccolta, documento: "Scene", pacco, fonte, dopo: piena.dati, invalido, rifai: piena.rifai });
+  if (!op) return;
+  for (const nota of piena.note) {
+    const di = `${nota.segnalino} (${String(fonte?.name ?? "")})`;
+    piano.rapporto.segnalini.push(di);
+    annota(piano.rapporto, di, nota);
+  }
+  if (schedeIntere) {
+    piano.operazioni.push({ ...op, riscrivi: true });
+    return;
+  }
+  piano.operazioni.push({ ...op, dopoLeSchede: true });
+  piano.aspettano = true;
+  if (!schedeAperte) return;
+  const prima = convertiScena(fonte, tipi, { inCorso, soloPreparare: true });
+  const preparazione = operazione({ raccolta, documento: "Scene", pacco, fonte, dopo: prima.dati, invalido, rifai: prima.rifai });
+  if (preparazione) piano.operazioni.push({ ...preparazione, riscrivi: false });
 }
 
 /** Un oggetto, del mondo o di un compendio. */
@@ -145,21 +177,12 @@ export function pianoDelPassaggio(mondo, { quando = "", inCorso } = {}) {
   for (const voce of raccolte.actors ?? []) passaScheda(piano, { raccolta: "actors", ...voce }, opzioni);
   for (const voce of raccolte.items ?? []) passaOggetto(piano, { raccolta: "items", ...voce });
 
-  // Le scene vengono dopo le schede: un segnalino si legge col tipo della sua scheda, e finché una scheda
-  // non si apre i suoi segnalini aspettano.
-  const schedeChiuse = piano.operazioni.some((op) => op.invalido);
-  for (const { fonte, invalido } of raccolte.scenes ?? []) {
-    const esito = convertiScena(fonte, tipi, { inCorso: adesso, togliSubito: true });
-    const op = operazione({ raccolta: "scenes", documento: "Scene", fonte, dopo: esito.dati, invalido });
-    if (!op) continue;
-    piano.operazioni.push({ ...op, dopoLeSchede: schedeChiuse });
-    for (const nota of esito.note) {
-      const di = `${nota.segnalino} (${String(fonte?.name ?? "")})`;
-      piano.rapporto.segnalini.push(di);
-      annota(piano.rapporto, di, nota);
-    }
-  }
-  if (schedeChiuse && piano.operazioni.some((op) => op.dopoLeSchede)) piano.aspettano = true;
+  // Le scene vengono dopo le schede: un segnalino si legge col tipo della sua scheda, e i suoi ritocchi
+  // aspettano che le schede del mondo siano intere (quelle dei compendi non hanno segnalini).
+  const schede = piano.operazioni.filter((op) => op.documento === "Actor" && !op.pacco);
+  const schedeAperte = !schede.some((op) => op.invalido);
+  const perLeScene = { inCorso: adesso, schedeAperte, schedeIntere: schedeAperte && !schede.some((op) => op.togli.length) };
+  for (const voce of raccolte.scenes ?? []) passaScena(piano, { raccolta: "scenes", ...voce }, tipi, perLeScene);
 
   for (const { fonte, invalido } of raccolte.messages ?? []) {
     const op = operazione({ raccolta: "messages", documento: "ChatMessage", fonte, dopo: convertiMessaggio(fonte), invalido });
@@ -177,6 +200,7 @@ export function pianoDelPassaggio(mondo, { quando = "", inCorso } = {}) {
     for (const voce of pacco.voci ?? []) {
       if (pacco.documento === "Actor") passaScheda(piano, { raccolta: "", pacco: pacco.id, ...voce }, opzioni);
       else if (pacco.documento === "Item") passaOggetto(piano, { raccolta: "", pacco: pacco.id, ...voce });
+      else if (pacco.documento === "Scene") passaScena(piano, { raccolta: "", pacco: pacco.id, ...voce }, tipi, perLeScene);
       else {
         const op = operazione({ raccolta: "", documento: pacco.documento, pacco: pacco.id, fonte: voce.fonte, dopo: convertiGenerico(pacco.documento, voce.fonte), invalido: voce.invalido });
         if (op) piano.operazioni.push(op);
@@ -199,7 +223,7 @@ export function pianoDelPassaggio(mondo, { quando = "", inCorso } = {}) {
   return piano;
 }
 
-/** Le operazioni di un giro: nel primo quelle che non aspettano le schede, nel secondo le altre. */
+/** Le operazioni che si possono fare adesso: quelle che aspettano le schede restano per l'esame dopo. */
 export function operazioniDelGiro(piano) {
   return (piano?.operazioni ?? []).filter((op) => !op.dopoLeSchede);
 }

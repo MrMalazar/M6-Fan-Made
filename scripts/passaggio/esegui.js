@@ -11,11 +11,19 @@
  *                 diari, le macro e gli oggetti del mondo passano; poi la
  *                 pagina si ricarica, perché Foundry non sa aggiornare a
  *                 schermo una scheda che non aveva aperto
- *   secondo giro  a schede aperte passano le scene coi segnalini e si
- *                 tolgono gli oggetti che non hanno un posto; la pagina si
- *                 ricarica ancora
+ *   secondo giro  a schede aperte si tolgono gli oggetti che non hanno un
+ *                 posto, e subito dopo passano le scene coi segnalini; la
+ *                 pagina si ricarica ancora
  *   alla fine     un esame a pagina fresca non trova più niente: passano le
  *                 impostazioni e il rapporto finisce in un diario
+ *
+ * I segnalini non legati alla scheda hanno una regola in più, perché Foundry
+ * 14 rifà la scheda che mostrano ogni volta che cambia qualcosa sotto, e si
+ * ferma se ci trova un oggetto che non conosce. Il delta di un segnalino si
+ * ritocca quindi solo a schede intere; e un delta che porta lui stesso un
+ * oggetto da togliere si rifà da capo: prima delle schede il delta nuovo va
+ * al sicuro nelle bandiere del segnalino e quello vecchio si azzera, dopo le
+ * schede si riscrive dalla copia.
  *
  * Lo stato sta nell'impostazione `passaggio` del mondo: un passaggio
  * interrotto riprende da dove era. `esamina` non scrive niente, e gira anche
@@ -26,11 +34,11 @@
 import { MODULE_ID } from "../constants.js";
 import { haSchedeDiPrima, operazioniDelGiro, pianoDelPassaggio } from "./piano.js";
 import { propostaHtml, rapportoHtml, testiHtml, unisciRapporti } from "./rapporto.js";
-import { GERARCHIA, RACCOLTE, VECCHIO_MODULO } from "./regole.js";
+import { GERARCHIA, RACCOLTE, REGISTRO, VECCHIO_MODULO } from "./regole.js";
 
 export const PASSAGGIO_SETTING = "passaggio";
 
-/** Dopo tanti giri senza finire ci si ferma: qualcosa non si lascia portare, e lo dice il rapporto. Di solito ne bastano due. */
+/** Dopo tanti giri senza finire ci si ferma: qualcosa non si lascia portare, e lo dice il rapporto. Di solito ne bastano due, più quello che controlla. */
 export const GIRI_MAX = 4;
 
 /** Quanti documenti aperti si aggiornano in una volta. */
@@ -152,8 +160,6 @@ function cammina(documento, nome, strada) {
   let tipo = nome;
   for (const passo of strada) {
     if (passo.uno) {
-      // Il delta di un segnalino si tocca dal suo documento. Dalla scheda che il segnalino mostra no:
-      // lì Foundry 14 toglie a schermo un oggetto che non conosce e sul server lo lascia.
       tipo = GERARCHIA[tipo]?.[passo.uno]?.uno ?? "";
       dove = dove?.[passo.uno];
     } else {
@@ -189,16 +195,56 @@ async function aggiornaChiuso(documento, cambia) {
 }
 
 /**
- * Fa le operazioni di un giro. Torna quante ne ha fatte, quante schede chiuse
- * ha toccato e gli errori. `avanza(fatte, tutte)` viene chiamata man mano.
+ * Aggiorna un documento aperto. Quando un cambio non gli torna, Foundry 14
+ * non lancia un errore: avvisa a schermo, non manda niente al server e torna
+ * a mani vuote. Qui quel silenzio diventa un errore, col nome di chi non è
+ * passato.
+ */
+async function aggiornaAperto(documento, cambia, rifiuto) {
+  const fatto = await documento.update(staccata(cambia), { render: false });
+  if (!fatto) throw new Error(rifiuto);
+}
+
+/**
+ * Rifà il delta di un segnalino non legato. La copia del delta nuovo deve
+ * essere già al sicuro nelle bandiere del segnalino (ce la mette
+ * l'aggiornamento della scena): senza la copia non si azzera niente. Poi il
+ * delta vecchio si cancella intero, che è l'unico modo in cui Foundry 14 si
+ * libera di un oggetto che non conosce; e, se le schede sono intere
+ * (`riscrivi`), il delta nuovo e le bandiere senza la copia si scrivono in
+ * un colpo solo.
+ */
+async function rifaiDelta(scena, voce, { riscrivi, rifiuto }) {
+  const segnalino = scena.tokens?.get(voce.id);
+  const scorta = segnalino?._source?.flags?.[MODULE_ID]?.[REGISTRO]?.delta;
+  if (!scorta || typeof scorta !== "object") throw new Error(`${voce.nome}: ${rifiuto}`);
+  if (segnalino._source.delta) await segnalino.delta.delete({ render: false });
+  if (segnalino._source.delta) throw new Error(`${voce.nome}: ${rifiuto}`);
+  if (!riscrivi) return;
+  const bandiere = staccata(segnalino._source.flags);
+  delete bandiere[MODULE_ID][REGISTRO];
+  if (!Object.keys(bandiere[MODULE_ID]).length) delete bandiere[MODULE_ID];
+  const fatti = await scena.updateEmbeddedDocuments("Token", [{ _id: voce.id, delta: staccata(scorta), "==flags": bandiere }], { render: false });
+  if (!fatti?.length) throw new Error(`${voce.nome}: ${rifiuto}`);
+}
+
+/**
+ * Fa le operazioni che si possono fare adesso. Torna quante ne ha fatte,
+ * quante schede chiuse ha toccato e gli errori. `avanza(fatte, tutte)` viene
+ * chiamata man mano.
  *
- * L'ordine dentro una scheda conta: prima si toglie quello che va tolto,
- * poi si aggiorna (l'aggiornamento cancella dal registro la lista di chi
- * andava tolto: se il togliere non riesce, la lista deve restare).
+ * L'ordine conta. Le scene coi delta da rifare vanno davanti alle schede:
+ * quando una scheda cambia, Foundry rifà i suoi segnalini non legati, e se
+ * un delta porta ancora un oggetto che il sistema non conosce si ferma lì.
+ * Dentro una scheda prima si toglie quello che va tolto, poi si aggiorna
+ * (l'aggiornamento cancella dal registro la lista di chi andava tolto: se il
+ * togliere non riesce, la lista deve restare).
  */
 export async function applica(piano, { gioco = globalThis.game, avanza = () => {} } = {}) {
   const operazioni = operazioniDelGiro(piano);
   const errori = [];
+  const manca = gioco.i18n.localize("M6.Passaggio.Manca");
+  const rifiuto = gioco.i18n.localize("M6.Passaggio.Rifiuto");
   let fatte = 0;
   let chiuse = 0;
   const passo = (quante = 1) => {
@@ -206,12 +252,16 @@ export async function applica(piano, { gioco = globalThis.game, avanza = () => {
     avanza(fatte, operazioni.length);
   };
   const sbaglio = (op, errore) => errori.push({ nome: op.nome || op.id, documento: op.documento, errore: String(errore?.message ?? errore) });
+  const trova = (op) => {
+    const documento = documentoDi(op, gioco);
+    if (!documento) throw new Error(manca);
+    return documento;
+  };
 
   // Le schede chiuse, una per volta.
   for (const op of operazioni.filter((voce) => voce.invalido)) {
     try {
-      const documento = documentoDi(op, gioco);
-      if (!documento) throw new Error("manca");
+      const documento = trova(op);
       if (op.cambia) await aggiornaChiuso(documento, op.cambia);
       chiuse += 1;
     } catch (errore) {
@@ -220,23 +270,25 @@ export async function applica(piano, { gioco = globalThis.game, avanza = () => {
     passo();
   }
 
-  // I documenti aperti con qualcosa da togliere, uno per volta: prima si toglie, poi si aggiorna.
-  // Le scene davanti alle schede: quando una scheda cambia, Foundry rifà i suoi segnalini non legati,
-  // e se uno porta ancora un oggetto che il sistema non conosce si ferma lì.
-  const daSvuotare = operazioni.filter((voce) => !voce.invalido && voce.togli?.length);
-  daSvuotare.sort((a, b) => Number(b.documento === "Scene") - Number(a.documento === "Scene"));
-  for (const op of daSvuotare) {
+  // Le scene coi delta da rifare, davanti alle schede: la copia al sicuro (sta nell'aggiornamento), poi il delta.
+  const daRifare = operazioni.filter((voce) => !voce.invalido && voce.rifai?.length);
+  for (const op of daRifare) {
     try {
-      const documento = documentoDi(op, gioco);
-      if (!documento) throw new Error("manca");
-      if (op.documento === "Scene") {
-        // Una scena: prima i segnalini prendono i dati nuovi, poi dai loro delta esce quello che non ha un posto.
-        if (op.cambia) await documento.update(staccata(op.cambia), { render: false });
-        await togliDa(documento, op);
-      } else {
-        await togliDa(documento, op);
-        if (op.cambia) await documento.update(staccata(op.cambia), { render: false });
-      }
+      const documento = trova(op);
+      if (op.cambia) await aggiornaAperto(documento, op.cambia, rifiuto);
+      for (const voce of op.rifai) await rifaiDelta(documento, voce, { riscrivi: Boolean(op.riscrivi), rifiuto });
+    } catch (errore) {
+      sbaglio(op, errore);
+    }
+    passo();
+  }
+
+  // I documenti aperti con qualcosa da togliere, uno per volta: prima si toglie, poi si aggiorna.
+  for (const op of operazioni.filter((voce) => !voce.invalido && !voce.rifai?.length && voce.togli?.length)) {
+    try {
+      const documento = trova(op);
+      await togliDa(documento, op);
+      if (op.cambia) await aggiornaAperto(documento, op.cambia, rifiuto);
     } catch (errore) {
       sbaglio(op, errore);
     }
@@ -246,7 +298,7 @@ export async function applica(piano, { gioco = globalThis.game, avanza = () => {
   // Gli altri documenti aperti, a mazzi per raccolta.
   const mazzi = new Map();
   for (const op of operazioni) {
-    if (op.invalido || op.togli?.length || !op.cambia) continue;
+    if (op.invalido || op.rifai?.length || op.togli?.length || !op.cambia) continue;
     const chiave = `${op.documento}|${op.pacco}`;
     if (!mazzi.has(chiave)) mazzi.set(chiave, []);
     mazzi.get(chiave).push(op);
@@ -257,15 +309,16 @@ export async function applica(piano, { gioco = globalThis.game, avanza = () => {
     for (let da = 0; da < lista.length; da += MAZZO) {
       const mazzo = lista.slice(da, da + MAZZO);
       try {
-        await classe.updateDocuments(mazzo.map((op) => ({ _id: op.id, ...staccata(op.cambia) })), opzioni);
+        const fatti = await classe.updateDocuments(mazzo.map((op) => ({ _id: op.id, ...staccata(op.cambia) })), opzioni);
+        // Chi manca fra i tornati non è passato: Foundry l'ha lasciato fuori senza dire niente.
+        const passati = new Set((fatti ?? []).map((documento) => documento?.id));
+        for (const op of mazzo) if (!passati.has(op.id)) sbaglio(op, rifiuto);
       } catch (errore) {
         // Un documento del mazzo non passa: si riprova uno per uno, per sapere quale.
         console.warn(`${MODULE_ID} | Passaggio: un mazzo non è passato, riprovo voce per voce.`, errore);
         for (const op of mazzo) {
           try {
-            const documento = documentoDi(op, gioco);
-            if (!documento) throw new Error("manca");
-            await documento.update(staccata(op.cambia), { render: false });
+            await aggiornaAperto(trova(op), op.cambia, rifiuto);
           } catch (sotto) {
             sbaglio(op, sotto);
           }
@@ -320,6 +373,12 @@ async function scriviDiario(html, testi, quando, gioco) {
  * da soli. Il passaggio finisce quando un esame a pagina fresca non trova più
  * niente: allora passano le impostazioni e il rapporto va nel diario. Dopo
  * GIRI_MAX giri ci si ferma comunque, e il rapporto dice che cosa è rimasto.
+ *
+ * Quello che aspettava le schede (le scene coi segnalini) passa nello stesso
+ * giro in cui le schede diventano intere: l'esame si rifà sulla memoria
+ * della pagina e si fa il seguito. Solo se il giro è andato liscio e non ha
+ * toccato schede chiuse, perché allora quella memoria dice il vero; e la
+ * pagina fresca del giro dopo controlla comunque.
  */
 export async function porta({ gioco = globalThis.game, avanza = () => {} } = {}) {
   if (!gioco.user?.isGM) throw new Error(gioco.i18n.localize("M6.Passaggio.SoloNarratore"));
@@ -327,15 +386,25 @@ export async function porta({ gioco = globalThis.game, avanza = () => {} } = {})
   const quando = stato.quando || oggi();
   const fatti = Number(stato.giro) || 0;
   const mondo = await fotografa(gioco);
-  const piano = pianoDelPassaggio(mondo, { quando, inCorso: Boolean(stato.inCorso) || haSchedeDiPrima(mondo) });
+  const inCorso = Boolean(stato.inCorso) || haSchedeDiPrima(mondo);
+  const piano = pianoDelPassaggio(mondo, { quando, inCorso });
   const daFare = operazioniDelGiro(piano).length > 0 || piano.aspettano;
-  const percorsi = [...new Set([...(stato.percorsi ?? []), ...piano.percorsi])];
+  let percorsi = [...new Set([...(stato.percorsi ?? []), ...piano.percorsi])];
 
   if (daFare && fatti < GIRI_MAX) {
     const esito = await applica(piano, { gioco, avanza });
-    const rapporto = unisciRapporti(stato.rapporto, piano.rapporto);
-    await scriviStato({ inCorso: true, giro: fatti + 1, quando, rapporto, errori: esito.errori, percorsi }, gioco);
-    return { finito: false, ricarica: true, giro: fatti + 1, rapporto, errori: esito.errori };
+    let rapporto = unisciRapporti(stato.rapporto, piano.rapporto);
+    const errori = [...esito.errori];
+    if (piano.aspettano && !esito.chiuse && !errori.length) {
+      const seguito = pianoDelPassaggio(await fotografa(gioco), { quando, inCorso });
+      if (operazioniDelGiro(seguito).length) {
+        errori.push(...(await applica(seguito, { gioco, avanza })).errori);
+        rapporto = unisciRapporti(rapporto, seguito.rapporto);
+        percorsi = [...new Set([...percorsi, ...seguito.percorsi])];
+      }
+    }
+    await scriviStato({ inCorso: true, giro: fatti + 1, quando, rapporto, errori, percorsi }, gioco);
+    return { finito: false, ricarica: true, giro: fatti + 1, rapporto, errori };
   }
 
   // Niente più da fare, o troppi giri: le impostazioni, il controllo dei file, il rapporto.

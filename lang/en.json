@@ -3314,6 +3314,8 @@
       "Sfere": "Spheres",
       "Oggetto": "Item",
       "Errore": "Error",
+      "Manca": "is no longer there",
+      "Rifiuto": "Foundry did not accept the change",
       "Tutti": "all rolls",
       "Conti": {
         "actors": "Sheets",
