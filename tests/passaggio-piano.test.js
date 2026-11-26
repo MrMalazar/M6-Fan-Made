@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { haSchedeDiPrima, operazioniDelGiro, pianoDelPassaggio } from "../scripts/passaggio/piano.js";
+import { contiDi, unisciRapporti } from "../scripts/passaggio/rapporto.js";
 import { GERARCHIA } from "../scripts/passaggio/regole.js";
 import { applicaAggiornamento, applicaTogli, mondoDelModulo } from "./passaggio-mondo.mjs";
 
@@ -33,7 +34,7 @@ assert.deepEqual(primo.lasciati, [
 const scena = primo.operazioni.find((op) => op.documento === "Scene");
 assert.equal(scena.dopoLeSchede, true);
 assert.ok(!operazioniDelGiro(primo).includes(scena));
-assert.deepEqual(primo.rapporto.conti, { actors: 4, items: 1, scenes: 1, messages: 3, journal: 1, macros: 2, users: 1, "world.grimorio-comune": 1 });
+assert.deepEqual(contiDi(primo.rapporto), { actors: 4, items: 1, scenes: 1, messages: 3, journal: 1, macros: 2, users: 1, "world.grimorio-comune": 1 });
 assert.deepEqual(primo.operazioni.filter((op) => op.pacco).map((op) => [op.pacco, op.documento, op.nome]), [["world.grimorio-comune", "Item", "Formula"]]);
 // Le impostazioni: quelle del modulo che il sistema conosce passano, anche il timbro; le altre restano.
 assert.deepEqual(primo.impostazioni.map((voce) => [voce.da, voce.a, voce.mossa]), [
@@ -100,17 +101,41 @@ assert.equal(mondo.raccolte.users[0].fonte.flags.m6.tema, "chiaro");
 assert.equal(mondo.pacchi[0].voci[0].fonte.flags.m6.formula.sfera, "forces");
 
 // --------------------------------------------- l'esame dal mondo del modulo
-// Nel mondo che gira ancora col modulo le schede sono aperte e non si sa che cosa il sistema conosce:
-// il piano dice tutto quello che succederebbe, in un giro solo.
+// Nel mondo che gira ancora col modulo Foundry dà le schede per aperte e non si sa che cosa il sistema
+// conosce: il piano è lo stesso del primo giro (una scheda col tipo di prima è chiusa comunque), e il
+// rapporto dice già tutto quello che succederà.
 {
   const vecchio = mondoDelModulo();
   for (const voce of [...vecchio.raccolte.actors, ...vecchio.raccolte.items]) voce.invalido = false;
   vecchio.registrate = null;
   const esame = pianoDelPassaggio(vecchio);
-  assert.equal(esame.aspettano, false);
-  assert.deepEqual(esame.operazioni.filter((op) => op.documento === "Actor").map((op) => op.togli.flatMap((voce) => voce.ids).length), [2, 0, 3, 1]);
-  assert.equal(esame.operazioni.find((op) => op.documento === "Scene").dopoLeSchede, false);
+  assert.equal(esame.aspettano, true);
+  assert.deepEqual(esame.operazioni.filter((op) => op.documento === "Actor").map((op) => [op.invalido, op.togli.length]), [[true, 0], [true, 0], [true, 0], [true, 0]]);
+  assert.deepEqual(esame.rapporto.condizioni, primo.rapporto.condizioni);
+  assert.deepEqual(esame.rapporto.scarti.length, primo.rapporto.scarti.length);
   assert.deepEqual(esame.impostazioni.filter((voce) => voce.mossa === "porta").length, 4);
+}
+
+// Una scheda di prima dentro un compendio: Foundry la dà per aperta, ma va trattata da chiusa.
+{
+  const conPacco = mondoDelModulo();
+  const scheda = structuredClone(conPacco.raccolte.actors[2].fonte);
+  conPacco.pacchi.push({ id: "world.bestiario", nome: "Bestiario", documento: "Actor", voci: [{ fonte: scheda, invalido: false }] });
+  const piano = pianoDelPassaggio(conPacco);
+  const op = piano.operazioni.find((voce) => voce.pacco === "world.bestiario");
+  assert.deepEqual([op.invalido, op.togli.length, op.cambia.type], [true, 0, "png"]);
+  assert.equal(piano.rapporto.nomi["world.bestiario"], "Bestiario");
+}
+
+// Il rapporto di due giri: le voci dette due volte restano una, i documenti toccati due volte si contano una.
+{
+  const due = unisciRapporti(primo.rapporto, primo.rapporto);
+  assert.deepEqual(due.portati, primo.rapporto.portati);
+  assert.deepEqual(contiDi(due), contiDi(primo.rapporto));
+  const coiGiri = unisciRapporti(primo.rapporto, secondo.rapporto);
+  assert.equal(contiDi(coiGiri).actors, 4);
+  assert.equal(contiDi(coiGiri).scenes, 1);
+  assert.deepEqual(coiGiri.scarti.map((voce) => voce.nome).slice(-1), ["Scorta"]);
 }
 
 // Un mondo nato col sistema: niente da fare.

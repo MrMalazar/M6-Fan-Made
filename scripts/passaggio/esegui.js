@@ -73,7 +73,7 @@ export async function fotografa(gioco = globalThis.game) {
     if (pacco.metadata?.packageType !== "world" || pacco.locked) continue;
     try {
       await pacco.getDocuments();
-      pacchi.push({ id: pacco.collection, documento: pacco.documentName, voci: vociDi(pacco) });
+      pacchi.push({ id: pacco.collection, nome: pacco.metadata?.label ?? pacco.title ?? "", documento: pacco.documentName, voci: vociDi(pacco) });
     } catch (errore) {
       console.warn(`${MODULE_ID} | Passaggio: il compendio ${pacco.collection} non si legge.`, errore);
     }

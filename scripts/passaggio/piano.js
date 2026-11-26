@@ -10,7 +10,7 @@
  *
  * La fotografia:
  *   raccolte      { actors: [{ fonte, invalido }], items: […], scenes: […], … }
- *   pacchi        [{ id, documento, voci: [{ fonte, invalido }] }]   i compendi del mondo
+ *   pacchi        [{ id, nome, documento, voci: [{ fonte, invalido }] }]   i compendi del mondo
  *   impostazioni  [{ id, key, value }]                               col valore già letto
  *   registrate    le chiavi che il sistema conosce, o null se non si sa
  */
@@ -66,8 +66,14 @@ function annota(rapporto, di, note) {
   if (note.testi) rapporto.testi.push({ di, testi: note.testi });
 }
 
-/** Una scheda, del mondo o di un compendio: l'operazione e le sue voci nel rapporto. */
-function passaScheda(piano, { raccolta, pacco = "", fonte, invalido }, { quando, inCorso }) {
+/**
+ * Una scheda, del mondo o di un compendio: l'operazione e le sue voci nel
+ * rapporto. Una scheda col tipo di prima è chiusa comunque la dia Foundry
+ * (dentro un compendio la apre lo stesso, ma non la lascia svuotare): prima
+ * prende il tipo nuovo, e gli oggetti da togliere aspettano il giro dopo.
+ */
+function passaScheda(piano, { raccolta, pacco = "", fonte, invalido: comeLaDaFoundry }, { quando, inCorso }) {
+  const invalido = Boolean(comeLaDaFoundry) || Boolean(TIPI_ATTORE[fonte?.type]);
   const esito = convertiAttore(fonte, { quando, inCorso, togliSubito: !invalido });
   const nome = String(fonte?.name ?? "");
   if (esito.lasciato) {
@@ -128,7 +134,7 @@ export function pianoDelPassaggio(mondo, { quando = "", inCorso } = {}) {
     compendi: null,
     lasciati: [],
     aspettano: false,
-    rapporto: { portati: [], assorbite: [], scarti: [], condizioni: [], casi: [], domini: [], testi: [], conti: {}, segnalini: [] },
+    rapporto: { portati: [], assorbite: [], scarti: [], condizioni: [], casi: [], domini: [], testi: [], segnalini: [], toccati: {}, nomi: {} },
     percorsi: [],
     daFare: false
   };
@@ -180,10 +186,12 @@ export function pianoDelPassaggio(mondo, { quando = "", inCorso } = {}) {
 
   passaImpostazioni(piano, oggetto(mondo));
 
+  // Chi è stato toccato, raccolta per raccolta: il rapporto conta i documenti, non i giri.
   for (const op of piano.operazioni) {
     const dove = op.pacco || op.raccolta;
-    piano.rapporto.conti[dove] = (piano.rapporto.conti[dove] ?? 0) + 1;
+    (piano.rapporto.toccati[dove] ??= []).push(op.id);
   }
+  for (const pacco of mondo?.pacchi ?? []) if (pacco.nome) piano.rapporto.nomi[pacco.id] = pacco.nome;
   const visti = new Set();
   for (const op of piano.operazioni) for (const percorso of JSON.stringify(op.cambia ?? {}).match(PERCORSO) ?? []) visti.add(percorso);
   piano.percorsi = [...visti].sort();

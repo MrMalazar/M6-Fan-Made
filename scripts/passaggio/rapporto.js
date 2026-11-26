@@ -11,26 +11,44 @@ const LISTE = ["portati", "assorbite", "scarti", "condizioni", "casi", "domini",
 
 /** Un rapporto vuoto. */
 export function rapportoVuoto() {
-  return { portati: [], assorbite: [], scarti: [], condizioni: [], casi: [], domini: [], testi: [], segnalini: [], conti: {} };
+  return { portati: [], assorbite: [], scarti: [], condizioni: [], casi: [], domini: [], testi: [], segnalini: [], toccati: {}, nomi: {} };
 }
 
-/** Due rapporti in uno: quello dei giri fatti e quello del giro di adesso. */
+/**
+ * Due rapporti in uno: quello dei giri fatti e quello del giro di adesso.
+ * Una voce detta due volte (un giro ripetuto) resta una, e un documento
+ * toccato in due giri si conta una volta.
+ */
 export function unisciRapporti(prima, adesso) {
   const a = { ...rapportoVuoto(), ...(prima ?? {}) };
   const b = { ...rapportoVuoto(), ...(adesso ?? {}) };
   const esito = rapportoVuoto();
-  for (const lista of LISTE) esito[lista] = [...(a[lista] ?? []), ...(b[lista] ?? [])];
-  for (const conti of [a.conti, b.conti]) for (const [dove, quanti] of Object.entries(conti ?? {})) esito.conti[dove] = (esito.conti[dove] ?? 0) + quanti;
+  for (const lista of LISTE) {
+    const viste = new Set();
+    for (const voce of [...(a[lista] ?? []), ...(b[lista] ?? [])]) {
+      const impronta = JSON.stringify(voce);
+      if (viste.has(impronta)) continue;
+      viste.add(impronta);
+      esito[lista].push(voce);
+    }
+  }
+  for (const toccati of [a.toccati, b.toccati]) for (const [dove, ids] of Object.entries(toccati ?? {})) esito.toccati[dove] = [...new Set([...(esito.toccati[dove] ?? []), ...ids])];
+  esito.nomi = { ...a.nomi, ...b.nomi };
   return esito;
+}
+
+/** Quanti documenti tocca un rapporto, raccolta per raccolta. */
+export function contiDi(rapporto) {
+  return Object.fromEntries(Object.entries(rapporto?.toccati ?? {}).map(([dove, ids]) => [dove, new Set(ids).size]));
 }
 
 /** I conti di un piano, una riga per raccolta: `[{ voce, quanti }]`. */
 export function contiDelPiano(piano, { localize = (chiave) => chiave, format = (chiave) => chiave } = {}) {
   const righe = [];
-  for (const [dove, quanti] of Object.entries(piano?.rapporto?.conti ?? {})) {
+  for (const [dove, quanti] of Object.entries(contiDi(piano?.rapporto))) {
     const chiave = `M6.Passaggio.Conti.${dove}`;
     const nome = localize(chiave);
-    righe.push({ voce: nome === chiave ? format("M6.Passaggio.Conti.pacco", { nome: dove }) : nome, quanti });
+    righe.push({ voce: nome === chiave ? format("M6.Passaggio.Conti.pacco", { nome: piano?.rapporto?.nomi?.[dove] ?? dove }) : nome, quanti });
   }
   const impostazioni = (piano?.impostazioni ?? []).filter((voce) => voce.mossa === "porta").length + (piano?.compendi ? 1 : 0);
   if (impostazioni) righe.push({ voce: localize("M6.Passaggio.Conti.impostazioni"), quanti: impostazioni });
