@@ -373,6 +373,34 @@ assert.ok(registro.diari[0].pages[1].text.content.includes("Scritta sulla scheda
   assert.deepEqual([quattro.finito, quattro.fermo, quattro.errori], [true, false, []]);
 }
 
+// ------------------------------------------------ l'esame dal mondo del modulo
+{
+  // Il mondo gira ancora col modulo: Foundry dà le schede per aperte e non ha caricato le parole del sistema.
+  // La finestra le legge dal file di lingua, mostra i conti e non scrive niente.
+  const vecchio = mondoDelModulo();
+  for (const voce of [...vecchio.raccolte.actors, ...vecchio.raccolte.items]) voce.invalido = false;
+  const finto = monta(vecchio);
+  finto.game.system.id = "wod5e";
+  const lingua = JSON.parse(readFileSync(new URL("../lang/it.json", import.meta.url), "utf8"));
+  const chiesti = [];
+  globalThis.fetch = async (percorso) => {
+    chiesti.push(percorso);
+    return { ok: !percorso.includes("manca"), json: async () => lingua };
+  };
+  const piano = await apri({ gioco: finto.game });
+  assert.equal(piano.daFare, true);
+  assert.ok(chiesti.includes("/systems/m6/lang/it.json"));
+  assert.equal(finto.registro.finestre.length, 1);
+  const finestra = finto.registro.finestre[0];
+  assert.equal(finestra.window.title, "Passaggio dal modulo");
+  assert.ok(finestra.content.includes("Qui non si scrive niente."));
+  assert.ok(finestra.content.includes("Abilità da travasare a mano") && finestra.content.includes("Mano fasciata"));
+  assert.ok(!finestra.content.includes("M6.Passaggio."), "nessuna chiave nuda");
+  assert.deepEqual(finestra.buttons.map((tasto) => tasto.action), ["chiudi"], "si può solo chiudere");
+  assert.deepEqual([finto.registro.aggiornati.length, finto.registro.mazzi.length, finto.registro.delta.length], [0, 0, 0]);
+  assert.equal(vecchio.raccolte.actors[0].fonte.type, "mortal");
+}
+
 // Chi non è il Narratore non porta niente.
 {
   const finto = monta(mondoDelModulo());

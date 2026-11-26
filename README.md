@@ -6,10 +6,11 @@ Qui dati, schede, dado e tiro sono di M6 da cima a fondo.
 
 ## Stato
 
-Quinta tappa, il telefono. La scheda e le regole del modulo sono nel sistema,
+Sesta tappa, la prova. La scheda e le regole del modulo sono nel sistema,
 su una base scritta da capo; gli strumenti del Narratore sono stati provati
 con due utenti collegati insieme; gli oggetti hanno la loro scheda; il
-telefono ha la porta dove entra un'interfaccia fatta a parte.
+telefono ha la porta dove entra un'interfaccia fatta a parte; un mondo nato
+col modulo si porta nel sistema.
 
 | Pezzo | Cosa c'è |
 | :--- | :--- |
@@ -21,12 +22,13 @@ telefono ha la porta dove entra un'interfaccia fatta a parte.
 | PNG | La scheda del nemico, con le tre riserve, i casi, la Salute e la Natura |
 | Narratore | Il Quadro col menù circolare, il verdetto sui tiri dei giocatori, le Condizioni dal Master, il Vathrâ e la Salute sulle barre dei token |
 | Telefono | Su uno schermo stretto una pagina sola prende il posto di Foundry: il tiro della scheda, i tiri di tutti, e la porta per un'interfaccia fatta a parte |
+| Passaggio | Un mondo nato col modulo si porta nel sistema su una copia. Passano schede, scene, chat, diari, macro e impostazioni, e un rapporto dice quello che resta da fare a mano |
 
 Il dado ha la faccia vuota da 1 a 5, la scintilla da 6 a 9 e la stellina sul 10.
 La scintilla vale un successo. Le stelline contano a coppie, 4 successi la
 coppia e 1 la spaiata.
 
-La prossima tappa è la prova del passaggio: un mondo del modulo convertito al sistema.
+La prossima tappa è il passaggio del mondo della cronaca.
 
 ## Installazione
 
@@ -39,6 +41,19 @@ https://github.com/MrMalazar/M6-Fan-Made/releases/latest/download/system.json
 ```
 
 Poi si crea un mondo che usa il sistema «Maghi 6ª Edizione - Fan Made».
+
+## Passaggio
+
+Un mondo fatto col modulo `wod5e-mage` non si rifà. Si copia la sua
+cartella, nella copia si scrive il sistema in `world.json` e la si apre da
+Narratore. Il sistema propone il passaggio, lo fa in due giri ricaricando
+la pagina da solo e lascia il rapporto in un diario del mondo. L'originale
+resta com'era.
+
+I passi, le regole di quello che diventa cosa e i lavori che restano da
+fare a mano stanno in [docs/passaggio.md](docs/passaggio.md). Da lì si può
+anche chiedere l'esame di un mondo che usa ancora il modulo, per vedere
+prima che cosa il passaggio farebbe.
 
 ## Telefono
 
@@ -84,6 +99,7 @@ Il sistema è fatto per cambiare un pezzo senza toccare gli altri.
 | `scripts/sistema.js` | Il motore delle regole del tiro, senza niente di Foundry |
 | `scripts/data/` | I cataloghi, cioè poteri, Formule, Condizioni, Strumenti e menù del Paradosso |
 | `scripts/sheets/` | Le due schede, il Mago e il nemico |
+| `scripts/passaggio/` | Il passaggio dal modulo. Le scelte in `regole.js`, i conti in `converti.js`, l'esame in `piano.js`, la parte che parla con Foundry in `esegui.js` |
 | `templates/actor/parts/` | I riquadri della scheda, un file per riquadro |
 | `tools/` | Gli attrezzi che rigenerano cataloghi e compendi dalle loro sorgenti |
 

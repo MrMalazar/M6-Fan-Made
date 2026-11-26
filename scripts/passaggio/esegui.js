@@ -428,10 +428,41 @@ export async function porta({ gioco = globalThis.game, avanza = () => {} } = {})
 
 /* ----------------------------------------------------------------- le finestre */
 
+/**
+ * Le parole del sistema. In un mondo che usa ancora il modulo Foundry non le
+ * ha caricate: per l'esame si leggono dal file di lingua del sistema.
+ */
+export async function paroleDi(gioco = globalThis.game) {
+  const sue = { localize: (chiave) => gioco.i18n.localize(chiave), format: (chiave, dati) => gioco.i18n.format(chiave, dati) };
+  if (gioco.system?.id === MODULE_ID) return sue;
+  for (const lingua of [...new Set([gioco.i18n?.lang, "it"])].filter(Boolean)) {
+    try {
+      const risposta = await fetch(foundry.utils.getRoute(`systems/${MODULE_ID}/lang/${lingua}.json`));
+      if (!risposta.ok) continue;
+      const voci = await risposta.json();
+      const cerca = (chiave) => {
+        const voce = String(chiave).split(".").reduce((dove, pezzo) => dove?.[pezzo], voci);
+        return typeof voce === "string" ? voce : null;
+      };
+      return {
+        localize: (chiave) => cerca(chiave) ?? sue.localize(chiave),
+        format: (chiave, dati = {}) => {
+          const testo = cerca(chiave);
+          return testo === null ? sue.format(chiave, dati) : testo.replace(/\{([^}]+)\}/g, (tutto, nome) => (Object.hasOwn(dati, nome) ? String(dati[nome]) : tutto));
+        }
+      };
+    } catch (errore) {
+      console.warn(`${MODULE_ID} | Passaggio: il file di lingua ${lingua} non si legge.`, errore);
+    }
+  }
+  return sue;
+}
+
 /** La finestra col rapporto. */
-export async function mostraRapporto(pagina, { gioco = globalThis.game, diario = "", fermo = false } = {}) {
-  const L = (chiave) => gioco.i18n.localize(`M6.Passaggio.${chiave}`);
-  const testa = fermo ? L("Fermo") : diario ? gioco.i18n.format("M6.Passaggio.Finito", { nome: diario }) : "";
+export async function mostraRapporto(pagina, { gioco = globalThis.game, diario = "", fermo = false, parole = null } = {}) {
+  const voci = parole ?? { localize: (chiave) => gioco.i18n.localize(chiave), format: (chiave, dati) => gioco.i18n.format(chiave, dati) };
+  const L = (chiave) => voci.localize(`M6.Passaggio.${chiave}`);
+  const testa = fermo ? L("Fermo") : diario ? voci.format("M6.Passaggio.Finito", { nome: diario }) : "";
   return foundry.applications.api.DialogV2.wait({
     window: { title: L("Titolo") },
     classes: CLASSI,
@@ -470,14 +501,14 @@ async function eseguiDallaFinestra(gioco = globalThis.game) {
  * due tasti. In un mondo che usa ancora il modulo mostra solo l'esame.
  */
 export async function apri({ gioco = globalThis.game } = {}) {
-  const L = (chiave) => gioco.i18n.localize(`M6.Passaggio.${chiave}`);
   const nostro = gioco.system?.id === MODULE_ID;
   const piano = await esamina({ gioco });
-  const parole = { localize: (chiave) => gioco.i18n.localize(chiave), format: (chiave, dati) => gioco.i18n.format(chiave, dati) };
+  const parole = await paroleDi(gioco);
+  const L = (chiave) => parole.localize(`M6.Passaggio.${chiave}`);
   if (!nostro) {
     const mancanti = await fileMancanti(piano.percorsi);
     const pagina = rapportoHtml({ rapporto: piano.rapporto, lasciati: piano.lasciati, impostazioni: piano.impostazioni, compendi: Boolean(piano.compendi), mancanti }, { ...parole, esame: true });
-    await mostraRapporto(`<p>${foundry.utils.escapeHTML(L("Esame"))}</p>${pagina}`, { gioco });
+    await mostraRapporto(`<p>${foundry.utils.escapeHTML(L("Esame"))}</p>${pagina}`, { gioco, parole });
     return piano;
   }
   if (!gioco.user?.isGM) {
