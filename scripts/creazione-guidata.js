@@ -103,6 +103,17 @@ export const FORMA_ATTRIBUTI = Object.freeze([
   { value: 1, count: 1 }
 ]);
 
+/**
+ * Un Mago appena nato e ancora vuoto: a lui la guida si apre da sola. Le
+ * copie e le schede portate da fuori hanno già i loro dati nelle bandiere, e
+ * la guida non le disturba. (Nel modulo lo diceva la scheda scelta alla
+ * nascita; nel sistema lo dice il tipo.)
+ */
+export function nasceVuoto(actor) {
+  if (actor?.type !== "mago") return false;
+  return !Object.keys(actor.flags?.[MODULE_ID] ?? {}).length;
+}
+
 /** Alla creazione (LIBRO 05_080): Quintessenza 3, Paradosso 0, e il tetto di ogni Sfera è Areté + 2. */
 export const QUINTESSENZA_INIZIALE = 3;
 export const SFERA_SOPRA_ARETE = 2;

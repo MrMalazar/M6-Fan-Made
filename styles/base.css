@@ -20,6 +20,13 @@
   --m6-viola: #5a2b82;         /* l'arcano: il colore dei successi */
   --m6-viola-chiaro: #b58ade;  /* cornici e segni del dado */
   --m6-viola-dado: #2f2153;    /* corpo del dado */
+  /* La fascia dell'esito in chat (Blue, 26/11): il successo sul viola dei dadi, il fallimento chiuso scuro. Il rosso è solo del Paradosso. */
+  --m6-esito-successo: var(--m6-viola);
+  --m6-esito-successo-filo: var(--m6-viola-chiaro);
+  --m6-esito-successo-testo: var(--m6-voce);
+  --m6-esito-fallimento: #222;
+  --m6-esito-fallimento-filo: #3a3a3a;
+  --m6-esito-fallimento-testo: var(--m6-tenue);
 }
 
 /* ==========================================================================
@@ -343,14 +350,17 @@
     text-shadow: 0 0 5px #000;
   }
 
+  /* Il successo sul viola dei dadi; il fallimento chiuso resta scuro: il rosso è solo del Paradosso (Blue, 26/11). */
   .chat-message .roll-result-label.success {
-    background-color: #065200;
-    color: #dbd6d6;
+    background-color: var(--m6-esito-successo);
+    border-color: var(--m6-esito-successo-filo);
+    color: var(--m6-esito-successo-testo);
   }
 
   .chat-message .roll-result-label.failure {
-    background-color: #900;
-    color: #dbdbdb;
+    background-color: var(--m6-esito-fallimento);
+    border-color: var(--m6-esito-fallimento-filo);
+    color: var(--m6-esito-fallimento-testo);
   }
 }
 

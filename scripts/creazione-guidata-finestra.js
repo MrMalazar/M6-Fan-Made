@@ -9,10 +9,11 @@
 import { CHIAVI_VIVE } from "./abilita-essenziali.js";
 import { addFromArchivio, ARCHIVI, loadArchivio, openArchivio } from "./archivi.js";
 import { getArete } from "./arete.js";
-import { MAGE_SHEET_ID, MODULE_ID } from "./constants.js";
+import { MODULE_ID } from "./constants.js";
 import {
   GUIDA_TESTI_SETTING,
   GUIDATA_FLAG,
+  nasceVuoto,
   PASSI,
   passoSalvato,
   prepareGuidata,
@@ -541,7 +542,7 @@ export function registraCreazioneGuidata() {
   });
   Hooks.on("createActor", (actor, options, userId) => {
     if (userId !== game.user?.id) return;
-    if (actor?.getFlag?.("core", "sheetClass") !== MAGE_SHEET_ID) return;
+    if (!nasceVuoto(actor)) return;
     // La scheda si apre da sé: la guida le va sopra, un attimo dopo.
     setTimeout(() => { apriCreazioneGuidata(actor); }, 250);
   });

@@ -20521,7 +20521,7 @@
   color: var(--mage-rosso-vivo);
 }
 
-/* La riuscita senza tirare in oro; il tiro che fallisce in rosso. */
+/* La riuscita senza tirare in oro; il tiro che fallisce spento, come la fascia in chat: il rosso è solo del Paradosso (Blue, 26/11). */
 .m6.m6w.actor.sheet .m6-tiro-esito.riesce,
 .m6.m6w.actor.sheet .m6-tiro-esito.riesce > span {
   color: var(--mage-oro);
@@ -20529,7 +20529,7 @@
 
 .m6.m6w.actor.sheet .m6-tiro-esito.fallisce,
 .m6.m6w.actor.sheet .m6-tiro-esito.fallisce > span {
-  color: var(--mage-rosso-chiaro);
+  color: var(--mage-tenue);
 }
 
 .m6.m6w.actor.sheet .m6-tiro-esito.riesce > i,

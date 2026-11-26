@@ -5,6 +5,7 @@ import {
   credoConsigliato,
   famiglieDelCredo,
   formaAttributi,
+  nasceVuoto,
   notaScheda,
   PASSI,
   passiFatti,
@@ -360,5 +361,15 @@ assert.match(sheet, /guidataApri: onGuidataApri/);
 assert.match(sheet, /m6-guidata-testata/);
 const main = readFileSync(new URL("../scripts/main.js", import.meta.url), "utf8");
 assert.match(main, /registraCreazioneGuidata\(\);/);
+
+// La guida alla nascita: si apre al Mago nato vuoto; non al PNG, non alle copie che portano già i loro dati.
+assert.equal(nasceVuoto({ type: "mago", flags: {} }), true);
+assert.equal(nasceVuoto({ type: "mago", flags: { m6: {} } }), true);
+assert.equal(nasceVuoto({ type: "mago", flags: { m6: { arete: { value: 2 } } } }), false);
+assert.equal(nasceVuoto({ type: "png", flags: {} }), false);
+assert.equal(nasceVuoto(null), false);
+const allaNascita = readFileSync(new URL("../scripts/creazione-guidata-finestra.js", import.meta.url), "utf8");
+assert.match(allaNascita, /Hooks\.on\("createActor"[\s\S]*nasceVuoto\(actor\)/);
+assert.doesNotMatch(allaNascita, /sheetClass/, "la guida non guarda più la scheda scelta: nel sistema decide il tipo");
 
 console.log("Creazione guidata: test passati.");

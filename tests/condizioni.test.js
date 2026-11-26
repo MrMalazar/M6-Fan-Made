@@ -6,6 +6,7 @@ import {
   applicaCondizione,
   condizioneItemData,
   condizioniDelTiro,
+  dadiScrittiSulTiro,
   definizioneDi,
   findCondizione,
   findCondizioneByName,
@@ -171,6 +172,28 @@ assert.equal(tipoDelTiro({}), "");
   assert.deepEqual([cieco.fallisce, cieco.perche, cieco.dadi], [true, ["Cieco"], 0]);
   const spenta = condizioniDelTiro([{ ...fakeActor("S", ["sanguinante"]).items[0], system: { suppressed: true } }], "physical");
   assert.equal(spenta.righe.length, 0, "una Condizione spenta dal sistema non pesa");
+}
+
+// Le Condizioni scritte a mano pesano da sole (Blue, 26/11): i dadi in meno scritti sull'oggetto, sui tiri spuntati.
+{
+  const fasciata = { id: "m1", type: "condition", name: "Mano fasciata", img: "icons/svg/item-bag.svg", flags: {}, system: { bonuses: [{ source: "Mano fasciata", value: "-2", paths: ["physical"] }] } };
+  const stanco = { id: "m2", type: "condition", name: "Stanco morto", flags: {}, system: { bonuses: [{ value: -1, paths: ["all"] }, { value: "-1", paths: ["mental"] }, { value: 2, paths: ["physical"] }] } };
+  const muta = { id: "m3", type: "condition", name: "Solo scritta", flags: {}, system: { bonuses: [] } };
+  const arma = { id: "a1", type: "weapon", name: "Coltello", flags: {}, system: { bonuses: [{ value: -3, paths: ["all"] }] } };
+  assert.equal(dadiScrittiSulTiro(fasciata, "physical"), -2);
+  assert.equal(dadiScrittiSulTiro(fasciata, "social"), 0);
+  assert.equal(dadiScrittiSulTiro(stanco, "physical"), -1, "i dadi scritti in più non entrano");
+  assert.equal(dadiScrittiSulTiro(stanco, "mental"), -2);
+  const items = [...fakeActor("M", ["contuso"]).items, fasciata, stanco, muta, arma];
+  const fisico = condizioniDelTiro(items, "physical");
+  assert.deepEqual(fisico.righe.map((r) => [r.id, r.name, r.peso, r.dadi, r.on]), [["contuso", "Contuso", "−1", -1, true], ["mano:m1", "Mano fasciata", "−2", -2, true], ["mano:m2", "Stanco morto", "−1", -1, true]]);
+  assert.equal(fisico.dadi, -4);
+  assert.equal(testoCondizioniDelTiro(fisico), "Contuso −1, Mano fasciata −2, Stanco morto −1");
+  // Sul tiro sociale la mano fasciata non c'entra; si toglie a mano come le altre; spenta dal sistema non pesa.
+  assert.deepEqual(condizioniDelTiro(items, "social").righe.map((r) => r.id), ["mano:m2"]);
+  const tolta = condizioniDelTiro(items, "physical", { "mano:m1": false });
+  assert.deepEqual([tolta.dadi, tolta.fuori], [-2, ["Mano fasciata"]]);
+  assert.equal(condizioniDelTiro([{ ...fasciata, system: { ...fasciata.system, suppressed: true } }], "physical").righe.length, 0);
 }
 
 // Il riallineamento del 29/9: le Condizioni accese prima prendono simbolo, dadi e testo di oggi.

@@ -327,6 +327,25 @@ export async function applicaCondizione(actor, entry) {
   return target;
 }
 
+/** Il prefisso dell'id di riga di una Condizione scritta a mano: «mano:<id dell'oggetto>». */
+export const RIGA_A_MANO = "mano:";
+
+/**
+ * I dadi che una Condizione scritta a mano toglie a un tipo di tiro: la somma
+ * dei suoi dadi scritti in meno, sui tiri che ha spuntati (o su tutti). I
+ * dadi scritti in più non entrano: una Condizione toglie, non dà.
+ */
+export function dadiScrittiSulTiro(item, tipo) {
+  let totale = 0;
+  for (const bonus of item?.system?.bonuses ?? []) {
+    const value = Math.trunc(Number(bonus?.value) || 0);
+    if (value >= 0) continue;
+    const paths = Array.isArray(bonus?.paths) ? bonus.paths.map(String) : [];
+    if (paths.includes("all") || paths.includes(tipo)) totale += value;
+  }
+  return totale;
+}
+
 /**
  * Le Condizioni sul tiro (la guida, «Tiri» e «Somme»): quelle accese che
  * pesano sul tipo del tiro (fisico, sociale, mentale, dall'Attributo della
@@ -335,6 +354,10 @@ export async function applicaCondizione(actor, entry) {
  * il personaggio fa, e lo decide il tavolo. I dadi tolti si sommano, il
  * secondo grado dimezza la riserva (una volta sola, anche con più
  * Condizioni), una che fa fallire fa fallire il tiro.
+ *
+ * Dal 26/11 (Blue: «falle pesare da sole») pesano anche le Condizioni
+ * scritte a mano, coi dadi in meno scritti sull'oggetto: una riga per
+ * oggetto, che si toglie con la stessa spunta delle altre.
  */
 export function condizioniDelTiro(items, tipo, scelte = {}) {
   const vuoto = { tipo: TIPI_TIRO.includes(tipo) ? tipo : "", righe: [], dadi: 0, dimezza: false, fallisce: false, perche: [], fuori: [] };
@@ -343,7 +366,16 @@ export function condizioniDelTiro(items, tipo, scelte = {}) {
   const righe = [];
   for (const item of items ?? []) {
     const entry = definizioneDi(item);
-    if (!entry || viste.has(entry.id) || item.system?.suppressed) continue;
+    if (!entry) {
+      if (item?.type !== "condition" || item.system?.suppressed) continue;
+      const dadi = dadiScrittiSulTiro(item, tipo);
+      const id = `${RIGA_A_MANO}${item.id ?? item._id ?? ""}`;
+      if (!dadi || viste.has(id)) continue;
+      viste.add(id);
+      righe.push({ id, name: String(item.name ?? ""), numeral: "", family: "", icon: item.img ?? "", weight: "scritta", peso: `−${Math.abs(dadi)}`, dadi, on: scelte?.[id] !== false, aMano: true });
+      continue;
+    }
+    if (viste.has(entry.id) || item.system?.suppressed) continue;
     if (!PESI_DEL_TIRO.includes(entry.weight) || !entry.tipi.includes(tipo)) continue;
     viste.add(entry.id);
     righe.push({

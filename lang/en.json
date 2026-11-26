@@ -3238,7 +3238,7 @@
         "ModDadi": "dice",
         "ModNuovo": "Add",
         "ModVuoto": "No dice written.",
-        "ModNota": "Shown on the Condition's row. They do not enter the roll by themselves: whoever rolls counts them, or the Storyteller from their box."
+        "ModNota": "Dice written as a penalty weigh on the roll by themselves, on the ticked roll types. In the Roll box the Condition can be unticked when it does not apply."
       }
     },
     "Base": {

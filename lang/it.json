@@ -3238,7 +3238,7 @@
         "ModDadi": "dadi",
         "ModNuovo": "Aggiungi",
         "ModVuoto": "Nessun dado scritto.",
-        "ModNota": "Si leggono nella riga della Condizione. Sul tiro non entrano da soli: li conta chi tira, o il Narratore dal suo riquadro."
+        "ModNota": "I dadi in meno pesano sul tiro da soli, sui tiri spuntati. Nel riquadro del Tiro la Condizione si toglie con la sua spunta quando non c'entra."
       }
     },
     "Base": {
