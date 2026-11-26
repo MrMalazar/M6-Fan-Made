@@ -682,3 +682,95 @@
   border: 0;
   flex: none;
 }
+
+/* --------------------------------------------------------------------------
+   Il passaggio dal modulo: la finestra che lo propone e il rapporto. I
+   titoli in maiuscolo nell'oro, le voci nel bianco sporco, una tavola per
+   ogni cosa da sapere; la finestra scorre quando il rapporto è lungo.
+   -------------------------------------------------------------------------- */
+.application.m6-passaggio-finestra .dialog-content {
+  max-height: 72vh;
+  overflow-y: auto;
+}
+
+.m6-passaggio-finestra .m6-passaggio,
+.m6-passaggio-finestra .m6-passaggio-testa {
+  color: var(--m6-voce);
+}
+
+.m6-passaggio > p {
+  margin: 0 0 8px;
+}
+
+.m6-passaggio-sezione {
+  margin: 12px 0 0;
+}
+
+.m6-passaggio-finestra .m6-passaggio h3 {
+  border-bottom: 1px solid var(--m6-oro-scuro);
+  color: var(--m6-oro);
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  margin: 0 0 4px;
+  padding-bottom: 2px;
+  text-transform: uppercase;
+}
+
+.m6-passaggio-nota {
+  font-size: 0.86em;
+  font-style: italic;
+  margin: 0 0 4px;
+  opacity: 0.8;
+}
+
+.m6-passaggio-tavola {
+  border-collapse: collapse;
+  margin: 0;
+  width: 100%;
+}
+
+.m6-passaggio-tavola th,
+.m6-passaggio-tavola td {
+  padding: 2px 6px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.m6-passaggio-finestra .m6-passaggio-tavola {
+  background: none;
+  border: 0;
+}
+
+.m6-passaggio-finestra .m6-passaggio-tavola th {
+  background: none;
+  border-bottom: 1px solid var(--m6-oro-tenue);
+  color: var(--m6-tenue);
+  font-size: 0.78rem;
+  font-weight: 400;
+  text-shadow: none;
+}
+
+.m6-passaggio-finestra .m6-passaggio-tavola tr {
+  background: none;
+}
+
+.m6-passaggio-finestra .m6-passaggio-tavola td {
+  border-bottom: 1px solid rgb(107 79 18 / 35%);
+}
+
+.m6-passaggio-tavola td:last-child:not(:first-child) {
+  white-space: normal;
+}
+
+.m6-passaggio-finestra .m6-passaggio-avviso {
+  border: 1px solid var(--m6-oro-scuro);
+  border-radius: 3px;
+  color: var(--m6-oro-chiaro);
+  margin: 12px 0 0;
+  padding: 6px 8px;
+}
+
+.m6-passaggio-finestra .m6-passaggio-testa {
+  font-weight: 700;
+  margin: 0 0 8px;
+}

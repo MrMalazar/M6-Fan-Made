@@ -34,6 +34,7 @@ import { registraHelperIcone } from "./icone-oggetti.js";
 import { apriVathra, mandaVathra, registraVathra } from "./vathra/traduttore.js";
 import { traduciTesto } from "./vathra/vathra.js";
 import { registraNomiScheda } from "./nomi-scheda.js";
+import { passaggio, passaggioAlPronto, registraPassaggio } from "./passaggio/esegui.js";
 
 /**
  * Le porte del sistema per le macro e per la console: stanno in `game.m6`,
@@ -67,7 +68,13 @@ function createApi() {
         if (!entry) throw new Error(`Condizione sconosciuta: ${id}`);
         return assignCondizione(actors, entry);
       }
-    })
+    }),
+
+    /**
+     * Il passaggio dal modulo (26/11): `esamina()` dice che cosa c'è da portare senza scrivere niente,
+     * `apri()` mostra la finestra, `porta()` fa un giro.
+     */
+    passaggio
   };
 }
 
@@ -86,7 +93,7 @@ Hooks.once("init", () => {
   game.m6.telefono.usa(tiraDalTelefono);
 
   // La scheda degli oggetti chiede alle regole se una Condizione è della lista:
-  // quelle fuori lista mostrano i loro dadi scritti.
+  // quelle fuori lista mostrano i loro dadi scritti, che dal 26/11 pesano sul tiro (condizioniDelTiro).
   SchedaOggetto.diLista = (oggetto) => Boolean(definizioneDi(oggetto));
 
   // L'icona propria di un oggetto nella pagina Tratti (23/9): l'immagine del
@@ -157,6 +164,8 @@ Hooks.once("init", () => {
       }
     }
   });
+  // Lo stato del passaggio dal modulo: un mondo che viene da lì si porta in due giri, e un giro interrotto riprende.
+  registraPassaggio();
   // Le Condizioni riallineate alla regola di base del 29/9 (una volta per mondo, dal Narratore).
   game.settings.register(MODULE_ID, CONDIZIONI_VERSIONE_SETTING, { scope: "world", config: false, type: String, default: "" });
   // Il catalogo dei poteri a cui le schede sono allineate (30/9): quando il catalogo cambia, al primo avvio si riallineano.
@@ -254,6 +263,9 @@ Hooks.once("ready", () => {
   // Il rifacimento dei poteri (30/9): le righe prese dal catalogo prendono il testo, il nome, il grado e il costo di oggi,
   // se non sono state cambiate a mano (una volta per catalogo, dal primo Narratore).
   riallineaPoteriDelMondo().catch((error) => console.warn("m6 | Riallineamento dei poteri interrotto.", error));
+
+  // Un mondo che viene dal modulo: al primo Narratore la finestra che propone il passaggio, o la ripresa di quello a metà.
+  passaggioAlPronto();
 
   debug("Ready", {
     foundryVersion: game.version,
