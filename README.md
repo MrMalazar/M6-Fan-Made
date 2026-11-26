@@ -6,16 +6,16 @@ Qui dati, schede, dado e tiro sono di M6 da cima a fondo.
 
 ## Stato
 
-Terza tappa, il Narratore. La scheda e le regole del modulo sono nel sistema,
-su una base scritta da capo, e gli strumenti del Narratore sono stati provati
-con due utenti collegati insieme.
+Quarta tappa, gli oggetti. La scheda e le regole del modulo sono nel sistema,
+su una base scritta da capo; gli strumenti del Narratore sono stati provati
+con due utenti collegati insieme; gli oggetti hanno la loro scheda.
 
 | Pezzo | Cosa c'è |
 | :--- | :--- |
 | Mago | La scheda a nove pagine, cioè Stat, Tratti, Magick, Formule, Credo, Bussola, Sfida, Esperienza e Note |
 | Tiro | Il tiro di Abilità e il lancio di Magick, con Specializzazioni, Condizioni, soglia, dadi rossi e Volontà |
 | Carta | In chat mostra con cosa si è tirato, i dadi, i successi contro la soglia e la fascia dell'esito |
-| Oggetti | Pregi, Difetti, Background, Condizioni, armi, armature ed equipaggiamento, con una scheda sola per tutti |
+| Oggetti | Pregi, Difetti, Background, Condizioni, armi, armature ed equipaggiamento. Una scheda sola, coi campi di ogni tipo presi da una tavola: danno, portata, rarità, grado di Background, punti armatura, usi |
 | Compendi | Quindici, dai Vantaggi all'Equipaggiamento alla Bussola |
 | PNG | La scheda del nemico, con le tre riserve, i casi, la Salute e la Natura |
 | Narratore | Il Quadro col menù circolare, il verdetto sui tiri dei giocatori, le Condizioni dal Master, il Vathrâ e la Salute sulle barre dei token |
@@ -25,7 +25,7 @@ Il dado ha la faccia vuota da 1 a 5, la scintilla da 6 a 9 e la stellina sul 10.
 La scintilla vale un successo. Le stelline contano a coppie, 4 successi la
 coppia e 1 la spaiata.
 
-Le prossime tappe sono gli oggetti e l'interfaccia dell'app sul telefono.
+La prossima tappa è l'interfaccia dell'app sul telefono.
 
 ## Installazione
 
@@ -59,6 +59,8 @@ Il sistema è fatto per cambiare un pezzo senza toccare gli altri.
 | :--- | :--- |
 | `scripts/base/` | Quello che parla con Foundry e non è una regola. Dati, dadi, tiro, scheda di base, oggetti, telefono |
 | `scripts/base/tratti.js` | La tavola degli Attributi e delle Abilità. Dati, pallini e tiri la leggono da qui |
+| `scripts/base/campi-oggetto.js` | La tavola dei campi degli oggetti, tipo per tipo. La scheda degli oggetti disegna quello che trova lì |
+| `scripts/attore.js` | L'attore del sistema: la Salute come la leggono le barre dei token |
 | `scripts/sistema.js` | Il motore delle regole del tiro, senza niente di Foundry |
 | `scripts/data/` | I cataloghi, cioè poteri, Formule, Condizioni, Strumenti e menù del Paradosso |
 | `scripts/sheets/` | Le due schede, il Mago e il nemico |

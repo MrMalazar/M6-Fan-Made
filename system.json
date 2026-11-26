@@ -2,10 +2,10 @@
   "id": "m6",
   "title": "Maghi 6ª Edizione - Fan Made",
   "description": "Il sistema di gioco di Maghi 6ª Edizione per Foundry VTT. Fatto da fan, non ufficiale.",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "url": "https://github.com/MrMalazar/M6-Fan-Made",
   "manifest": "https://github.com/MrMalazar/M6-Fan-Made/releases/latest/download/system.json",
-  "download": "https://github.com/MrMalazar/M6-Fan-Made/releases/download/0.3.0/m6.zip",
+  "download": "https://github.com/MrMalazar/M6-Fan-Made/releases/download/0.4.0/m6.zip",
   "authors": [
     {
       "name": "MrMalazar"

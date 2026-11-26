@@ -579,6 +579,11 @@
   min-height: 26px;
 }
 
+.m6-oggetto-scheda .resource-value .resource-value-step.active {
+  background-color: var(--m6-oro);
+  border-color: var(--m6-oro);
+}
+
 /* I modificatori ai tiri di una Condizione: una riga per modificatore. */
 .m6-oggetto-modificatori {
   display: grid;
