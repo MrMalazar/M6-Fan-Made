@@ -36,19 +36,60 @@
     min-height: 300px;
   }
 
+  /* L'alone: viola e stretto per le finestre che non sono schede (il Quadro),
+     nella tinta della scheda per le schede. */
+  .application.m6w {
+    box-shadow: 0 0 5px rgba(48, 45, 91, 0.94);
+  }
+
   .m6w.sheet.mortal {
     box-shadow: 0 0 10px var(--mortal-color-1);
   }
 
-  .m6w.sheet .window-header {
+  /* La testata è la stessa per ogni finestra del sistema: schede, Quadro,
+     Vathrâ, finestre di dialogo. Bassa, coi tasti quadrati e grigi. */
+  .application.m6 > .window-header,
+  .application.m6w > .window-header {
     flex: 0 0 25px;
     line-height: 20px;
     padding-top: 2px;
   }
 
-  .m6w.sheet .window-header button.header-control {
+  .application.m6w > .window-header button.header-control,
+  .application.dialog.m6 > .window-header button.header-control {
     background-color: #686767;
     color: #fff;
+  }
+
+  /* Le finestre di dialogo del sistema (il verdetto sul tiro, le Condizioni
+     dal Master, i danni): il contenuto fitto, i tasti grigi, i campi scuri.
+     Quello che una finestra vuole diverso lo dice nel suo blocco di m6.css. */
+  .application.dialog.m6 .dialog-content.standard-form {
+    gap: 0.5px;
+  }
+
+  .application.dialog.m6 button {
+    background-color: #686767;
+    color: #fff;
+  }
+
+  .application.dialog.m6 input {
+    background-color: #1d1d1d;
+    color: #fff;
+  }
+
+  .application.dialog.m6 input:not([type="checkbox"], [type="radio"]) {
+    border-radius: 0;
+  }
+
+  .application.dialog.m6 input[type="number"] {
+    max-width: 35px;
+    min-width: 35px;
+  }
+
+  /* Il pannello del Paradosso: le righe del registro senza stacco fra loro. */
+  .m6-paradosso-registro > li {
+    margin-bottom: 0;
   }
 
   .m6w.actor.sheet .window-content {
