@@ -1,7 +1,7 @@
 /**
  * La scheda del nemico (Blue, 25/9; rifatta l'1/10 sul mock
  * docs/mock_scheda_nemico_1-10.html): una scheda in più per gli attori `spc`
- * del sistema, «Scheda del nemico (M6)». La testata resta sempre (chi è,
+ * del sistema, «Scheda del nemico». La testata resta sempre (chi è,
  * Salute, Armatura, Condizioni); sotto tre pagine: In gioco, Oggetti, Note.
  * La Magick non ha più una pagina sua: sta nel blocco della Natura, dentro In
  * gioco. I conti e i contesti stanno in nemico.js (funzioni pure), le carte in

@@ -6,8 +6,9 @@ Qui dati, schede, dado e tiro sono di M6 da cima a fondo.
 
 ## Stato
 
-Seconda tappa, il Mago. La scheda e le regole del modulo sono passate nel
-sistema, su una base scritta da capo.
+Terza tappa, il Narratore. La scheda e le regole del modulo sono nel sistema,
+su una base scritta da capo, e gli strumenti del Narratore sono stati provati
+con due utenti collegati insieme.
 
 | Pezzo | Cosa c'è |
 | :--- | :--- |
@@ -17,16 +18,14 @@ sistema, su una base scritta da capo.
 | Oggetti | Pregi, Difetti, Background, Condizioni, armi, armature ed equipaggiamento, con una scheda sola per tutti |
 | Compendi | Quindici, dai Vantaggi all'Equipaggiamento alla Bussola |
 | PNG | La scheda del nemico, con le tre riserve, i casi, la Salute e la Natura |
-| Narratore | Il Quadro, il verdetto sui tiri, le Condizioni e il Vathrâ |
+| Narratore | Il Quadro col menù circolare, il verdetto sui tiri dei giocatori, le Condizioni dal Master, il Vathrâ e la Salute sulle barre dei token |
 | Telefono | Su uno schermo stretto una pagina sola prende il posto di Foundry |
 
 Il dado ha la faccia vuota da 1 a 5, la scintilla da 6 a 9 e la stellina sul 10.
 La scintilla vale un successo. Le stelline contano a coppie, 4 successi la
 coppia e 1 la spaiata.
 
-La scheda del nemico e gli strumenti del Narratore ci sono già, ma la loro
-prova a fondo è la terza tappa. Poi vengono gli oggetti e l'interfaccia dell'app
-sul telefono.
+Le prossime tappe sono gli oggetti e l'interfaccia dell'app sul telefono.
 
 ## Installazione
 

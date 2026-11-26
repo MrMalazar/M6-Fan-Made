@@ -564,6 +564,29 @@ function backToPreviousControl() {
   }, 0);
 }
 
+/**
+ * Un clic sull'occhio della barra di sinistra: dal 24/9 il Narratore apre il
+ * Quadro (contatore, menù, giocatori), i giocatori il pannello col numero.
+ * Foundry 14 per lo stesso clic chiama sia il controllo sia il suo attrezzo,
+ * anche più volte: conta la prima chiamata, le altre a ridosso si scartano.
+ * Senza, il pannello dei giocatori si apriva e si richiudeva da solo, e
+ * l'avviso della riserva nascosta usciva tre volte.
+ */
+const STESSO_CLIC_MS = 400;
+let ultimoClicSulControllo = 0;
+
+export function stessoClic(ora, ultimo, finestra = STESSO_CLIC_MS) {
+  return ultimo > 0 && ora - ultimo >= 0 && ora - ultimo < finestra;
+}
+
+function apriDalControllo(gm) {
+  const ora = Date.now();
+  if (stessoClic(ora, ultimoClicSulControllo)) return;
+  ultimoClicSulControllo = ora;
+  if (gm && apriQuadro) apriQuadro("contatore");
+  else PannelloParadosso.toggle();
+}
+
 /** In init: impostazioni, livello e barra. In ready: pannello e raccolta. */
 export function registerParadossoNarratore() {
   game.settings.register(MODULE_ID, POOL_SETTING, {
@@ -604,9 +627,7 @@ export function registerParadossoNarratore() {
       activeTool: "pannello",
       onChange: (_event, active) => {
         if (!active) return;
-        // Dal 24/9 il Narratore apre il Quadro (contatore, menù, giocatori); i giocatori il pannello col numero.
-        if (gm && apriQuadro) apriQuadro("contatore");
-        else PannelloParadosso.toggle();
+        apriDalControllo(gm);
         backToPreviousControl();
       },
       tools: {
@@ -617,7 +638,7 @@ export function registerParadossoNarratore() {
           order: 1,
           button: true,
           visible: true,
-          onChange: () => ((gm && apriQuadro) ? apriQuadro("contatore") : PannelloParadosso.toggle())
+          onChange: () => apriDalControllo(gm)
         },
         spendi: {
           name: "spendi",

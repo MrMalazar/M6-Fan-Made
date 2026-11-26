@@ -329,7 +329,7 @@ for (const nuova of ["nemicoModo", "nemicoMano", "nemicoArmatura", "nemicoEffett
   sheet.tabGroups.primary = "magick";
   const context = await sheet._prepareContext({});
   assert.deepEqual([sheet.tabGroups.primary, context.tabAttiva, Object.keys(sheet.tabs), context.pagine.map((p) => p.id), context.modo, context.isGM], ["gioco", "gioco", ["gioco", "oggetti", "note"], ["gioco", "oggetti", "note"], "gioca", true]);
-  assert.equal(sheet.title, "Scheda del nemico (M6): Rade");
+  assert.equal(sheet.title, "Scheda del nemico: Rade");
 }
 
 // --- un nemico appena creato resta in Scrivi mentre lo si scrive (1.33.2). Senza un modo scelto col tasto la finestra

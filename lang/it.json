@@ -1732,7 +1732,7 @@
       "RollHint": "Carica l'effetto nel Tiro della prima pagina, coi suoi valori: lì si tira coi tre tasti."
     },
     "GrimorioComune": {
-      "Label": "Grimorio comune (M6)",
+      "Label": "Grimorio comune",
       "Open": "Apri il Grimorio comune",
       "Share": "Versa nel Grimorio comune",
       "Copy": "Copia nel tuo Grimorio",
@@ -2569,7 +2569,7 @@
         "wits": "Prontezza",
         "resolve": "Fermezza"
       },
-      "Sheet": "Scheda del nemico (M6)",
+      "Sheet": "Scheda del nemico",
       "Nature": {
         "mortal": "Dormiente",
         "sonnambulo": "Sonnambulo",

@@ -1732,7 +1732,7 @@
       "RollHint": "Loads the effect into the Roll box on the first page, with its values: roll there with the three buttons."
     },
     "GrimorioComune": {
-      "Label": "Shared Grimoire (M6)",
+      "Label": "Shared Grimoire",
       "Open": "Open the shared Grimoire",
       "Share": "Pour into the shared Grimoire",
       "Copy": "Copy to your Grimoire",
@@ -2569,7 +2569,7 @@
         "wits": "Wits",
         "resolve": "Resolve"
       },
-      "Sheet": "Enemy sheet (M6)",
+      "Sheet": "Enemy sheet",
       "Nature": {
         "mortal": "Sleeper",
         "sonnambulo": "Sleepwalker",

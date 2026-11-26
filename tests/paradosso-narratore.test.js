@@ -6,6 +6,7 @@ import {
   isInLobby,
   LOBBY_FLAG,
   LOG_MAX,
+  stessoClic,
   lobbyActors,
   normalizePool,
   pendingGifts,
@@ -138,3 +139,12 @@ console.log("Punti Paradosso del Narratore: test passati.");
   assert.equal(PREMIO_DIFETTO_FLAG, "premioDifetto");
   console.log("premio del difetto: ok");
 }
+
+// Un clic sull'occhio conta una volta sola: Foundry 14 chiama il controllo e
+// il suo attrezzo per lo stesso clic, le chiamate a ridosso si scartano.
+assert.equal(stessoClic(1000, 0), false, "il primo clic passa sempre");
+assert.equal(stessoClic(1003, 1000), true, "la seconda chiamata dello stesso clic no");
+assert.equal(stessoClic(1399, 1000), true);
+assert.equal(stessoClic(1400, 1000), false, "un clic dopo è un clic nuovo");
+assert.equal(stessoClic(900, 1000), false, "l'orologio che torna indietro non blocca");
+
